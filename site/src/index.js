@@ -53,6 +53,11 @@ async function holders(url, token, birth) {
   return holdersCache;
 }
 
+// Constants of a launched token, read once per isolate; the last good answer,
+// served whenever the public node rate-limits us. Errors are never cached.
+let constCache = { token: null, symbol: null, supply: null };
+let lastGood = null;
+
 async function state(env) {
   const url = env.FLY_RH_RPC || 'https://rpc.mainnet.chain.robinhood.com';
   const token = (env.FLY_TOKEN || '').toLowerCase();
@@ -63,15 +68,17 @@ async function state(env) {
       const blk = await rpc(url, 'eth_blockNumber', []);
       return { ok: true, launched: false, block: int(blk), updated: Math.floor(Date.now() / 1000) };
     }
-    const [blk, sup, sym, bal] = await Promise.all([
-      rpc(url, 'eth_blockNumber', []),
-      rpc(url, 'eth_call', [{ to: token, data: '0x18160ddd' }, 'latest']),
-      rpc(url, 'eth_call', [{ to: token, data: '0x95d89b41' }, 'latest']),
-      rpc(url, 'eth_getBalance', [wallet, 'latest']),
-    ]);
+    // sequential on purpose: the public node rate-limits bursts from one edge
+    const blk = await rpc(url, 'eth_blockNumber', []);
+    if (constCache.token !== token) {
+      const sup = await rpc(url, 'eth_call', [{ to: token, data: '0x18160ddd' }, 'latest']);
+      const sym = await rpc(url, 'eth_call', [{ to: token, data: '0x95d89b41' }, 'latest']);
+      constCache = { token, symbol: abiString(sym), supply: Number(BigInt(sup)) / 1e18 };
+    }
+    const bal = await rpc(url, 'eth_getBalance', [wallet, 'latest']);
     const h = await holders(url, token, birth);
     const eth = int(bal) / 1e18;
-    return {
+    lastGood = {
       ok: true,
       launched: true,
       block: int(blk),
@@ -79,8 +86,8 @@ async function state(env) {
       launches_left: Math.floor(eth / FEE_ETH),
       token: {
         address: token,
-        symbol: abiString(sym),
-        supply: Number(BigInt(sup)) / 1e18,
+        symbol: constCache.symbol,
+        supply: constCache.supply,
         holders: h.holders,
         transfers: h.transfers,
         pair: env.FLY_PAIR || 'GOOGL',
@@ -88,8 +95,25 @@ async function state(env) {
       },
       updated: Math.floor(Date.now() / 1000),
     };
+    return lastGood;
   } catch (e) {
-    return { ok: false, error: String(e.message || e).slice(0, 160) };
+    const err = String(e.message || e).slice(0, 160);
+    if (lastGood) return { ...lastGood, stale: true, error: err };
+    if (!token) return { ok: false, error: err };
+    // The node is rate-limiting this edge. What the launch itself settled is
+    // known without asking anyone: say so, and leave the live numbers empty.
+    return {
+      ok: true, launched: true, stale: true, error: err,
+      block: null, budget_eth: null, launches_left: null,
+      token: {
+        address: token, symbol: env.FLY_SYMBOL || 'HER',
+        supply: Number(env.FLY_SUPPLY || 1e9),
+        holders: null, transfers: null,
+        pair: env.FLY_PAIR || 'GOOGL',
+        creator_tax_pct: Number(env.FLY_TAX_PCT || 1),
+      },
+      updated: Math.floor(Date.now() / 1000),
+    };
   }
 }
 
@@ -106,11 +130,12 @@ export default {
     const hit = await cache.match(key);
     if (hit) return hit;
 
-    const body = JSON.stringify(await state(env));
+    const st = await state(env);
+    const body = JSON.stringify(st);
     const res = new Response(body, {
-      headers: { 'content-type': 'application/json', 'cache-control': CACHE_CONTROL },
+      headers: { 'content-type': 'application/json', 'cache-control': st.ok ? CACHE_CONTROL : 'no-store' },
     });
-    ctx.waitUntil(cache.put(key, res.clone()));
+    if (st.ok) ctx.waitUntil(cache.put(key, res.clone()));
     return res;
   },
 };
