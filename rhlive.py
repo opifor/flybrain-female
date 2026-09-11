@@ -1161,7 +1161,7 @@ async def run(ws: WebSocket):
             STATE["running"] = True
             coin = {"name": msg.get("name") or "test",
                     "ticker": msg.get("ticker") or "test",
-                    "desc": msg.get("desc") or "launched by a fruit fly connectome",
+                    "desc": msg.get("desc") or "launched by a female fruit fly connectome",
                     "x": msg.get("x") or X_HANDLE}
             try:
                 await run_episode(ws, coin, int(msg.get("steps", 18)),
