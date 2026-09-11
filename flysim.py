@@ -36,7 +36,8 @@ class FlyBrain:
     def __init__(self, graph_path=None, p=Params()):
         if graph_path is None:
             graph_path = load_env().get("FLY_GRAPH", BUILD / "graph.npz")
-        z = np.load(graph_path, allow_pickle=False)
+        self.graph_path = Path(graph_path).resolve()
+        z = np.load(self.graph_path, allow_pickle=False)
         W = sp.csr_matrix(
             (z["data"], z["indices"], z["indptr"]), shape=tuple(z["shape"])
         )

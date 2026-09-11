@@ -48,6 +48,7 @@ class MushroomBody:
 
     def __init__(self, fb, lr=0.06, floor=0.25, recover=0.0008, trace_decay=0.55):
         self.fb = fb
+        self.store = ROOT / "build" / f"mb_gains_{Path(fb.graph_path).stem}.npz"
         self.lr = lr                  # how hard one dopamine event depresses
         self.floor = floor            # a synapse is never silenced completely
         self.recover = recover        # drift back toward 1.0, i.e. forgetting
@@ -158,9 +159,9 @@ class MushroomBody:
     # -- persistence ------------------------------------------------------
     def save(self):
         try:
-            STORE.parent.mkdir(parents=True, exist_ok=True)
+            self.store.parent.mkdir(parents=True, exist_ok=True)
             np.savez_compressed(
-                STORE, gain=self.gain, pos=self.pos,
+                self.store, gain=self.gain, pos=self.pos,
                 rewards=self.events["reward"], punishments=self.events["punish"],
                 at=time.time())
         except Exception:
@@ -174,9 +175,10 @@ class MushroomBody:
         mismatch is discarded rather than misapplied.
         """
         try:
-            if not STORE.exists():
+            store = self.store if self.store.exists() else STORE
+            if not store.exists():
                 return False
-            z = np.load(STORE)
+            z = np.load(store)
             if len(z["gain"]) != len(self.gain) or not np.array_equal(z["pos"], self.pos):
                 return False
             self.gain = z["gain"].astype(np.float32)

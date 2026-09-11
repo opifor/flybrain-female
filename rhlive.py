@@ -75,8 +75,9 @@ def boot(n_keep=11000):
         P = np.full((fb.n, 3), np.nan, dtype=np.float32)
         P[ok] = np.stack(have[ok].to_numpy()).astype(np.float32)
     grp = np.zeros(fb.n, dtype=np.uint8)
-    for t, g in (("^L1$|^L2$", 1), ("^DNa02$|^DNa01$|^MDN$|^DNp09$", 2), ("^MN9$", 3)):
+    for t, g in (("^L1$|^L2$", 1), ("^DNa02$|^DNa01$|^MDN$|^DNp09$", 2)):
         grp[fb.where(type_re=t)] = g
+    grp[pilot.motor["click"]] = 3
     special = np.flatnonzero(ok & (grp > 0))
     rest = np.flatnonzero(ok & (grp == 0))
     rng = np.random.default_rng(0)
