@@ -401,7 +401,7 @@ cp .env.example .env         # then set FLY_ALLOW_BROWSER=1
 py roam.py                   # http://localhost:4660
 ```
 
-The site uses `FLY_TOKEN`, `FLY_WALLET`, `FLY_TOKEN_BLOCK`, `FLY_PAIR`, `FLY_TAX_PCT` and `FLY_LIVE_REPO`, and says "not launched yet" until `FLY_TOKEN` is set.
+The site uses `FLY_TOKEN`, `FLY_WALLET`, `FLY_TOKEN_BLOCK`, `FLY_PAIR`, `FLY_TAX_PCT` and `FLY_LIVE_REPO`, and says "not launched yet" until `FLY_TOKEN` is set. `FLY_RELAY_URL` and `FLY_RELAY_TOKEN` make the rig publish its state and frame to the relay in `site/relay/`; without them the page reads the rig's tunnel directly.
 
 MIT for the code. The connectome is **not ours to license** and stays CC-BY
 wherever it goes — keep the attribution, it is the whole reason any of this is

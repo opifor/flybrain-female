@@ -268,6 +268,90 @@ def blob_del(path):
         pass
 
 
+RELAY_URL = load_env().get("FLY_RELAY_URL", "").rstrip("/")
+RELAY_TOKEN = load_env().get("FLY_RELAY_TOKEN", "")
+RELAY_EVERY = 0.5
+# what the relay thread reads: the newest state dict, the newest jpeg, and a
+# counter for each so an unchanged pair is never posted twice
+RELAY = {"state": None, "state_n": 0, "jpg": None, "jpg_n": 0}
+
+
+def live_state(stats, neural, hz, url, cx, cy):
+    """
+    The one description of the fly's moment.
+
+    The socket's frame message and the relay post are both built from this, so
+    a viewer on either path sees the same fields and the two can never drift.
+    The cursor is normalised to the frame so a page can draw it from the state
+    alone.
+    """
+    return {"type": "frame", "neural": neural,
+            "events": stats["events"][-18:],
+            "visited": stats["visited"][-8:],
+            "cx": cx, "cy": cy,
+            "cursor": {"x": round(cx / 1280, 4), "y": round(cy / 800, 4)},
+            "hz": {k: round(v, 1) for k, v in hz.items()},
+            "stats": {k: stats[k] for k in
+                      ("steps", "clicks", "vetoes", "hops",
+                       "blocked", "scrolled")},
+            "url": url}
+
+
+def relay_post(state, jpg):
+    """One multipart POST to the relay: the state as json, the frame as bytes."""
+    import urllib.request
+    b = b"----flybrain" + str(int(time.time() * 1000)).encode()
+    body = (b"--" + b + b"\r\n"
+            b'Content-Disposition: form-data; name="state"\r\n'
+            b"Content-Type: application/json\r\n\r\n"
+            + json.dumps(state).encode() + b"\r\n")
+    if jpg:
+        body += (b"--" + b + b"\r\n"
+                 b'Content-Disposition: form-data; name="frame"; filename="frame.jpg"\r\n'
+                 b"Content-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n")
+    body += b"--" + b + b"--\r\n"
+    req = urllib.request.Request(
+        RELAY_URL + "/publish", method="POST", data=body,
+        headers={"Authorization": f"Bearer {RELAY_TOKEN}",
+                 "Content-Type": "multipart/form-data; boundary=" + b.decode()})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        return r.status, len(body)
+
+
+def start_relay():
+    """
+    Publish to the relay twice a second, from a thread of its own.
+
+    Every viewer used to be a socket into this machine. Now the rig tells one
+    place what it sees and the world reads from there, so the number of
+    watchers never touches the run. Failures are logged once a minute and
+    otherwise ignored: the fly does not roam for the relay's sake.
+    """
+    import threading
+
+    if not RELAY_URL or not RELAY_TOKEN:
+        return
+
+    def loop():
+        sent = (0, 0)
+        complained = 0.0
+        while True:
+            time.sleep(RELAY_EVERY)
+            key = (RELAY["state_n"], RELAY["jpg_n"])
+            if RELAY["state"] is None or key == sent:
+                continue
+            try:
+                relay_post(RELAY["state"], RELAY["jpg"])
+                sent = key
+            except Exception as exc:
+                if time.time() - complained > 60:
+                    complained = time.time()
+                    say("relay post failed:", str(exc)[:90])
+
+    threading.Thread(target=loop, daemon=True).start()
+    say("relaying to", RELAY_URL)
+
+
 app = FastAPI()
 # the public page reads /state and /frame.jpg from a different origin
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"],
@@ -502,6 +586,7 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             while STATE["running"]:
                 if latest["jpg"] is not None and latest["n"] != last:
                     last = latest["n"]
+                    RELAY["jpg"], RELAY["jpg_n"] = latest["jpg"], latest["n"]
                     await send({"type": "view",
                                 "jpg": base64.b64encode(latest["jpg"]).decode(),
                                 "cx": cx, "cy": cy})
@@ -599,15 +684,9 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                 await asyncio.sleep(0.028)
             px_, py_ = cx, cy
 
-            await send({"type": "frame", "neural": neural,
-                        "events": stats["events"][-18:],
-                        "visited": stats["visited"][-8:],
-                        "cx": cx, "cy": cy,
-                        "hz": {k: round(v, 1) for k, v in hz.items()},
-                        "stats": {k: stats[k] for k in
-                                  ("steps", "clicks", "vetoes", "hops",
-                                   "blocked", "scrolled")},
-                        "url": page.url})
+            moment = live_state(stats, neural, hz, page.url, cx, cy)
+            RELAY["state"], RELAY["state_n"] = moment, RELAY["state_n"] + 1
+            await send(moment)
 
             if click:
                 under = await page.evaluate(UNDER_JS, [cx, cy])
@@ -779,6 +858,7 @@ async def begin():
         return
 
     start_tunnel(STATE.get("port", 4660))
+    start_relay()
 
     async def forever():
         while True:

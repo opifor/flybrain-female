@@ -1,0 +1,17 @@
+name = "flybrain-relay"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# one object, named "live", holds the latest state and frame
+[[durable_objects.bindings]]
+name = "LATEST"
+class_name = "Latest"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["Latest"]
+
+# PUBLISH_TOKEN is a secret: wrangler secret put PUBLISH_TOKEN
+
+# served on the site's own subdomain; the zone is on Cloudflare
+routes = [{ pattern = "live.femaleflybrain.com", custom_domain = true }]

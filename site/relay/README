@@ -1,0 +1,36 @@
+flybrain relay
+
+A Cloudflare Worker with one Durable Object. The rig (roam.py) POSTs its
+latest state and frame here every half second; the public page polls the
+Worker once a second and the edge cache answers almost all of it. The rig's
+own machine is never reached by a viewer.
+
+Routes
+
+  POST /publish     Authorization: Bearer <PUBLISH_TOKEN>, multipart form with
+                    fields state (json text) and frame (jpeg, optional).
+                    Body limit 600 KB. Returns {ok:true, seq}.
+  GET  /state       the state json plus seq, updated, age, live (age < 15 s)
+  GET  /frame.jpg   the latest jpeg, 404 until one has arrived
+  GET  /            "flybrain relay <seq>"
+
+Deploy
+
+  cd site/relay
+  npx wrangler login
+  npx wrangler secret put PUBLISH_TOKEN
+  npx wrangler deploy
+
+Then set on the rig, in .env or the environment:
+
+  FLY_RELAY_URL=https://<worker>.workers.dev   (or the custom domain)
+  FLY_RELAY_TOKEN=<the same PUBLISH_TOKEN>
+
+and set RELAY in site/web/index.html to the same origin.
+
+The two secrets are PUBLISH_TOKEN on the Worker and FLY_RELAY_TOKEN on the
+rig; they must be equal. Nothing else is configured.
+
+Local run
+
+  npx wrangler dev --local --var PUBLISH_TOKEN:devtoken
