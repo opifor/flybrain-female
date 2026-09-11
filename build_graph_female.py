@@ -28,7 +28,21 @@ def main():
     subclass = ann.sub_class.to_numpy().astype(str)
     soma_side = ann.side.map({"left": "L", "right": "R"}).fillna("").to_numpy().astype(str)
     neurons = pd.read_csv(DATA / "neurons.csv.gz", keep_default_na=False).set_index("root_id")
-    nt = neurons.nt_type.reindex(bodies).fillna("")
+    nt_cell = neurons.nt_type.reindex(bodies).fillna("")
+    votes = pd.DataFrame({"type": types, "nt": nt_cell,
+                          "score": pd.to_numeric(neurons.nt_type_score.reindex(bodies),
+                                                 errors="coerce")})
+    votes = votes.loc[(votes.type != "") & (votes.nt != "")]
+    ranked = votes.groupby(["type", "nt"]).agg(
+        count=("nt", "size"), score=("score", "mean")).reset_index()
+    consensus = ranked.sort_values(
+        ["type", "count", "score", "nt"], ascending=[True, False, False, True]
+    ).drop_duplicates("type").set_index("type").nt
+    nt = pd.Series(types, index=nt_cell.index).map(consensus).fillna(nt_cell)
+    print(f"  NT labels changed: {(nt != nt_cell).sum():,}")
+    print(f"  NT unknowns filled: {((nt_cell == '') & (nt != '')).sum():,}")
+    for t in ("L1", "L2", "L3", "Mi1", "T4a"):
+        print(f"  {t} consensus: {NT.get(consensus.get(t), 'unknown')}")
     sign = nt.map(SIGN).fillna(0).to_numpy(dtype=np.float32)
     nt_str = nt.map(NT).fillna("unknown").to_numpy().astype("U24")
 
@@ -78,6 +92,7 @@ def main():
         data=W.data, indices=W.indices, indptr=W.indptr, shape=W.shape,
         bodies=bodies, sign=sign, types=types, superclass=superclass,
         subclass=subclass, receptor=np.full(n, ""), fru=np.full(n, ""), nt=nt_str,
+        nt_cell=nt_cell.map(NT).fillna("unknown").to_numpy().astype("U24"),
         hex1=hex1, hex2=hex2, has_hex=has_hex, soma_side=soma_side,
         soma=soma, eye=np.array([eye]),
     )
