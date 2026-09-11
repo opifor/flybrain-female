@@ -1,4 +1,5 @@
 """Build a signed sparse graph from the FlyWire FAFB v783 CSV exports."""
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,10 @@ BUILD = ROOT / "build"
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    # On 8 real frames at 3 cursor positions, 0.6 reduced DN ceiling saturation to 0.04.
+    ap.add_argument("--exc-scale", type=float, default=0.6)
+    args = ap.parse_args()
     print("loading annotations ...")
     ann = pd.read_csv(DATA / "classification.csv.gz", keep_default_na=False)
     bodies = ann.root_id.to_numpy()
@@ -86,6 +91,7 @@ def main():
         print(f"  DN side {side or 'unspecified'}: {((superclass == 'descending') & (soma_side == side)).sum():,}")
     print(f"  proboscis motor neurons: {(subclass == 'proboscis_motor_neuron').sum():,}")
     print(f"  eye hemisphere: {eye}")
+    print(f"  exc_scale: {args.exc_scale}")
     BUILD.mkdir(exist_ok=True)
     np.savez_compressed(
         BUILD / "graph_female.npz",
@@ -94,7 +100,7 @@ def main():
         subclass=subclass, receptor=np.full(n, ""), fru=np.full(n, ""), nt=nt_str,
         nt_cell=nt_cell.map(NT).fillna("unknown").to_numpy().astype("U24"),
         hex1=hex1, hex2=hex2, has_hex=has_hex, soma_side=soma_side,
-        soma=soma, eye=np.array([eye]),
+        soma=soma, eye=np.array([eye]), exc_scale=np.float32(args.exc_scale),
     )
     print(f"wrote {BUILD / 'graph_female.npz'}")
 

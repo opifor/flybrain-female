@@ -81,6 +81,9 @@ class FlyBrain:
         self.indptr = self.W.indptr
         self.indices = self.W.indices
         self.wdata = self.W.data.astype(np.float32)
+        self.exc_scale = float(z["exc_scale"]) if "exc_scale" in z.files else 1.0
+        if self.exc_scale != 1.0:
+            self.wdata[self.wdata > 0] *= self.exc_scale
 
         self.n = W.shape[0]
         self.bodies = z["bodies"]

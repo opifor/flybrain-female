@@ -15,7 +15,7 @@ def sweep(path, frames, steps, seed, trained=False):
     fb = FlyBrain(path)
     pilot = FlyPilot(fb, sim_steps=steps)
     gains, tag = load_gains(fb)
-    print(f"Graph: {path.name}; gains: {tag}", flush=True)
+    print(f"Graph: {path.name}; gains: {tag}; exc x{fb.exc_scale:.2f}", flush=True)
     print("max_hz DNa02_mean DNa02_max ceiling_frac dx_nonzero mean_abs_dx fwd_mean back_mean",
           flush=True)
     rows = []
