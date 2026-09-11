@@ -24,3 +24,5 @@ __pycache__/
 # the relay worker: local dev state and installed tools
 site/relay/.wrangler/
 site/relay/node_modules/
+.wrangler/
+site/.wrangler/
