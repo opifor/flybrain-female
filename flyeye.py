@@ -25,6 +25,7 @@ class FlyEye:
             has = ~(np.isnan(h1.astype(float)) | np.isnan(h2.astype(float)))
 
         self.fb = fb
+        self.max_hz = float(getattr(fb, "drive_hz", 180.0))
         types = fb.types
         # L1 = ON pathway input, L2 = OFF pathway input (both postsynaptic to R1-R6)
         self.on_mask = has & (types == "L1")
@@ -55,7 +56,7 @@ class FlyEye:
         v = (y - self.y0) / (self.y1 - self.y0 + 1e-9)
         return np.clip(u, 0, 1), np.clip(v, 0, 1)
 
-    def look(self, img, cx, cy, fov_w=300, fov_h=210, max_hz=180.0):
+    def look(self, img, cx, cy, fov_w=300, fov_h=210, max_hz=None):
         """
         Sample the page around the cursor and return per-neuron drive rates.
         The fly's gaze follows its own cursor, so the view is egocentric.
@@ -65,6 +66,8 @@ class FlyEye:
         the fly moves, and there is no positional signal to learn from. A tight
         window makes what the fly sees depend on where it is.
         """
+        if max_hz is None:
+            max_hz = self.max_hz
         H, W = img.shape
 
         def sample(uv):

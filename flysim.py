@@ -38,6 +38,7 @@ class FlyBrain:
             graph_path = load_env().get("FLY_GRAPH", BUILD / "graph.npz")
         self.graph_path = Path(graph_path).resolve()
         z = np.load(self.graph_path, allow_pickle=False)
+        self.drive_hz = float(z["drive_hz"]) if "drive_hz" in z.files else 180.0
         W = sp.csr_matrix(
             (z["data"], z["indices"], z["indptr"]), shape=tuple(z["shape"])
         )
