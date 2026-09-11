@@ -385,7 +385,7 @@ Two flags gate everything, both in `.env`, both off by default:
 
 ## Fork it
 
-The female FlyWire FAFB v783 brain is also supported. Download the CC-BY exports from codex.flywire.ai with a free account, follow its citation guidelines, and put the eight CSV.gz files in data/female/. FlyWire's filtered connections keep at least 5 synapses; the male build keeps at least 3. Run `python build_graph_female.py`, then set `FLY_GRAPH=build/graph_female.npz` in `.env` or load it directly with `FlyBrain("build/graph_female.npz")`. The female build scales excitatory weights by 0.6 because at 1.0 its descending neurons sit at the rate ceiling on real pages; the number is stored in the graph file and printed by `compare.py`.
+The female FlyWire FAFB v783 brain is also supported. Download the CC-BY exports from codex.flywire.ai with a free account, follow its citation guidelines, and put the eight CSV.gz files in data/female/. FlyWire's filtered connections keep at least 5 synapses; the male build keeps at least 3. Run `python build_graph_female.py`, then set `FLY_GRAPH=build/graph_female.npz` in `.env` or load it directly with `FlyBrain("build/graph_female.npz")`. The female build scales excitatory weights by 0.6 because at 1.0 its descending neurons sit at the rate ceiling on real pages; the number is stored in the graph file and printed by `compare.py`, as is `click_hz` (150 Hz) because its stop neuron runs cooler.
 
 ```bash
 git clone https://github.com/fruitflydev/flycoinrh

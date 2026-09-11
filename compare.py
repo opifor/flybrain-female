@@ -20,7 +20,8 @@ def compare_graph(path, img, steps, seed, trained_types=None):
     eye = pilot.eye
     rows = [("Neurons", str(fb.n)), ("Edges", str(fb.W.nnz)),
             ("L1/L2 with hex", f"{len(eye.on_idx)} / {len(eye.off_idx)}"),
-            ("Gains", f"{tag}; exc x{fb.exc_scale:.2f}")]
+            ("Gains", f"{tag}; exc x{fb.exc_scale:.2f}"),
+            ("click_hz", f"{pilot.click_hz:g}")]
     for name, uv in (("ON", eye.on_uv), ("OFF", eye.off_uv)):
         u, v = uv
         rows.append((f"Eye {name} columns", str(len(u))))

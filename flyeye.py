@@ -100,7 +100,7 @@ class FlyPilot:
         self.fb = fb
         self.eye = eye or FlyEye(fb)
         self.sim_steps = sim_steps
-        self.click_hz = click_hz
+        self.click_hz = fb.click_hz if click_hz == 330.0 and fb.click_hz is not None else click_hz
 
         if fb.soma_side is not None:
             side = fb.soma_side

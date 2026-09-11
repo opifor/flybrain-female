@@ -19,6 +19,8 @@ def main():
     ap = argparse.ArgumentParser()
     # On 8 real frames at 3 cursor positions, 0.6 reduced DN ceiling saturation to 0.04.
     ap.add_argument("--exc-scale", type=float, default=0.6)
+    # Cooler DNp09 (mean 103 Hz, max 167) gave 13/48 clicks at 150 Hz, 0/48 at 330 (male 3/48, mean 172 Hz).
+    ap.add_argument("--click-hz", type=float, default=150)
     args = ap.parse_args()
     print("loading annotations ...")
     ann = pd.read_csv(DATA / "classification.csv.gz", keep_default_na=False)
@@ -92,6 +94,7 @@ def main():
     print(f"  proboscis motor neurons: {(subclass == 'proboscis_motor_neuron').sum():,}")
     print(f"  eye hemisphere: {eye}")
     print(f"  exc_scale: {args.exc_scale}")
+    print(f"  click_hz: {args.click_hz:g}")
     BUILD.mkdir(exist_ok=True)
     np.savez_compressed(
         BUILD / "graph_female.npz",
@@ -101,6 +104,7 @@ def main():
         nt_cell=nt_cell.map(NT).fillna("unknown").to_numpy().astype("U24"),
         hex1=hex1, hex2=hex2, has_hex=has_hex, soma_side=soma_side,
         soma=soma, eye=np.array([eye]), exc_scale=np.float32(args.exc_scale),
+        click_hz=np.float32(args.click_hz),
     )
     print(f"wrote {BUILD / 'graph_female.npz'}")
 
