@@ -261,6 +261,13 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   text-overflow:ellipsis;color:var(--ink)}
 .lcount{color:var(--ink-faint);font-variant-numeric:tabular-nums;text-align:right}
 .lcount b{font-weight:400;color:var(--ink-dim)}
+/* the sound control sits on the header row; the slider only exists while on */
+.lsnd{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+#snd{background:none;border:0;padding:0;cursor:pointer;font:inherit;
+  letter-spacing:.06em;color:var(--ink-faint);border-bottom:1px dotted var(--ink-faint)}
+#snd:hover,#snd.on{color:var(--cyan);border-bottom-color:var(--cyan)}
+#vol{width:72px;height:2px;margin:0;accent-color:var(--cyan)}
+#vol[hidden]{display:none}
 
 .lstage{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden;
   border:1px solid var(--cyan)}
@@ -335,6 +342,11 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   border:1px solid var(--line)}
 .tvismeta{display:grid;gap:8px}
 .dnote{font-size:11px;color:var(--ink-faint);margin-top:10px;line-height:1.55}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chips span{font-size:10.5px;letter-spacing:.04em;padding:3px 8px;border:1px solid var(--line);
+  color:var(--ink-dim);background:var(--ground)}
+/* the second row is a silhouette of additions that are not decided yet */
+.chips.next{margin-top:6px;filter:blur(3px);opacity:.55;pointer-events:none}
 
 /* ---------- the rig ---------- */
 /* The side column is taller than a 16:10 screenshot, and a stretched grid row
@@ -498,6 +510,10 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
           <span class="lage" id="r-age" title="how old the frame on screen is, by the relay clock"></span>
         </div>
         <div class="lcount"><b id="r-hops">&mdash;</b> pages &middot; <b id="r-clicks">&mdash;</b> clicks &middot; <b id="r-scrolled">&mdash;</b> scrolls &middot; <b id="r-steps">&mdash;</b> brain steps &middot; <b id="r-vetoes">&mdash;</b> vetoed</div>
+        <div class="lsnd">
+          <button id="snd" type="button" aria-pressed="false">sound</button>
+          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.5" aria-label="volume" hidden>
+        </div>
       </div>
 
       <div class="lstage">
@@ -518,12 +534,12 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
         <div class="lcard lsteer">
           <div class="lk">Steering</div>
           <div id="n-steer" class="tbars"></div>
-          <p class="lsay">Left minus right is where the cursor goes.</p>
+          <p class="lsay">Left minus right is where the cursor goes; up against down is how she scrolls.</p>
         </div>
         <div class="lcard">
           <div class="lk">What she just did</div>
           <div id="r-events" class="tlog"></div>
-          <p class="lsay">Every click is checked before it lands and refused if it looks like a submit, a sign-in or a purchase.</p>
+          <p class="lsay">Every click is checked before it lands and refused if it looks like a submit, a sign-in or a purchase (for now).</p>
         </div>
       </div>
 
@@ -572,6 +588,12 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
             <div><div class="tql">punishments</div><div class="tqv" id="l-pun">&mdash;</div></div>
           </div>
           <div class="dnote">KC to MBON synapses under dopamine. Depression only &mdash; that is the rule a fly actually uses.</div>
+        </div>
+        <div class="dblk">
+          <div class="lk">Where she may go</div>
+          <div class="chips"><span>codex.flywire.ai</span><span>en.wikipedia.org</span><span>commons.wikimedia.org</span><span>arxiv.org</span><span>biorxiv.org</span><span>janelia.org</span><span>gutenberg.org</span><span>ponsfamily.com</span><span>robinhoodchain.blockscout.com</span><span>femaleflybrain.com</span></div>
+          <div class="chips next" aria-hidden="true"><span>more to come</span><span>and more</span><span>soon</span><span>later</span><span>one day</span></div>
+          <p class="lsay" style="margin-top:10px">The list grows as she proves she can be trusted with more.</p>
         </div>
       </div>
     </div>
@@ -1144,7 +1166,7 @@ rdraw();
 
 /* the DNa02 pair is the steering card; the other descending neurons fold
    into the details, all six share one map so the readout loop is unchanged */
-const STEER_ROWS = [['steer_L','left'],['steer_R','right']];
+const STEER_ROWS = [['steer_L','left'],['steer_R','right'],['up','up'],['down','down']];
 const DN_ROWS = [['fwd_L','DNa01 L'],['fwd_R','DNa01 R'],
                  ['back','MDN'],['stop','DNp09']];
 const OUT_ROWS = [['turn_l','turn L'],['turn_r','turn R'],['forward','forward'],
@@ -1235,8 +1257,11 @@ function renderState(d){
     $$('n-mv').textContent = n.mean_mv + ' mV';
     $$('n-vis').textContent = nf0(n.visual);
     $$('n-mot').textContent = nf0(n.motor);
+    // up is the DNa01 pair walking forward (up the page), down is MDN walking back
+    const dn = n.dn || {};
+    const dnv = {...dn, up: ((dn.fwd_L || 0) + (dn.fwd_R || 0)) / 2, down: dn.back || 0};
     for (const k in dnBars){
-      const v = (n.dn && n.dn[k]) || 0;
+      const v = dnv[k] || 0;
       dnBars[k].v.textContent = v.toFixed(0);
       dnBars[k].f.style.width = Math.min(100, v/4.5) + '%';
     }
@@ -1278,7 +1303,9 @@ function renderState(d){
       row.appendChild(b); row.appendChild(sp2);
       host.appendChild(row);
     }
+    fxEvents(d.events);
   }
+  fxState(d);
 }
 
 /* The details area is folded by default so the panel reads at a glance; the
@@ -1296,6 +1323,7 @@ function renderState(d){
 
 function goOffline(){
   roamOn = false; points = []; cols = []; hist = [];
+  fxOffline();
   $$('r-img').removeAttribute('src');
   $$('r-off').hidden = false;
   $$('t-live').classList.remove('on');
@@ -1393,6 +1421,127 @@ async function relayTick(){
   } catch (e) { goOffline(); }
   setTimeout(relayTick, document.visibilityState === 'hidden' ? 5000 : 1000);
 }
+
+/* ---- sound ----------------------------------------------------------------
+   Off until asked: browsers refuse audio before a gesture, and silence is the
+   right default. Nothing is built until the first click. Everything below is
+   driven by the same state the panel renders, so there is no second clock. */
+const fx = window.__fx = {ctx: null, master: null, on: false, plucks: 0, updates: 0};
+const sndBtn = $$('snd'), volIn = $$('vol');
+let fxVol = 0.5, fxScrolled = null, fxUrl = null, fxEvKey = null;
+try { const v = parseFloat(localStorage.getItem('fly-vol')); if (v >= 0 && v <= 1) fxVol = v; } catch (e) {}
+volIn.value = fxVol;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function soundOn(){
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const master = ctx.createGain(); master.gain.value = 0;
+  const pan = ctx.createStereoPanner();
+  const tone = ctx.createGain();                       // taken down when the fly is between runs
+  const trem = ctx.createGain(); trem.gain.value = 0.7;
+  const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 200; filt.Q.value = 2;
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 0.5;
+  const lfoG = ctx.createGain(); lfoG.gain.value = 0.3;
+  lfo.connect(lfoG).connect(trem.gain); lfo.start();
+  for (const [type, det] of [['sine', -6], ['triangle', 6]]){
+    const o = ctx.createOscillator(); o.type = type; o.frequency.value = 110; o.detune.value = det;
+    o.connect(filt); o.start();
+  }
+  filt.connect(trem).connect(tone).connect(pan).connect(master).connect(ctx.destination);
+  // one second of noise, reused for every scroll swell
+  const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const ch = noise.getChannelData(0);
+  for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+  Object.assign(fx, {ctx, master, pan, tone, filt, lfo, noise});
+}
+
+function fxPing(freq, dur, level, at){
+  if (!fx.on) return;
+  const {ctx, master} = fx, t = ctx.currentTime + (at || 0);
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(level, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g).connect(master);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+
+function fxSwell(){
+  if (!fx.on) return;
+  const {ctx, master, noise} = fx, t = ctx.currentTime;
+  const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+  src.buffer = noise; bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.2;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.06, t + 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+  src.connect(bp).connect(g).connect(master);
+  src.start(t); src.stop(t + 0.3);
+}
+
+function fxState(d){
+  const wasUrl = fxUrl, wasScrolled = fxScrolled;
+  fxUrl = d.url || fxUrl; fxScrolled = d.scrolled;
+  if (!fx.on) return;
+  fx.updates++;
+  const {ctx, filt, lfo, pan, tone} = fx, t = ctx.currentTime, n = d.neural || {};
+  const f = clamp((n.firing || 0) / 8000, 0, 1);
+  filt.frequency.setTargetAtTime(200 + 2200 * f, t, 0.4);
+  lfo.frequency.setTargetAtTime(0.5 + 5.5 * f, t, 0.4);
+  const dn = n.dn || {};
+  pan.pan.setTargetAtTime(clamp(((dn.steer_R || 0) - (dn.steer_L || 0)) / 300, -0.8, 0.8), t, 0.4);
+  tone.gain.setTargetAtTime(1, t, 0.3);
+  if (wasScrolled != null && d.scrolled > wasScrolled) fxSwell();
+  if (wasUrl && d.url && d.url !== wasUrl){ fxPing(440, 0.14, 0.05); fxPing(660, 0.18, 0.05, 0.11); }
+}
+
+/* The relay sends the whole recent event list; only the lines after the last
+   one already heard are new. The key is tracked while sound is off too, so
+   turning it on does not replay the backlog. */
+function fxEvents(list){
+  let i = fxEvKey ? list.length : 0;
+  while (i > 0 && list[i - 1].t + list[i - 1].m !== fxEvKey) i--;
+  const fresh = fxEvKey ? list.slice(i) : list;
+  if (list.length) fxEvKey = list[list.length - 1].t + list[list.length - 1].m;
+  for (const e of fresh){
+    if (/did not click/.test(e.m)) fxPing(220, 0.12, 0.06);
+    else if (/click on|clicked/.test(e.m)){ fx.plucks++; fxPing(880, 0.09, 0.05); }
+  }
+}
+
+function fxOffline(){
+  if (!fx.ctx) return;
+  const t = fx.ctx.currentTime;
+  fx.tone.gain.cancelScheduledValues(t);
+  fx.tone.gain.setValueAtTime(fx.tone.gain.value, t);
+  fx.tone.gain.linearRampToValueAtTime(0, t + 1);
+}
+
+function fxRamp(level, secs){
+  const g = fx.master.gain, t = fx.ctx.currentTime;
+  g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+  g.linearRampToValueAtTime(level, t + secs);
+}
+
+sndBtn.addEventListener('click', function(){
+  if (!fx.ctx) soundOn();
+  fx.on = !fx.on;
+  sndBtn.textContent = fx.on ? 'sound on' : 'sound';
+  sndBtn.classList.toggle('on', fx.on);
+  sndBtn.setAttribute('aria-pressed', String(fx.on));
+  volIn.hidden = !fx.on;
+  if (fx.on) fx.ctx.resume().then(() => fxRamp(fxVol * 0.25, 0.6));
+  else { fxRamp(0, 0.4); setTimeout(() => { if (!fx.on) fx.ctx.suspend(); }, 450); }
+});
+volIn.addEventListener('input', function(){
+  fxVol = parseFloat(volIn.value);
+  try { localStorage.setItem('fly-vol', String(fxVol)); } catch (e) {}
+  if (fx.on) fxRamp(fxVol * 0.25, 0.15);
+});
+document.addEventListener('visibilitychange', function(){
+  if (!fx.ctx) return;
+  if (document.visibilityState === 'hidden') fx.ctx.suspend();
+  else if (fx.on) fx.ctx.resume();
+});
 
 if (RELAY) relayTick();
 else { roamTick(); setInterval(roamTick, 15000); }
