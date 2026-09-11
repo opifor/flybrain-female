@@ -146,12 +146,16 @@ Nothing on that page is decoration. `flysim` reports it:
 `FlyPilot.step(detail=True)` returns the extra readout as a fifth value, so
 every existing caller still unpacks four and is unaffected.
 
-The site itself is in `site/` — a static page on Vercel plus one serverless
-function that proxies the chain, because the public Robinhood node
-intermittently answers `Access-Control-Allow-Origin: *,*`, which browsers
-refuse. The relay is at
-[live.femaleflybrain.com](https://live.femaleflybrain.com), so nothing about
-the feed needs the machine it runs on to be reachable.
+The site itself is in `site/` — a Cloudflare Worker serving the static page
+and answering `/api/state` from the chain on the edge, because the public
+Robinhood node intermittently answers `Access-Control-Allow-Origin: *,*`,
+which browsers refuse. The relay in `site/relay/` is a second Worker with a
+Durable Object: the rig posts one state and one frame to it, viewers read
+them from the edge cache, and nothing about the feed needs the machine she
+runs on to be reachable. It lives at
+[live.femaleflybrain.com](https://live.femaleflybrain.com). The Vercel and
+Railway files under `site/` are the upstream deployment paths, kept so the
+male rig's instructions still hold.
 
 ## Why Robinhood Chain
 
@@ -314,8 +318,8 @@ behind an `x.com/` prefix; Telegram sits next to it as `community`. Neither has
 a name or an id, so the placeholder is the only stable handle on them. It is
 typed like every other field and set by `FLY_RH_X`, which here is `opifor`.
 
-> The shipped default is `elonmusk`, a **test value** that has only ever been
-> typed in dry runs. Putting a real person's handle on a live token presents
+> The shipped default is empty, and an empty `FLY_RH_X` leaves the field
+> alone. Putting a real person's handle on a live token presents
 > that token as theirs, which is impersonation and gets both the token and the
 > creator wallet flagged. Set `FLY_RH_X` to something you own before any live
 > launch, or clear it.
