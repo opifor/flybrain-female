@@ -331,7 +331,7 @@ estimateGas     21000 units
 **The connectome.** CC-BY, from a public bucket, no account and no key:
 
 ```
-https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/
+https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/
   body-annotations-male-cns-v1.0-minconf-0.5.feather      14 MB
   body-neurotransmitters-male-cns-v1.0.feather            42 MB
   connectome-weights-male-cns-v1.0-minconf-0.5.feather   1.1 GB

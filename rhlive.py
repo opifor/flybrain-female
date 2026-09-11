@@ -582,6 +582,9 @@ async def run_episode(ws, coin, steps, seed, headful):
     gains = None
     tag = "untrained (anatomy only)"
     p = ROOT / "build" / "gains_ui.npz"
+    if not p.exists():
+        # the trained gains ship in assets/; build/ is gitignored
+        p = ROOT / "assets" / "gains_ui.npz"
     if p.exists():
         z = np.load(p, allow_pickle=False)
         gains = np.ones(fb.n_types, dtype=np.float32)

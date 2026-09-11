@@ -17,3 +17,6 @@ __pycache__/
 
 # trained gains are small and reproducible, but they ARE a result - keep them
 !build/gains_ui.npz
+
+# local virtualenv
+.venv/
