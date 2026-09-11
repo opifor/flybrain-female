@@ -401,6 +401,8 @@ cp .env.example .env         # then set FLY_ALLOW_BROWSER=1
 py roam.py                   # http://localhost:4660
 ```
 
+The site uses `FLY_TOKEN`, `FLY_WALLET`, `FLY_TOKEN_BLOCK`, `FLY_PAIR`, `FLY_TAX_PCT` and `FLY_LIVE_REPO`, and says "not launched yet" until `FLY_TOKEN` is set.
+
 MIT for the code. The connectome is **not ours to license** and stays CC-BY
 wherever it goes — keep the attribution, it is the whole reason any of this is
 real.

@@ -9,9 +9,9 @@
 // It reads. There is no key here and no method in the allowlist that writes.
 
 const RPC = process.env.FLY_RH_RPC || 'https://rpc.mainnet.chain.robinhood.com';
-const TOKEN = (process.env.FLY_TOKEN || '0x4eb990547bce4a982432ca88cf5fae7eed1a2d35').toLowerCase();
-const WALLET = process.env.FLY_WALLET || '0x6ce4085EfB52a6eBDb7d6989beb8860847f4b42A';
-const BIRTH = process.env.FLY_TOKEN_BLOCK || '0x38DA606';
+const TOKEN = (process.env.FLY_TOKEN || '').toLowerCase();
+const WALLET = process.env.FLY_WALLET || '';
+const BIRTH = process.env.FLY_TOKEN_BLOCK || '0x0';
 const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const FEE_ETH = 0.00055;
 
@@ -57,6 +57,12 @@ async function holders() {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=60');
   try {
+    if (!TOKEN) {
+      const blk = await rpc('eth_blockNumber', []);
+      res.status(200).json({ ok: true, launched: false, block: int(blk),
+        updated: Math.floor(Date.now() / 1000) });
+      return;
+    }
     const [blk, sup, sym, bal] = await Promise.all([
       rpc('eth_blockNumber', []),
       rpc('eth_call', [{ to: TOKEN, data: '0x18160ddd' }, 'latest']),
@@ -67,6 +73,7 @@ export default async function handler(req, res) {
     const eth = int(bal) / 1e18;
     res.status(200).json({
       ok: true,
+      launched: true,
       block: int(blk),
       budget_eth: eth,
       launches_left: Math.floor(eth / FEE_ETH),
@@ -76,8 +83,8 @@ export default async function handler(req, res) {
         supply: Number(BigInt(sup)) / 1e18,
         holders: h.holders,
         transfers: h.transfers,
-        pair: 'GOOGL',
-        creator_tax_pct: 1,
+        pair: process.env.FLY_PAIR || 'GOOGL',
+        creator_tax_pct: Number(process.env.FLY_TAX_PCT || 2),
       },
       updated: Math.floor(Date.now() / 1000),
     });

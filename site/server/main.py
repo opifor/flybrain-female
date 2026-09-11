@@ -18,16 +18,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 RPC = os.environ.get("FLY_RH_RPC", "https://rpc.mainnet.chain.robinhood.com")
 CHAIN_ID = 4663
-WALLET = os.environ.get("FLY_WALLET",
-                        "0x6ce4085EfB52a6eBDb7d6989beb8860847f4b42A")
-TOKEN = os.environ.get("FLY_TOKEN",
-                       "0x4eb990547bce4a982432ca88cf5fae7eed1a2d35")
-# the wallet that made the first eight launches, still the fee recipient there
-WALLET_V1 = os.environ.get("FLY_WALLET_V1",
-                           "0x739Ccc9dd8Ed6412F00782927dbd087c4e72bFc3")
+WALLET = os.environ.get("FLY_WALLET", "")
+TOKEN = os.environ.get("FLY_TOKEN", "")
+WALLET_V1 = os.environ.get("FLY_WALLET_V1", "")
 # the block the token was launched in - scanning logs from 0 gets the public
 # node to answer 429, and there is nothing to find before this anyway
-BIRTH_BLOCK = int(os.environ.get("FLY_TOKEN_BLOCK", "59614342"))
+BIRTH_BLOCK = int(os.environ.get("FLY_TOKEN_BLOCK", "0"), 0)
 
 TRANSFER = ("0xddf252ad1be2c89b69c2b068fc378daa"
             "952ba7f163c4a11628f55a4df523b3ef")
@@ -112,13 +108,18 @@ def state():
         return _cache["data"]
 
     out = {"chain": {"name": "Robinhood Chain", "id": CHAIN_ID, "rpc": RPC},
-           "ok": True, "error": None}
+           "ok": True, "launched": bool(TOKEN), "error": None}
     try:
         out["chain"]["block"] = as_int(rpc("eth_blockNumber", []))
+        if not TOKEN:
+            out = {"ok": True, "launched": False,
+                   "block": out["chain"]["block"], "updated": int(now)}
+            _cache.update(at=now, data=out)
+            return out
         out["chain"]["gas_gwei"] = round(as_int(rpc("eth_gasPrice", [])) / 1e9, 4)
 
         bal = as_int(rpc("eth_getBalance", [WALLET, "latest"]))
-        old = as_int(rpc("eth_getBalance", [WALLET_V1, "latest"]))
+        old = as_int(rpc("eth_getBalance", [WALLET_V1, "latest"])) if WALLET_V1 else 0
         out["wallet"] = {
             "address": WALLET, "eth": bal / 1e18,
             "launches_left": int(bal / 1e18 / 0.00055),
@@ -135,8 +136,8 @@ def state():
             "supply": sup / 1e18,
             "addresses_touched": h,
             "transfers": transfers,
-            "pair": "GOOGL",
-            "creator_tax_pct": 1,
+            "pair": os.environ.get("FLY_PAIR", "GOOGL"),
+            "creator_tax_pct": float(os.environ.get("FLY_TAX_PCT", "2")),
             "url": f"https://www.ponsfamily.com/launchpad/{TOKEN}",
         }
     except Exception as exc:

@@ -198,7 +198,7 @@ def start_tunnel(port):
     threading.Thread(target=watch, daemon=True).start()
 
 
-LIVE_REPO = "fruitflydev/flycoinrh"
+LIVE_REPO = load_env().get("FLY_LIVE_REPO", "opifor/flybrain-female")
 LIVE_PATH = "site/web/live.json"
 _addr = {"url": None, "at": 0.0}
 

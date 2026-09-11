@@ -705,8 +705,6 @@ draw();
    current holders.
 --------------------------------------------------------------------------- */
 const RPC     = 'https://rpc.mainnet.chain.robinhood.com';
-const TOKEN   = '0x4eb990547bce4a982432ca88cf5fae7eed1a2d35';
-const BIRTH   = '0x38DA606';        // the block the token launched in
 const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const FEE_ETH = 0.00055;
 
@@ -734,12 +732,21 @@ function abiString(x){
 function render(d){
   $('blk').textContent = 'block ' + nf(d.block);
   const t = d.token;
-  $('t-ca').textContent = t.address;
-  $('t-pair').textContent = t.pair;
-  $('t-tax').textContent = t.creator_tax_pct.toFixed(2) + ' %';
-  $('t-sup').textContent = nf(t.supply) + ' ' + t.symbol;
-  $('t-link').href = 'https://www.ponsfamily.com/launchpad/' + t.address;
-  $('f-scan').href = 'https://robinhoodchain.blockscout.com/token/' + t.address;
+  const launched = d.launched !== false && !!t;
+  $('ca-text').textContent = launched ? t.address : 'not launched yet';
+  $('ca-copy').disabled = !launched;
+  if (launched) {
+    $('t-ca').textContent = t.address;
+    $('t-pair').textContent = t.pair;
+    $('t-tax').textContent = t.creator_tax_pct.toFixed(2) + ' %';
+    $('t-sup').textContent = nf(t.supply) + ' ' + t.symbol;
+    $('t-link').href = 'https://www.ponsfamily.com/launchpad/' + t.address;
+    if ($('f-scan')) $('f-scan').href = 'https://robinhoodchain.blockscout.com/token/' + t.address;
+  } else {
+    for (const id of ['t-ca', 't-pair', 't-tax', 't-sup']) $(id).textContent = '\u2014';
+    $('t-link').href = 'https://www.ponsfamily.com/launchpad';
+    if ($('f-scan')) $('f-scan').href = 'https://robinhoodchain.blockscout.com/';
+  }
   $('upd').textContent = new Date().toISOString().slice(11,19) + ' UTC';
   $('pip').classList.remove('stale');
   $('pip-t').textContent = 'read from Robinhood Chain';
@@ -755,16 +762,8 @@ async function readChain(){
     if (d && d.ok) { render(d); return; }
   } catch (e) { /* fall through */ }
 
-  // token facts only - the fly's wallet address lives in the proxy, not here
-  const [blk, sup, sym] = await Promise.all([
-    rpc('eth_blockNumber', []),
-    rpc('eth_call', [{to:TOKEN, data:'0x18160ddd'}, 'latest']),
-    rpc('eth_call', [{to:TOKEN, data:'0x95d89b41'}, 'latest']),
-  ]);
-  render({block:int(blk), budget_eth:null,
-          token:{address:TOKEN, symbol:abiString(sym),
-                 supply:Number(BigInt(sup))/1e18, holders:null,
-                 transfers:null, pair:'GOOGL', creator_tax_pct:1}});
+  const blk = await rpc('eth_blockNumber', []);
+  render({block:int(blk), launched:false});
 }
 
 async function tick(){
@@ -783,14 +782,18 @@ async function tick(){
   const btn = document.getElementById('ca-copy');
   const lab = document.getElementById('ca-copy-t');
   const live = document.getElementById('ca-live');
-  document.getElementById('ca-text').textContent = TOKEN;
+  document.getElementById('ca-text').textContent = 'not launched yet';
+  btn.disabled = true;
+  for (const id of ['t-ca', 't-pair', 't-tax', 't-sup']) $(id).textContent = '\u2014';
   let timer = null;
   btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    const address = document.getElementById('ca-text').textContent;
     let ok = true;
-    try { await navigator.clipboard.writeText(TOKEN); }
+    try { await navigator.clipboard.writeText(address); }
     catch (e) {
       const ta = document.createElement('textarea');
-      ta.value = TOKEN; ta.setAttribute('readonly','');
+      ta.value = address; ta.setAttribute('readonly','');
       ta.style.position = 'fixed'; ta.style.opacity = '0';
       document.body.appendChild(ta); ta.select();
       try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
@@ -1047,7 +1050,7 @@ async function findStream(){
     /* Read from the repo, not from this deployment: the fly writes the
        address there and this page is only redeployed when someone deploys
        it. The minute-keyed query keeps the CDN copy from going stale. */
-    const src = 'https://raw.githubusercontent.com/fruitflydev/flycoinrh/main/site/web/live.json';
+    const src = 'https://raw.githubusercontent.com/opifor/flybrain-female/main/site/web/live.json';
     const r = await fetch(src + '?t=' + Math.floor(Date.now()/60000));
     if (!r.ok) return null;
     const d = await r.json();
