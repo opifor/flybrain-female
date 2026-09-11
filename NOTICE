@@ -1,13 +1,21 @@
-flybrain
-========
+flybrain-female
+===============
 
 The code in this repository is MIT licensed - see LICENSE.
 This licence covers the code in this repository and nothing else.
 
-The connectome is not ours to license. The male Drosophila CNS dataset is
-© HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research,
-released under CC-BY 4.0, and it stays under CC-BY wherever it goes. If you
-fork this, keep that attribution: it is the whole reason any of this is real.
+The connectome is not ours to license. The female Drosophila brain is FlyWire
+FAFB v783, © the FlyWire consortium (Princeton, Cambridge and partners),
+released under CC-BY 4.0, and it stays under CC-BY wherever it goes. Cite
+Dorkenwald et al., Nature 2024 and Schlegel et al., Nature 2024, and follow
+FlyWire's own citation guidelines.
 
-No part of this repository is financial advice, and $FLYBRAIN is an art
-experiment rather than an investment.
+The male Drosophila CNS dataset is © HHMI Janelia FlyEM, the Cambridge
+Connectomics Group and Google Research, released under CC-BY 4.0. That
+attribution stays here because this build still supports the male brain.
+
+If you fork this, keep both attributions: they are the whole reason any of
+this is real.
+
+No part of this repository is financial advice, and $HER is an art experiment
+rather than an investment.
