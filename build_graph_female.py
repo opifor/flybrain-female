@@ -22,7 +22,11 @@ def main():
     ap.add_argument("--exc-scale", type=float, default=0.5)
     # 100 and 120 Hz tie at 5/48 clicks; use the lower stopping threshold.
     ap.add_argument("--click-hz", type=float, default=100)
+    ap.add_argument("--adapt", action=argparse.BooleanOptionalAction, default=False)
+    ap.add_argument("--back-scale", type=float, default=1.0)
     args = ap.parse_args()
+    if not np.isfinite(args.back_scale) or args.back_scale < 0:
+        ap.error("--back-scale must be finite and nonnegative")
     print("loading annotations ...")
     ann = pd.read_csv(DATA / "classification.csv.gz", keep_default_na=False)
     bodies = ann.root_id.to_numpy()
@@ -110,6 +114,7 @@ def main():
         hex1=hex1, hex2=hex2, has_hex=has_hex, soma_side=soma_side,
         soma=soma, eye=np.array([eye]), exc_scale=np.float32(args.exc_scale),
         click_hz=np.float32(args.click_hz),
+        adapt=np.bool_(args.adapt), back_scale=np.float32(args.back_scale),
     )
     print(f"wrote {BUILD / 'graph_female.npz'}")
 

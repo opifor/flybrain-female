@@ -23,7 +23,9 @@ from envcfg import load_env
 BUILD = Path(__file__).parent / "build"
 
 
-def load_gains(fb):
+def load_gains(fb, roam=False):
+    for key, value in getattr(fb, "graph_defaults", {}).items():
+        setattr(fb, key, value)
     stem = fb.graph_path.stem
     roots = (BUILD, BUILD.parent / "assets")
     paths = [root / f"gains_{stem}.npz" for root in roots]
@@ -31,6 +33,8 @@ def load_gains(fb):
         paths += [root / f"gains_{stem[6:]}.npz" for root in roots]
     if stem == "graph":
         paths += [root / "gains_ui.npz" for root in roots]
+    if roam and stem == "graph_female":
+        paths.insert(0, BUILD.parent / "assets" / "gains_female_roam.npz")
     path = next((p for p in paths if p.exists()), None)
     if path is None:
         return None, "untrained (anatomy only)"
@@ -54,7 +58,11 @@ def load_gains(fb):
         gains[codes] = np.exp(theta)
         if not np.isfinite(gains).all():
             return None, "untrained (non-finite gains)"
-        return gains, f"trained ({len(codes)} cell types)"
+        if roam and "graph" in z.files and str(z["graph"]) == stem:
+            for key in ("adapt", "back_scale", "drive_hz", "click_hz"):
+                if key in z.files:
+                    setattr(fb, key, bool(z[key]) if key == "adapt" else float(z[key]))
+        return gains, f"trained ({len(codes)} cell types; {path})"
 
 
 class Params:
@@ -74,6 +82,10 @@ class FlyBrain:
         z = np.load(self.graph_path, allow_pickle=False)
         self.drive_hz = float(z["drive_hz"]) if "drive_hz" in z.files else 180.0
         self.click_hz = float(z["click_hz"]) if "click_hz" in z.files else None
+        self.adapt = bool(z["adapt"]) if "adapt" in z.files else False
+        self.back_scale = float(z["back_scale"]) if "back_scale" in z.files else 1.0
+        self.graph_defaults = dict(adapt=self.adapt, back_scale=self.back_scale,
+                                   drive_hz=self.drive_hz, click_hz=self.click_hz)
         W = sp.csr_matrix(
             (z["data"], z["indices"], z["indptr"]), shape=tuple(z["shape"])
         )

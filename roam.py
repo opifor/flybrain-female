@@ -48,7 +48,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 
-from flysim import FlyBrain
+from flysim import FlyBrain, load_gains
 from envcfg import load_env
 from mushroom import MushroomBody
 from flyeye import FlyPilot
@@ -59,30 +59,33 @@ OUT = ROOT / "build"
 # Link-rich, text-heavy, safe places to be dropped into. The fly leaves them
 # on its own within a few clicks; these only decide where a life starts.
 SEEDS = [
-    # The open internet, chosen for what a real browser can actually render.
-    # Google, X, reddit and archive.org were all tried and all fail: the first
-    # three serve a consent or login wall (Google answers 335 characters of
-    # "unusual traffic"), and archive.org paints nothing at all headless. What
-    # is left is the link-rich, text-heavy web, which is what a retina can work
-    # on anyway.
-    "https://en.wikipedia.org/wiki/Special:Random",
+    # Her world: the dataset she was built from, her own species, the papers
+    # behind the model, and the two places her token life happens. Consent
+    # walls, login walls and search engines were all tried upstream and all
+    # fail headless, so the list stays with pages a retina can work on.
+    "https://codex.flywire.ai/",
     "https://en.wikipedia.org/wiki/Drosophila_melanogaster",
-    "https://commons.wikimedia.org/wiki/Main_Page",
-    "https://en.wikisource.org/wiki/Main_Page",
-    "https://news.ycombinator.com/",
-    "https://www.gutenberg.org/browse/scores/top",
-    "https://openlibrary.org/",
-    "https://xkcd.com/",
+    "https://en.wikipedia.org/wiki/FlyWire",
+    "https://en.wikipedia.org/wiki/Connectome",
+    "https://en.wikipedia.org/wiki/Compound_eye",
+    "https://commons.wikimedia.org/wiki/Category:Drosophila_melanogaster",
+    "https://www.inaturalist.org/taxa/47217-Drosophila",
     "https://arxiv.org/list/q-bio.NC/recent",
-    # and the chain it launched its own token on
-    "https://www.ponsfamily.com/launchpad/explore",
+    "https://www.biorxiv.org/collection/neuroscience",
+    "https://www.janelia.org/project-team/flyem",
+    # her brother, and the chain both of them launch on
     "https://www.ponsfamily.com/launchpad/0x4eb990547bce4a982432ca88cf5fae7eed1a2d35",
+    "https://www.ponsfamily.com/launchpad/explore",
     "https://robinhoodchain.blockscout.com/txs",
+    # herself, watched
+    "https://femaleflybrain.com/",
+    # one book
+    "https://www.gutenberg.org/cache/epub/5200/pg5200-images.html",
 ]
 
 # Checked against every URL the browser tries to commit to.
 BLOCK = re.compile(
-    r"(porn|xxx|adult|nsfw|escort|hentai|onlyfans|camsoda|chaturbate"
+    r"(#/media/|porn|xxx|adult|nsfw|escort|hentai|onlyfans|camsoda|chaturbate"
     r"|casino|bet365|poker|gambl|lottery"
     r"|checkout|/cart|/pay|payment|billing|invoice|subscribe"
     # it roams trading sites now, where every other control is a trade
@@ -99,16 +102,17 @@ BLOCK = re.compile(
 # Wikipedia alone is millions of pages that link everywhere, so this is still a
 # real roam; it is just a roam with a fence.
 ALLOW = {
+    "codex.flywire.ai", "flywire.ai", "www.flywire.ai",
     "en.wikipedia.org", "en.m.wikipedia.org", "commons.wikimedia.org",
-    "en.wikisource.org", "en.wikiquote.org", "en.wikibooks.org",
-    "www.wikidata.org", "species.wikimedia.org",
-    "news.ycombinator.com",
-    "www.gutenberg.org", "gutenberg.org",
-    "openlibrary.org",
-    "xkcd.com", "www.xkcd.com",
+    "species.wikimedia.org", "www.wikidata.org",
+    "www.inaturalist.org", "inaturalist.org",
     "arxiv.org", "www.arxiv.org",
+    "www.biorxiv.org", "biorxiv.org",
+    "www.janelia.org", "janelia.org",
+    "www.gutenberg.org", "gutenberg.org",
     "www.ponsfamily.com", "ponsfamily.com",
     "robinhoodchain.blockscout.com",
+    "femaleflybrain.com", "www.femaleflybrain.com",
 }
 OPEN = load_env().get("FLY_ROAM_OPEN") == "1"
 
@@ -396,9 +400,12 @@ def load_brain():
         say("loading the connectome ...")
         fb = FlyBrain()
         STATE["brain"] = fb
+        STATE["gains"], tag = load_gains(fb, roam=True)
         STATE["pilot"] = FlyPilot(fb, sim_steps=60)
+        say(f"motor gains: {tag}")
         STATE["xy"] = soma_xy(fb)
         STATE["mb"] = MushroomBody(fb)
+        STATE["mb"].store = OUT / f"mb_gains_{fb.graph_path.stem}.npz"
         st = STATE["mb"].stats()
         say(f"brain ready: {len(fb.bodies):,} neurons")
         say(f"mushroom body: {st['synapses']:,} KC->MBON synapses "
@@ -458,10 +465,12 @@ UNDER_JS = """([x, y]) => {
 
 
 def may_click(under):
-    """A click is allowed unless it looks like it commits something."""
+    """Allow links and controls unless they look like a commitment."""
     if not under:
         return False, "nothing there"
     href = under.get("href") or ""
+    if not href and not under.get("control"):
+        return False, "not an interactive target"
     if href and BLOCK.search(href):
         return False, "blocked destination"
     if href and not allowed_host(href):
@@ -608,27 +617,26 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             img = to_gray(raw)
 
             dx, dy, click, hz, info = pilot.step(
-                img, cx, cy, seed=rng.randrange(1 << 30), detail=True)
+                img, cx, cy, gains=STATE["gains"], seed=rng.randrange(1 << 30), detail=True)
             cx = float(np.clip(cx + dx, 8, 1272))
             cy = float(np.clip(cy + dy, 8, 792))
             stats["steps"] += 1
             on_page += 1
 
-            # A fly that walks off the bottom of what it can see should get
-            # more page, not stick to the edge. DNa01 driving down past the
-            # margin scrolls down, MDN driving up scrolls back, and the cursor
-            # is recentred so the walk continues instead of pinning. This is
-            # what makes the view move: without it the page is a still image
-            # with a cursor twitching on it.
+            # Strong walking must move the page before the hop budget erases
+            # vertical progress; weaker walking still scrolls at the edge.
             EDGE = 110
-            if cy > 800 - EDGE and dy > 0:
-                await page.mouse.wheel(0, 300)
-                cy = 800 - EDGE - 140
-                stats["scrolled"] += 1
-            elif cy < EDGE and dy < 0:
-                await page.mouse.wheel(0, -300)
-                cy = EDGE + 140
-                stats["scrolled"] += 1
+            at_edge = (cy > 800 - EDGE and dy > 0) or (cy < EDGE and dy < 0)
+            if at_edge or abs(dy) / 90.0 > 0.15:
+                before_scroll = await page.evaluate("window.scrollY")
+                await page.mouse.wheel(0, float(np.copysign(300, dy)) if at_edge else float(dy))
+                await page.wait_for_timeout(100)
+                after_scroll = await page.evaluate("window.scrollY")
+                if at_edge:
+                    cy = 800 - EDGE - 140 if dy > 0 else EDGE + 140
+                if after_scroll != before_scroll:
+                    stats["scrolled"] += 1
+                    await log("scrolled down" if after_scroll > before_scroll else "scrolled up")
 
             # a sample of the neurons that actually fired, at their measured
             # soma positions - the scatter is a readout, not an animation
@@ -869,8 +877,9 @@ async def begin():
         say("FLY_ALLOW_BROWSER is not 1 - not opening a browser")
         return
 
-    start_tunnel(STATE.get("port", 4660))
-    start_relay()
+    if not STATE.get("local_only"):
+        start_tunnel(STATE.get("port", 4660))
+        start_relay()
 
     async def forever():
         while True:
@@ -892,7 +901,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=4660)
     ap.add_argument("--headful", action="store_true")
+    ap.add_argument("--local-only", action="store_true")
+    ap.add_argument("--output", type=Path, default=OUT)
     a = ap.parse_args()
+    OUT = a.output
+    STATE["local_only"] = a.local_only
+    if a.local_only:
+        BLOB_TOKEN = ""
     STATE["port"] = a.port
     load_brain()
     say(f"the fly roams - open http://localhost:{a.port}")

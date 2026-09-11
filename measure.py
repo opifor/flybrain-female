@@ -1,5 +1,6 @@
 """Measure visual motor responses on real frames and a white screen."""
 import argparse
+import json
 from pathlib import Path
 
 import numpy as np
@@ -11,20 +12,43 @@ from flysim import FlyBrain, load_gains
 ROOT = Path(__file__).parent
 
 
-def measure(fb, frames, steps, seeds, click_hz=None):
+def measure(fb, frames, steps, seeds, click_hz=None, adapt=None, output=None, roam=True,
+            drive_hz=None, back_scale=None):
+    gains, tag = load_gains(fb, roam=roam)
     pilot = FlyPilot(fb, sim_steps=steps)
+    if drive_hz is not None:
+        pilot.eye.max_hz = drive_hz
+    if back_scale is not None:
+        pilot.back_scale = back_scale
+    if adapt is not None:
+        pilot.eye.adapt = adapt
     if click_hz is not None:
         pilot.click_hz = click_hz
-    gains, tag = load_gains(fb)
     samples = []
     for img in frames:
         height, width = img.shape
         for cx in (width / 3, width / 2, 2 * width / 3):
             for seed in seeds:
-                dx, _, click, hz = pilot.step(img, cx, height / 2, gains=gains, seed=seed)
-                samples.append(dict(hz, dx=float(dx), flag=bool(click)))
+                dx, dy, click, hz = pilot.step(img, cx, height / 2, gains=gains, seed=seed)
+                samples.append(dict(hz, dx=float(dx), speed=float(-dy / 90), flag=bool(click)))
     steer = np.array([[s["steer_L"], s["steer_R"]] for s in samples])
     stop = np.array([s["stop"] for s in samples])
+    dx = np.array([s["dx"] for s in samples])
+    speed = np.array([s["speed"] for s in samples])
+    if output is not None:
+        output.write_text(json.dumps(samples), encoding="utf-8")
+    print(json.dumps(dict(adapt=pilot.eye.adapt, drive_hz=pilot.eye.max_hz,
+                          back_scale=pilot.back_scale, click_hz=pilot.click_hz, samples=len(samples),
+                          steer_L=float(steer[:, 0].mean()), steer_R=float(steer[:, 1].mean()),
+                          ceiling_frac=float(np.any(steer >= 400, axis=1).mean()),
+                          dx_nonzero=float(np.mean(dx != 0)), mean_abs_dx=float(np.abs(dx).mean()),
+                          right_share=float(np.mean(dx > 0)),
+                          fwd_L=float(np.mean([s['fwd_L'] for s in samples])),
+                          fwd_R=float(np.mean([s['fwd_R'] for s in samples])),
+                          back=float(np.mean([s['back'] for s in samples])), stop=float(stop.mean()),
+                          speed_positive=float(np.mean(speed > 0.15)),
+                          speed_negative=float(np.mean(speed < -0.15)),
+                          click_frac=float(np.mean([s['flag'] for s in samples])))), flush=True)
     print(f"Graph: {fb.graph_path.name}; gains: {tag}; steps: {steps}; seeds: {seeds}", flush=True)
     print(f"Frames: {len(frames)}; positions: 3; samples: {len(samples)}", flush=True)
     print("exc_scale click_hz DNa02_mean ceiling_frac dx_nonzero DNa01_L DNa01_R DNp09_mean DNp09_max click_frac", flush=True)
@@ -47,7 +71,12 @@ def main():
     ap.add_argument("--graph", type=Path, required=True)
     ap.add_argument("--frames", type=Path, default=ROOT / "data" / "frames")
     ap.add_argument("--steps", type=int, default=60)
-    ap.add_argument("--seeds", type=int, nargs=2, default=(0, 1))
+    ap.add_argument("--seeds", type=int, nargs="+", default=(0, 1, 2, 3))
+    ap.add_argument("--adapt", choices=("on", "off", "graph"), nargs="+", default=("graph",))
+    ap.add_argument("--roam", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument("--drive-hz", type=float, nargs="+")
+    ap.add_argument("--back-scale", type=float)
+    ap.add_argument("--output", type=Path)
     ap.add_argument("--exc-scale", type=float, nargs="+")
     ap.add_argument("--click-hz", type=float, nargs="+")
     args = ap.parse_args()
@@ -66,8 +95,12 @@ def main():
         # Start from the unscaled graph weights to avoid accumulated rounding.
         fb.wdata[positive] = fb.W.data[positive] * scale
         fb.exc_scale = scale
-        for click_hz in args.click_hz or (fb.click_hz,):
-            measure(fb, frames, args.steps, args.seeds, click_hz)
+        for click_hz in args.click_hz or (None,):
+            for adapt in args.adapt:
+                for drive in args.drive_hz or (None,):
+                    measure(fb, frames, args.steps, args.seeds, click_hz,
+                            None if adapt == "graph" else adapt == "on", args.output, args.roam,
+                            drive, args.back_scale)
 
 
 if __name__ == "__main__":

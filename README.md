@@ -386,6 +386,7 @@ Two flags gate everything, both in `.env`, both off by default:
 ## Fork it
 
 The female FlyWire FAFB v783 brain is also supported. Download the CC-BY exports from codex.flywire.ai with a free account, follow its citation guidelines, and put the eight CSV.gz files in data/female/. FlyWire's filtered connections keep at least 5 synapses; the male build keeps at least 3. Run `python build_graph_female.py`, then set `FLY_GRAPH=build/graph_female.npz` in `.env` or load it directly with `FlyBrain("build/graph_female.npz")`. The female build uses both eyes on a shared grid with excitatory scale 0.5 and `click_hz` 100 Hz; these constants are stored in the graph file and printed by `compare.py`.
+The roamer and `measure.py` prefer `assets/gains_female_roam.npz`, whose graph-matched `adapt`, `back_scale`, `drive_hz`, and `click_hz` settings control luminance adaptation and motor balance, while the form rig retains `assets/gains_female.npz` (`measure.py --no-roam` measures that profile).
 
 ```bash
 git clone https://github.com/fruitflydev/flycoinrh

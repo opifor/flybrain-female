@@ -26,6 +26,7 @@ class FlyEye:
 
         self.fb = fb
         self.max_hz = float(getattr(fb, "drive_hz", 180.0))
+        self.adapt = bool(getattr(fb, "adapt", False))
         types = fb.types
         # L1 = ON pathway input, L2 = OFF pathway input (both postsynaptic to R1-R6)
         self.on_mask = has & (types == "L1")
@@ -56,7 +57,7 @@ class FlyEye:
         v = (y - self.y0) / (self.y1 - self.y0 + 1e-9)
         return np.clip(u, 0, 1), np.clip(v, 0, 1)
 
-    def look(self, img, cx, cy, fov_w=300, fov_h=210, max_hz=None):
+    def look(self, img, cx, cy, fov_w=300, fov_h=210, max_hz=None, adapt=True):
         """
         Sample the page around the cursor and return per-neuron drive rates.
         The fly's gaze follows its own cursor, so the view is egocentric.
@@ -78,6 +79,11 @@ class FlyEye:
 
         lum_on = sample(self.on_uv)
         lum_off = sample(self.off_uv)
+        if adapt and self.adapt:
+            mean = float(img.mean())
+            scale = max(mean, 1.0 - mean)
+            lum_on = 0.5 + (lum_on - mean) / (2.0 * scale)
+            lum_off = 0.5 + (lum_off - mean) / (2.0 * scale)
         # L1 carries light increments, L2 light decrements
         return {
             tuple(self.on_idx): np.clip(lum_on, 0, 1) * max_hz,
@@ -100,6 +106,7 @@ class FlyPilot:
         self.fb = fb
         self.eye = eye or FlyEye(fb)
         self.sim_steps = sim_steps
+        self.back_scale = float(getattr(fb, "back_scale", 1.0))
         self.click_hz = fb.click_hz if click_hz == 330.0 and fb.click_hz is not None else click_hz
 
         if fb.soma_side is not None:
@@ -144,7 +151,7 @@ class FlyPilot:
         # steering is the left/right difference; forward drive is the sum
         turn = (hz["steer_R"] - hz["steer_L"]) / 450.0
         fwd = (hz["fwd_L"] + hz["fwd_R"]) / 2.0 / 450.0
-        back = hz["back"] / 450.0
+        back = hz["back"] * self.back_scale / 450.0
         stop = hz["stop"] / 450.0
 
         speed = np.clip(fwd - back, -1, 1) * (1.0 - np.clip(stop, 0, 1))
