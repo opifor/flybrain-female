@@ -20,6 +20,24 @@ Her connectome is FlyWire FAFB v783, the female adult brain reconstructed at
 Princeton and Cambridge with the FlyWire consortium, released CC-BY 4.0
 (Dorkenwald et al., *Nature* 2024; Schlegel et al., *Nature* 2024).
 
+## The story, in 60 seconds
+
+1. **3 Sep 2026.** Google, Janelia and Cambridge publish the first complete
+   wiring diagram of a *male* fruit fly's central nervous system, 165,122
+   neurons ([Google's announcement](https://x.com/NewsFromGoogle/status/2095553014715093022)).
+2. **10 Sep.** [fruitflydev](https://github.com/fruitflydev/flycoinrh) simulates
+   that male brain neuron by neuron, points its retina at a launchpad, and it
+   launches $FLYBRAIN on Robinhood Chain. They publish the code and say: fork it.
+3. **Since 2024.** A *female* fly brain has existed all along: FlyWire FAFB,
+   139,255 neurons, mapped at Princeton and Cambridge and open to anyone
+   ([the dataset](https://codex.flywire.ai/?dataset=fafb)). The male one got
+   the attention.
+4. **11 Sep.** Her brain goes into the same rig. She was blind, then one-eyed,
+   then stubborn; the section *What building her actually took* is that week.
+5. **Tonight.** She reads the launchpad through her own retina, types the
+   ticker herself and launches **$HER** from her own wallet. No dev supply, no
+   initial buy. Watch her at [femaleflybrain.com](https://femaleflybrain.com).
+
 ## What it actually does
 
 Press START and a real Chromium opens ponsfamily.com/launchpad. Its screenshots
