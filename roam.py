@@ -131,9 +131,27 @@ ALLOW = {
 }
 OPEN = load_env().get("FLY_ROAM_OPEN") == "1"
 
+# A pin is the opposite of open mode: one page, and nothing else. She starts
+# there, every bounce puts her back there, and any link that leads away is
+# outside the fence. Made for the night she was left alone on her own chart.
+PIN = load_env().get("FLY_PIN_URL", "").strip()
+if PIN:
+    SEEDS = [PIN]
+
+
+def _page_of(url):
+    from urllib.parse import urlparse
+    u = urlparse(url)
+    return (u.scheme, (u.hostname or "").lower(), u.path.rstrip("/"))
+
 
 def allowed_host(url):
     """Open mode drops the fence and leaves only the blocklist behind it."""
+    if PIN:
+        try:
+            return _page_of(url) == _page_of(PIN)
+        except Exception:
+            return False
     if OPEN:
         return True
     try:
@@ -647,7 +665,9 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             # vertical progress; weaker walking still scrolls at the edge.
             EDGE = 110
             at_edge = (cy > 800 - EDGE and dy > 0) or (cy < EDGE and dy < 0)
-            if at_edge or abs(dy) / 90.0 > 0.15:
+            # a pinned chart does not scroll, the wheel only zooms it, and an
+            # hour of random zooming leaves nothing readable on the screen
+            if (at_edge or abs(dy) / 90.0 > 0.15) and not PIN:
                 before_scroll = await page.evaluate("window.scrollY")
                 await page.mouse.wheel(0, float(np.copysign(300, dy)) if at_edge else float(dy))
                 await page.wait_for_timeout(100)
@@ -773,7 +793,9 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                         cx, cy = 640.0, 400.0
                 else:
                     stats["vetoes"] += 1
-                    if mb is not None:
+                    # on a pinned page there is nothing to reach for, so
+                    # reaching is not a mistake she should learn from
+                    if mb is not None and not PIN:
                         mb.dopamine(-1, 0.6)             # reached for a wall
                         mb.apply()
                     await log(f"did not click - {why}")
@@ -782,7 +804,10 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             if on_page >= steps_per_page:
                 on_page = 0
                 cx, cy = 640.0, 400.0
-                await goto(rng.choice(SEEDS), "hop budget spent")
+                # pinned, she has nowhere else to go; only reload if she is
+                # somehow not on her page any more
+                if not PIN or not allowed_host(page.url):
+                    await goto(rng.choice(SEEDS), "hop budget spent")
 
             publish(stats, raw, page.url, hz, neural)
             if mb is not None and stats["steps"] % 40 == 0:
