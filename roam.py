@@ -313,7 +313,9 @@ def relay_post(state, jpg):
     req = urllib.request.Request(
         RELAY_URL + "/publish", method="POST", data=body,
         headers={"Authorization": f"Bearer {RELAY_TOKEN}",
-                 "Content-Type": "multipart/form-data; boundary=" + b.decode()})
+                 "Content-Type": "multipart/form-data; boundary=" + b.decode(),
+                 # the edge refuses urllib's default agent outright
+                 "User-Agent": "flybrain"})
     with urllib.request.urlopen(req, timeout=5) as r:
         return r.status, len(body)
 
