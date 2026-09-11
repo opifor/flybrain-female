@@ -767,18 +767,49 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     for (let k = 0; k < ranges.length; k++) marks.appendChild(document.createElement('i'));
     const dots = Array.from(marks.children);
 
-    let dirty = true;
+    // Frames are fetched on demand around the visitor's position: a few
+    // behind, more ahead, nearest first. Most visitors never reach the end,
+    // so loading the whole film up front would mostly be wasted transfer.
+    // Decoded frames are kept; the full film fits in memory.
+    // The window reaches 96 frames ahead while the visitor scrolls and
+    // shrinks to 24 once they stop, so a visitor who only reads the top of
+    // the page costs the opening frames rather than a sixth of the film.
+    const POOL = 4, BACK = 24, AHEAD = 96, MOVING = 800, IDLE = 2000, STEP = 80;
+    const asked = new Uint8Array(N);
+    const t0 = performance.now();
+    let dirty = true, inflight = 0, want = 0, moved = t0 - MOVING, last = 0;
     function load(i){
+      asked[i] = 1; inflight++;
       const im = new Image();
       im.src = src(i);
       const done = im.decode ? im.decode() : new Promise((res, rej) => { im.onload = res; im.onerror = rej; });
       return done.then(() => { imgs[i] = im; ready[i] = 1; window.__filmLoaded++; dirty = true; },
-                       () => {});
+                       () => {})
+                 .then(() => { inflight--; fill(); });
     }
-    let next = Math.min(30, N);
-    for (let i = 0; i < next; i++) load(i);
-    function pump(){ if (next >= N) return; load(next++).then(pump); }
-    pump(); pump();
+    function pick(lo, hi){
+      for (let i = want; i <= hi; i++) if (!asked[i]) return i;
+      for (let i = want - 1; i >= lo; i--) if (!asked[i]) return i;
+      return -1;
+    }
+    function fill(){
+      const now = performance.now();
+      const ahead = now - moved < MOVING ? AHEAD : BACK;
+      while (inflight < POOL){
+        const i = pick(Math.max(0, want - BACK), Math.min(N - 1, want + ahead));
+        if (i < 0) break;
+        load(i);
+      }
+      // With the window complete and the visitor resting, fetch the rest one
+      // frame at a time so a later scroll past the window stays smooth. The
+      // pace is capped so a fast connection is not asked for the whole film
+      // within seconds of arriving.
+      if (inflight === 0 && now - Math.max(moved, t0) > IDLE && now - last > STEP){
+        const i = pick(0, N - 1);
+        if (i >= 0){ last = now; load(i); }
+      }
+    }
+    for (let i = 0; i < Math.min(30, N); i++) load(i);
 
     let W = 0, H = 0;
     function fit(){
@@ -852,7 +883,9 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     }
     function loop(){
       const p = progress();
-      const want = Math.round(p * (N - 1));
+      const w = Math.round(p * (N - 1));
+      if (w !== want){ want = w; moved = performance.now(); }
+      fill();
       let i = want;
       while (i >= 0 && !ready[i]) i--;
       if (i >= 0 && (i !== drawn || dirty)){

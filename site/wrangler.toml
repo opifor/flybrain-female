@@ -1,4 +1,5 @@
 name = "femaleflybrain"
+main = "src/index.js"
 compatibility_date = "2025-01-01"
 workers_dev = true
 
@@ -8,7 +9,17 @@ routes = [
 ]
 
 # the page and the film frames are plain files; the edge serves them
+# the worker handles /api/state and hands everything else to this binding
 [assets]
 directory = "web"
+binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
+
+# set at launch; an empty FLY_TOKEN means the state endpoint reports not launched
+# [vars]
+# FLY_TOKEN = ""
+# FLY_WALLET = ""
+# FLY_TOKEN_BLOCK = "0x0"
+# FLY_PAIR = "GOOGL"
+# FLY_TAX_PCT = "2"
