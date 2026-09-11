@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FLYBRAIN</title>
-<meta name="description" content="165,122 neurons of a real fruit fly connectome, loose on the internet and learning.">
-<meta property="og:title" content="FLYBRAIN">
-<meta property="og:description" content="165,122 neurons of a real fruit fly connectome, loose on the internet and learning.">
+<title>FEMALE FLYBRAIN</title>
+<meta name="description" content="139,255 neurons of a real female fruit fly connectome, loose on the internet and learning.">
+<meta property="og:title" content="FEMALE FLYBRAIN">
+<meta property="og:description" content="139,255 neurons of a real female fruit fly connectome, loose on the internet and learning.">
 <meta property="og:image" content="/fly.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/fly.png">
@@ -21,12 +21,12 @@
   --dot-hi:#dceef8;
   --dot-mid:#7db8d4;
   /* contrast against --ground #06070a, measured:
-     ink 14.6:1  ink-dim 7.4:1  ink-faint 4.8:1  cyan 9.6:1  amber 8.9:1
+     ink 14.6:1  ink-dim 7.4:1  ink-faint 4.8:1  amber 8.9:1
      the old values were 4.0:1 and 2.3:1, which is why nothing read */
   --ink:#e2eaf1;
   --ink-dim:#9dabb7;
   --ink-faint:#75828d;
-  --cyan:#7deaff;
+  --cyan:#ff79b0;
   --amber:#f0bc5f;
   --live:#6fdca6;
   --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
@@ -344,13 +344,13 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 
 <div class="plate">
   <canvas id="fly" aria-label="A fruit fly drawn as a cloud of points"></canvas>
-  <div class="corner tl">specimen<br><span style="color:var(--ink-dim)">male CNS v1.0</span></div>
+  <div class="corner tl">specimen<br><span style="color:var(--ink-dim)">FlyWire FAFB v783, female</span></div>
   <div class="corner tr">Robinhood Chain<br><span id="blk" style="color:var(--ink-dim)">block —</span></div>
-  <div class="corner bl">165,122 neurons<br><span style="color:var(--ink-dim)">10,228,000 connections</span></div>
+  <div class="corner bl">139,255 neurons<br><span style="color:var(--ink-dim)">3,641,142 connections</span></div>
   <div class="corner br"><span class="tick" id="livedot">●</span> observed live<br><span id="upd" style="color:var(--ink-dim)">—</span></div>
   <div class="title">
-    <h1>FLYBRAIN</h1>
-    <div class="latin">Drosophila melanogaster</div>
+    <h1>FEMALE FLYBRAIN</h1>
+    <div class="latin">sister build of FLYBRAIN. same experiment, the other sex.</div>
   </div>
 </div>
 
@@ -358,11 +358,11 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   <div class="wrap wide">
     <div class="eyebrow">live</div>
     <h2>Where the fly is right now</h2>
-    <p class="lede">A page goes in through 892 hex columns, 165,122 neurons integrate, and a cursor comes out. Every number on this panel is read out of the running simulation.</p>
+    <p class="lede">A page goes in through 785 hex columns per eye, both eyes on one shared grid; 139,255 neurons integrate, and a cursor comes out. Every number on this panel is read out of the running simulation.</p>
 
     <div class="term">
       <div class="tbar">
-        <span class="tname">FLYBRAIN LIVE</span>
+        <span class="tname">FEMALE FLYBRAIN LIVE</span>
         <span class="tdim">DROSOPHILA CONNECTOME &middot; OPEN INTERNET</span>
         <span class="tpills">
           <span class="pip2" id="p-vision">VISION</span>
@@ -372,7 +372,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
           <span class="pip2 off" id="p-wallet">WALLET</span>
         </span>
         <span class="tspacer"></span>
-        <span class="tdim">165,122 NEURONS &nbsp; 10,228,000 EDGES</span>
+        <span class="tdim">139,255 NEURONS &nbsp; 3,641,142 EDGES</span>
         <span class="tlive" id="t-live">&#9679; LIVE</span>
       </div>
 
@@ -388,7 +388,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
           <div class="tblk">
             <div class="tk">Neural activity</div>
             <div class="tbig" id="n-firing">&mdash;</div>
-            <div class="tsub">NEURONS FIRING <span class="tdim">of 165,122</span></div>
+            <div class="tsub">NEURONS FIRING <span class="tdim">of 139,255</span></div>
             <canvas id="n-spark" class="spark"></canvas>
             <div class="tquad">
               <div><div class="tql">spikes/sec</div><div class="tqv" id="n-spikes">&mdash;</div></div>
@@ -409,7 +409,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
           </div>
 
           <div class="tblk">
-            <div class="tk">Vision &rarr; retina</div>
+            <div class="tk">Vision, retina</div>
             <div class="tvis">
               <canvas id="n-retina"></canvas>
               <div class="tvismeta">
@@ -429,7 +429,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
               <div><div class="tql">punishments</div><div class="tqv" id="l-pun">&mdash;</div></div>
             </div>
             <div class="tsub" style="margin-top:8px;text-transform:none;letter-spacing:0">
-              <span class="tdim">KC&rarr;MBON synapses under dopamine. Depression only &mdash; that is the rule a fly actually uses.</span>
+              <span class="tdim">KC to MBON synapses under dopamine. Depression only &mdash; that is the rule a fly actually uses.</span>
             </div>
           </div>
 
@@ -461,7 +461,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 <div class="cabar">
   <div class="wrap cain">
     <div>
-      <div class="calabel">Contract address &middot; $FLYBRAIN</div>
+      <div class="calabel">Contract address &middot; $HER</div>
       <div class="caval" id="ca-text">&mdash;</div>
     </div>
     <button class="copy" id="ca-copy" type="button">
@@ -480,8 +480,8 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   <div class="wrap">
     <div class="eyebrow">what it is</div>
     <h2>A real nervous system, not a metaphor</h2>
-    <p class="lede">Every connection in this thing was traced from electron microscope images of an actual male fruit fly. Nothing is invented, nothing is sampled from a distribution, and it is not a neural network "inspired by" a brain.</p>
-    <p>The male <em style="font-family:var(--serif);font-style:italic">Drosophila</em> CNS connectome was released in September 2026 by HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, under CC-BY. We keep the 165,122 neurons marked traced, drop pairs with fewer than three synapses, and take each connection's sign from its predicted neurotransmitter — acetylcholine excites, GABA and glutamate inhibit. The neurons run as leaky integrate-and-fire units: rest &minus;52&nbsp;mV, threshold &minus;45&nbsp;mV, 20&nbsp;ms tau.</p>
+    <p class="lede">This is the whole adult female <em style="font-family:var(--serif);font-style:italic">Drosophila melanogaster</em> brain from FlyWire FAFB v783. The connectome supplies the wiring; the simulation runs it.</p>
+    <p>FlyWire FAFB v783 was released under CC-BY by the FlyWire Consortium, Princeton University and the University of Cambridge: Dorkenwald et al. 2024 (Nature) and Schlegel et al. 2024 (Nature). We keep FlyWire's filtered export, at least five synapses per pair: 139,255 neurons and 3,641,142 signed connections. Transmitter labels are assigned by cell-type majority vote, changing 22,889 labels. The neurons run as leaky integrate-and-fire units: rest &minus;52&nbsp;mV, threshold &minus;45&nbsp;mV, 20&nbsp;ms tau.</p>
   </div>
 </section>
 
@@ -489,16 +489,40 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   <div class="wrap">
     <div class="eyebrow">how it reaches the world</div>
     <h2>It sees with a fly's eye and moves with a fly's legs</h2>
-    <p class="lede">A screenshot of a live web page is sampled through 892 retinotopic hex columns into L1 and L2 — the lamina monopolar cells sitting directly behind photoreceptors R1–R6. All 165,122 neurons integrate. The cursor comes back out of the descending neurons a fly actually walks with.</p>
+    <p class="lede">A screenshot of a live web page is sampled through 785 hex columns per eye, both eyes on one shared grid: 783 left and 789 right L1 cells. All 139,255 neurons integrate. The descending neurons used have the same names and counts per side as in the male brain: DNa02 (1), DNa01 (1), MDN (4) and DNp09 (2).</p>
     <div class="wires">
       <div class="wire"><div class="cell">DNa02</div><div class="role">Left versus right. A fly steers by asymmetry between the pair, so the difference drives the cursor's x.</div></div>
       <div class="wire"><div class="cell">DNa01</div><div class="role">Forward walking. Drives the cursor's y.</div></div>
       <div class="wire"><div class="cell">MDN</div><div class="role">The Moonwalker neuron. Makes a fly walk backwards; here it reverses.</div></div>
-      <div class="wire"><div class="cell">DNp09</div><div class="role">Stopping. A fly freezes when it fires, so it became the click.</div></div>
+      <div class="wire"><div class="cell">DNp09</div><div class="role">Stopping. The female export has no MN9; she clicks from 24 proboscis motor neurons, with a threshold of 100 Hz.</div></div>
     </div>
   </div>
 </section>
 
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">the comparison</div>
+    <h2>Same experiment, the other sex</h2>
+    <p class="lede">The same rig runs both brains. The dataset, retina and click source differ.</p>
+    <div class="scroll"><table>
+      <thead><tr><th scope="col"></th><th scope="col">Male</th><th scope="col">Female</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Dataset</th><td>Janelia male CNS v1.0 (HHMI Janelia FlyEM, Cambridge Connectomics Group, Google Research), CC-BY</td><td>FlyWire FAFB v783 (FlyWire Consortium, Princeton University, University of Cambridge), CC-BY</td></tr>
+        <tr><th scope="row">Neurons</th><td>165,122</td><td>139,255</td></tr>
+        <tr><th scope="row">Connections</th><td>10,228,000, at least 3 synapses per pair</td><td>3,641,142 signed, filtered export with at least 5 synapses per pair</td></tr>
+        <tr><th scope="row">Hex columns per eye</th><td>892</td><td>785</td></tr>
+        <tr><th scope="row">Retina</th><td>892 columns</td><td>both eyes on one shared grid, 783 left L1 and 789 right L1 cells</td></tr>
+        <tr><th scope="row">Descending neurons used, per side</th><td>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</td><td>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</td></tr>
+        <tr><th scope="row">Click neuron</th><td>MN9, threshold 330 Hz</td><td>no MN9 in the export; 24 proboscis motor neurons, threshold 100 Hz</td></tr>
+        <tr><th scope="row">Simulation step time</th><td>0.33 s</td><td>0.12 s, same code, smaller graph</td></tr>
+        <tr><th scope="row">Offline form score</th><td>2 of 3 fields</td><td>2 of 3 fields</td></tr>
+        <tr><th scope="row">Live form score</th><td>not published</td><td>1 of 3 fields, ticker</td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin-top:22px">The descending motor side is identical by name and count in both brains. The fixes that made her walk were two constants and one relabelling, all in the repo, all measurable with <code>compare.py</code> and <code>measure.py</code>.</p>
+  </div>
+</section>
 
 <section>
   <div class="wrap">
@@ -506,14 +530,14 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <h2>How it got here</h2>
     <p class="lede">Not a roadmap of promises — a sequence, with everything before the amber line already done and checkable in the repo.</p>
     <div class="path">
-      <div class="step done"><div class="no">01</div><div class="what">Connectome loaded<em>165,122 traced neurons, 10,228,000 signed connections, built from the public dataset</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">02</div><div class="what">Eye wired<em>892 hex columns into L1 and L2, sampling a live browser</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">03</div><div class="what">Hands wired<em>DNa02, DNa01, MDN and DNp09 driving a real mouse</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">04</div><div class="what">Trained without touching the wiring<em>Only per-cell-type synaptic gains, by evolution strategy. Held-out +20.85 against +2.65 untrained</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">05</div><div class="what">Launched a token on-chain<em>It filled the form and the click produced one signed transaction</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">06</div><div class="what">Reward loop closed<em>44,042 KC&rarr;MBON synapses under dopamine, depressed the way a fly’s actually are. Twenty rewarded encounters moved reward-side MBONs −6.0%, left punishment-side at −0.9% and Kenyon cells unchanged</em></div><div class="tag">done</div></div>
-      <div class="step now"><div class="no">07</div><div class="what">Give it a nose<em>2,635 olfactory receptor neurons across 53 receptor types, fed token metadata as if it were an odour &mdash; a second opinion that is not visual</em></div><div class="tag">building</div></div>
-      <div class="step done"><div class="no">08</div><div class="what">Released<em>A budget, a browser, no schedule and no instructions. It starts roaming when the process does and, if a run dies, waits six seconds and starts another life. Nobody picks where it goes</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">01</div><div class="what">Forked<em>Started from FLYBRAIN's public rig. Three setup bugs fixed and reported upstream.</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">02</div><div class="what">Female connectome loaded<em>139,255 neurons, 3,641,142 signed connections, FlyWire FAFB v783.</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">03</div><div class="what">Blind at first<em>On a white screen 19,215 neurons fired and the steering neurons sat at their ceiling. Cause: per-cell neurotransmitter labels in the female export are noisy; a single mislabelled L1 to L5 synapse lit the whole medulla.</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">04</div><div class="what">Relabelled by cell type<em>One transmitter per type by majority vote, 22,889 labels changed; the white screen dropped to 691 neurons firing and the steering neurons went quiet.</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">05</div><div class="what">Both eyes<em>783 left and 789 right L1 cells on one shared hex grid, 785 columns per eye.</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">06</div><div class="what">One constant instead of a training run<em>Excitatory weights scaled by 0.5 put the steering neurons in the same band as the trained male; click threshold set to 100 Hz for her.</em></div><div class="tag">done</div></div>
+      <div class="step done"><div class="no">07</div><div class="what">Taught the form<em>55 cell-type gains by evolution strategy, 247 evaluations, offline 2 of 3 fields, the same as the male; live on the launchpad she typed the ticker herself, 1 of 3.</em></div><div class="tag">done</div></div>
+      <div class="step now"><div class="no">08</div><div class="what">Launch<em>She launches $HER from her own wallet on the same launchpad. Not yet.</em></div><div class="tag">building</div></div>
     </div>
   </div>
 </section>
@@ -521,10 +545,10 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 <section>
   <div class="wrap">
     <div class="eyebrow">on-chain</div>
-    <h2>$FLYBRAIN</h2>
-    <p class="lede">Launched by the fly, from the fly's own wallet, on Robinhood Chain. Read the receipt yourself rather than taking this page's word for it.</p>
+    <h2>$HER</h2>
+    <p class="lede">Launched by the female fly, from her own wallet, on Robinhood Chain. Until then this table is empty and says so.</p>
     <div class="scroll"><table>
-      <tr><th>Contract</th><td class="addr" id="t-ca">—</td></tr>
+      <tr><th>Contract</th><td class="addr" id="t-ca">Not launched</td></tr>
       <tr><th>Paired</th><td class="num" id="t-pair">—</td></tr>
       <tr><th>Creator tax</th><td class="num" id="t-tax">—</td></tr>
       <tr><th>Supply</th><td class="num" id="t-sup">—</td></tr>
@@ -539,9 +563,9 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <div class="eyebrow">what is not real, stated plainly</div>
     <h2>The parts that aren't the fly</h2>
     <ul class="plain">
-      <li><b>The fly does not fill the whole form.</b> It reliably gets the description, often the ticker, rarely the name. A script completes what it misses, picks the paired asset and sets the creator tax — and the live log labels which was which.</li>
-      <li><b>It cannot read.</b> 892 columns is roughly a 30&times;30 pixel view. Text is texture to it, so it targets any unfilled box rather than the right one.</li>
-      <li><b>Light mode blinds it.</b> Its retina is a luminance map and all of its tuning was done against dark interfaces. On a light page it filled 0 of 3 fields; on a dark one, 2 of 3. That gap is the clearest evidence the eye is doing real work.</li>
+      <li><b>The fly does not fill the whole form.</b> She fills 2 of 3 fields offline and typed the ticker herself live, 1 of 3. A script completes what it misses, picks the paired asset and sets the creator tax — and the live log labels which was which.</li>
+      <li><b>It cannot read.</b> 785 columns per eye is roughly a 28&times;28 pixel view per eye. Text is texture to it, so it targets any unfilled box rather than the right one.</li>
+      <li><b>Light mode blinds the male rig.</b> The male rig filled 0 of 3 on a light page and 2 of 3 on a dark one; the female scores 2 of 3 offline and 1 of 3 live on the dark launchpad.</li>
       <li><b>It has no goals.</b> A fly brain has no language and no plan. It cannot read a page, form a view about a coin, or write a note. Releasing it means nobody is steering, not that it decided anything.</li>
       <li><b>The reward signal is invented.</b> The circuit, the plasticity site and the direction of the rule are all real and measured. What a fly is rewarded <em style="font-style:italic">by</em> is sugar, not by reaching a web page &mdash; novelty stands in for it here, and that is a choice a person made.</li>
       <li><b>It roams inside a fence.</b> An allowlist keeps it on Robinhood Chain and pons. That is a choice, not a limit of the fly &mdash; one environment variable takes the fence down, and an unfenced random clicker on a public stream is a bad idea for reasons that have nothing to do with the brain.</li>
@@ -552,12 +576,13 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 <footer>
   <div class="wrap">
     <div class="links">
-      <a href="https://github.com/fruitflydev/flycoinrh">source</a>
-      <a href="https://x.com/fruitflydev">@fruitflydev</a>
+      <a href="https://github.com/opifor/flybrain-female">source</a>
+      <a href="https://x.com/opifor">@opifor</a>
+      <span>sister of <a href="https://github.com/fruitflydev/flycoinrh">FLYBRAIN</a></span>
       <a id="f-scan" href="https://robinhoodchain.blockscout.com">explorer</a>
     </div>
     <div><span class="pill"><span class="pip" id="pip"></span><span id="pip-t">reading the chain</span></span></div>
-    <p style="margin-top:22px;max-width:66ch">Connectome data &copy; HHMI Janelia FlyEM, the Cambridge Connectomics Group and Google Research, released CC-BY. Simulation after Shiu et&nbsp;al. 2024 and Lappalainen et&nbsp;al. 2024. Not affiliated with any of them, nor with pons or Robinhood. $FLYBRAIN is an art experiment, not an investment.</p>
+    <p style="margin-top:22px;max-width:66ch">Connectome data: FlyWire FAFB v783, released CC-BY by the FlyWire Consortium, Princeton University and the University of Cambridge. Dorkenwald et al. 2024 (Nature) and Schlegel et al. 2024 (Nature). Simulation after Shiu et&nbsp;al. 2024 and Lappalainen et&nbsp;al. 2024. Not affiliated with any of them, nor with pons or Robinhood. $HER is an art experiment, not an investment.</p>
   </div>
 </footer>
 
@@ -653,7 +678,7 @@ function draw(){
     const a = 0.24 + depth*0.55 + h*0.9;
     const r = (0.62 + depth*0.95 + h*1.7) * (Math.min(devicePixelRatio||1,2));
     cx.globalAlpha = Math.min(1, a);
-    cx.fillStyle = h > 0.25 ? '#9eecff' : (depth > 0.58 ? '#e8f4fb' : '#6ba2bd');
+    cx.fillStyle = h > 0.25 ? '#ff79b0' : (depth > 0.58 ? '#fbe8f0' : '#b8688a');
     cx.fillRect(X, Y, r, r);
     if (h > 0) heat[i] = h - 0.022;
   }
