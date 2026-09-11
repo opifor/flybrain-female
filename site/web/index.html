@@ -248,6 +248,8 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
    than as a borrowed instrument. */
 .wrap.livew{max-width:1180px}
 .live{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-dim)}
+.lage{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-left:14px;letter-spacing:.06em}
+#r-url{color:inherit;border-bottom:1px dotted var(--ink-faint)}
 .lhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;
   gap:6px 24px;padding:0 0 10px;font-size:11.5px;letter-spacing:.06em}
 .lwho{display:flex;align-items:baseline;gap:12px;min-width:0;flex:1 1 260px}
@@ -492,7 +494,8 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
       <div class="lhead">
         <div class="lwho">
           <span class="ldot" id="t-live">&#9679; LIVE</span>
-          <span id="r-url">&mdash;</span>
+          <a id="r-url" href="#" target="_blank" rel="noopener">&mdash;</a>
+          <span class="lage" id="r-age" title="how old the frame on screen is, by the relay clock"></span>
         </div>
         <div class="lcount"><b id="r-hops">&mdash;</b> pages &middot; <b id="r-clicks">&mdash;</b> clicks &middot; <b id="r-scrolled">&mdash;</b> scrolls &middot; <b id="r-steps">&mdash;</b> brain steps &middot; <b id="r-vetoes">&mdash;</b> vetoed</div>
       </div>
@@ -1218,7 +1221,7 @@ function renderState(d){
   for (const k of ['hops','clicks','steps','vetoes','scrolled']){
     const el = $$('r-'+k); if (el && d[k] != null) el.textContent = nf0(d[k]);
   }
-  if (d.url) $$('r-url').textContent = d.url.replace(/^https?:\/\//, '');
+  if (d.url){ const u = $$('r-url'); u.textContent = d.url.replace(/^https?:\/\//, ''); u.href = d.url; }
   $$('t-live').classList.add('on');
   for (const id of ['p-vision','p-motor','p-sim','p-net']){ const p = $$(id); if (p) p.classList.add('on'); }
 
@@ -1375,6 +1378,8 @@ async function relayTick(){
     renderState({neural: d.neural, url: d.url, events: d.events,
                  visited: d.visited, ...(d.stats || {})});
     if (d.cursor) rtar = {x: d.cursor.x, y: d.cursor.y};
+    // a recording could not print its own age; this one is read off the relay
+    $$('r-age').textContent = 'frame ' + Math.max(0, d.age|0) + ' s old · ' + new Date().toISOString().slice(11,19) + ' UTC';
     if (d.seq !== relaySeq){
       relaySeq = d.seq;
       $$('r-img').src = RELAY + '/frame.jpg?s=' + d.seq;
