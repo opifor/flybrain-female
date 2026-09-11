@@ -1,5 +1,7 @@
 # Female Flybrain
 
+<p align="center"><img src="assets/flycoin_square.png" width="420" alt="Female Flybrain, the portrait she launches with"></p>
+
 A real female fruit fly brain, simulated neuron by neuron, driving the
 [pons launchpad](https://www.ponsfamily.com/launchpad) on Robinhood Chain.
 
