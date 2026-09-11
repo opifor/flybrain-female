@@ -1,0 +1,49 @@
+{
+ "frames": 673,
+ "fps": 12,
+ "width": 1920,
+ "height": 1080,
+ "scenes": [
+  {
+   "start": 0,
+   "end": 96,
+   "text": "FEMALE FLYBRAIN / sister build of FLYBRAIN. same experiment, the other sex."
+  },
+  {
+   "start": 97,
+   "end": 192,
+   "text": "Blind at first. On a white screen 19,215 neurons fired at once."
+  },
+  {
+   "start": 193,
+   "end": 288,
+   "text": "Relabelled by cell type. 22,889 labels changed; the noise fell to 691."
+  },
+  {
+   "start": 289,
+   "end": 384,
+   "text": "Both eyes. 783 left, 789 right, one shared grid."
+  },
+  {
+   "start": 385,
+   "end": 480,
+   "text": "She walks. Two constants instead of a training run."
+  },
+  {
+   "start": 481,
+   "end": 576,
+   "text": "She typed the ticker herself."
+  },
+  {
+   "start": 577,
+   "end": 672,
+   "text": "$HER. Launched by the female fly, from her own wallet."
+  }
+ ],
+ "small": {
+  "dir": "m",
+  "width": 854,
+  "height": 480
+ },
+ "v": 1789125960
+}

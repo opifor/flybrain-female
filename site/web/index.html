@@ -51,9 +51,40 @@ a:hover{border-bottom-color:var(--cyan)}
 .wrap.wide{max-width:1500px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* ---------- specimen plate ---------- */
-.plate{position:relative;min-height:420px;border-bottom:1px solid var(--line)}
-#fly{display:block;width:100%;height:min(62vh,560px)}
+/* ---------- the film ----------
+   A tall spacer scrolls under a sticky, viewport-sized stage. Scroll position
+   through the spacer picks the frame, so the film runs at the reader's pace
+   and stops when they stop. The spacer's height is set from the frame count
+   once the manifest arrives; 600vh is the floor so a short film still scrubs. */
+.film{position:relative;min-height:600vh;border-bottom:1px solid var(--line)}
+.stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#000}
+#stage{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* a soft darkening top and bottom so the words read over bright frames */
+.shade{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 26%,
+             rgba(0,0,0,0) 54%,rgba(0,0,0,.74) 100%)}
+.scene{position:absolute;left:0;right:0;bottom:0;padding:0 24px 12vh;pointer-events:none;
+  opacity:0}
+.scene.on{opacity:1}
+.scene p{font-family:var(--serif);font-size:clamp(34px,4.6vw,66px);line-height:1.04;
+  letter-spacing:-.01em;color:#f4f7fa;margin:0;max-width:15ch;text-wrap:balance;
+  text-shadow:0 2px 24px rgba(0,0,0,.55)}
+.wide .scene.dark p{color:#14161a;text-shadow:0 1px 18px rgba(255,255,255,.45)}
+/* words are revealed by scroll position, so their look is set inline by script */
+.scene .w{display:inline-block;will-change:opacity,transform,filter}
+.scene.left p{margin-left:max(0px,calc(50% - 560px))}
+.scene.right p{margin-left:auto;margin-right:max(0px,calc(50% - 560px));text-align:right}
+.scene.mid p{margin:0 auto;text-align:center}
+.scene.low{padding-bottom:9vh}
+.wide .scene.high{bottom:auto;top:16vh}
+/* portrait: the frame is letterboxed, so every sentence sits in the black band below it */
+:root:not(.wide) .scene.right p{text-align:left;margin-left:0}
+.scene .note{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);text-align:center;
+  margin:22px auto 0;max-width:44ch;line-height:1.7}
+.scene.s0{top:0;height:100%;display:flex;align-items:flex-end;justify-content:center}
+@media (max-width:640px){.scene p{font-size:clamp(28px,8.2vw,38px);max-width:none}
+}
 .corner{
   position:absolute;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--ink-faint);pointer-events:none;line-height:1.7;
@@ -64,9 +95,7 @@ a:hover{border-bottom-color:var(--cyan)}
 .br{bottom:22px;right:24px;text-align:right}
 .tick{color:var(--live)}
 
-.title{
-  position:absolute;left:0;right:0;bottom:64px;text-align:center;pointer-events:none;
-}
+.title{text-align:center;pointer-events:none}
 .title h1{
   font-family:var(--serif);font-weight:400;font-style:normal;
   font-size:clamp(52px,11vw,116px);line-height:.92;margin:0;
@@ -76,10 +105,55 @@ a:hover{border-bottom-color:var(--cyan)}
   font-family:var(--serif);font-style:italic;font-size:clamp(14px,2.4vw,19px);
   color:var(--ink-dim);margin-top:10px;
 }
-.title .state{
-  margin-top:18px;font-size:12.5px;letter-spacing:.2em;text-transform:uppercase;
-  color:var(--amber);font-family:var(--mono);font-weight:500;
-}
+
+.marks{position:absolute;right:18px;top:50%;transform:translateY(-50%);
+  display:grid;gap:10px;pointer-events:none}
+.marks i{display:block;width:6px;height:6px;border-radius:50%;
+  border:1px solid var(--ink-faint);background:transparent;
+  transition:background .3s,border-color .3s}
+.marks i.on{background:var(--cyan);border-color:var(--cyan)}
+@media (max-width:599px){.marks{display:none}}
+.hint{position:absolute;left:0;right:0;bottom:22px;text-align:center;
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-faint);pointer-events:none;transition:opacity .4s}
+.hint.off{opacity:0}
+
+/* Reduced motion: one still per scene with its words, stacked, no scrubbing. */
+.film.still{min-height:0}
+.film.still .stage{position:static;height:auto;overflow:visible;background:var(--ground)}
+.film.still #stage,.film.still .shade,.film.still .marks,.film.still .hint{display:none}
+.film.still .scene{position:static;opacity:1;transform:none;padding:32px 24px;
+  border-bottom:1px solid var(--line)}
+.film.still .scene.s0{height:auto;display:block}
+.film.still .scene img{display:block;width:100%;max-width:980px;height:auto;
+  margin:0 auto 22px}
+.film.still .corners{display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  max-width:980px;margin:0 auto 24px}
+.film.still .corner{position:static;text-align:left}
+
+/* ---------- out of the film ----------
+   The stage is sticky until the spacer's last 100vh, so the last frame is
+   still on screen while the reader covers the final 40vh of scroll. The fade
+   and the first section pull up into that tail with negative margins and sit
+   above the stage, so the frame darkens under them instead of cutting to
+   ground. The ramp starts slow so scene 6's words stay legible until the
+   fade has actually reached them. */
+.fade{position:relative;z-index:2;height:40vh;margin-top:-40vh;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,7,10,0) 0%,rgba(6,7,10,.25) 35%,
+             rgba(6,7,10,.78) 65%,var(--ground) 100%)}
+/* 16vh, not more: scene 6's caption sits 12vh above the stage's bottom edge
+   and the section's eyebrow must clear it once both scroll together */
+#live{position:relative;z-index:2;margin-top:-16vh}
+/* the stacked stills have no sticky tail to pull into */
+.film.still+.fade{display:none}
+.film.still~#live{margin-top:0}
+
+/* ---------- reveal ----------
+   The class is added by script, so without it everything is simply visible. */
+.reveal{opacity:0;transform:translateY(24px);
+  transition:opacity .5s ease-out,transform .5s ease-out}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
 
 /* ---------- sections ---------- */
 section{padding:64px 0;border-bottom:1px solid var(--line)}
@@ -97,8 +171,13 @@ p{max-width:66ch;color:var(--ink);margin:0 0 18px}
 .path{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
 .step{
   background:var(--plate);padding:18px 20px;display:grid;
-  grid-template-columns:34px 1fr auto;gap:16px;align-items:baseline;
+  grid-template-columns:168px 34px 1fr auto;gap:16px;align-items:baseline;
 }
+/* a still from the film's matching scene; the frame index comes from the
+   manifest at runtime so a re-rendered film keeps the right pictures */
+.step .thumb{align-self:start;width:168px;aspect-ratio:16/9;height:auto;
+  display:block;object-fit:cover;border-radius:2px;border:1px solid var(--line);
+  background:#000}
 .step .no{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
 .step .what{color:var(--ink);font-weight:500;font-size:16.5px}
 .step .what em{font-style:normal;color:var(--ink-dim);display:block;font-size:15px;margin-top:5px;line-height:1.55}
@@ -122,6 +201,26 @@ td,th{text-align:left;padding:10px 14px 10px 0;border-bottom:1px solid var(--lin
 th{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);
   font-weight:500;white-space:nowrap;padding-right:28px}
 td.num{font-variant-numeric:tabular-nums;color:#eaf4fa}
+
+/* ---------- the comparison ----------
+   Two cards rather than a three-column table: each brain gets its own column
+   with the same row labels, so a reader can scan one sex top to bottom. */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+  border:1px solid var(--line)}
+.card{background:var(--plate);margin:0;padding:0 20px 8px;
+  box-shadow:inset 0 2px 0 var(--accent)}
+.card.male{--accent:#6ba2bd}
+.card.female{--accent:var(--cyan)}
+.card .who{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;font-weight:500;color:var(--accent);
+  padding:16px 0 12px;border-bottom:1px solid var(--line)}
+.cmp-row{padding:13px 0;border-bottom:1px solid var(--line)}
+.cmp-row:last-child{border-bottom:0}
+.cmp-row dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+.cmp-row dd{margin:4px 0 0;font-family:var(--serif);font-size:22px;line-height:1.25;
+  color:#eaf4fa;font-variant-numeric:tabular-nums;text-wrap:pretty}
+@media (max-width:720px){.cmp{grid-template-columns:1fr}}
 .addr{font-size:14px;word-break:break-all;color:var(--ink)}
 
 ul.plain{list-style:none;padding:0;margin:0;display:grid;gap:14px}
@@ -140,84 +239,97 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 .pip.stale{background:var(--ink-faint)}
 
 
-/* ---------- the terminal ----------
-   A phosphor instrument panel inset into the page. It commits to one look and
-   paints every colour explicitly, so it reads the same wherever it lands. */
-.term{
-  --g:#3dff88; --g-dim:#1f8f4d; --g-faint:#155c33; --g-bg:#020704;
-  background:var(--g-bg);border:1px solid #123a24;font-family:var(--mono);
-  color:var(--g);font-size:12px;line-height:1.5;
-}
-.tbar{display:flex;align-items:center;gap:14px;padding:8px 12px;flex-wrap:wrap;
-  border-bottom:1px solid #123a24;background:#04100a}
-.tname{font-weight:500;letter-spacing:.14em}
-.tdim{color:var(--g-faint);letter-spacing:.1em;font-size:10.5px}
-.tspacer{flex:1}
-.tpills{display:flex;gap:6px;flex-wrap:wrap}
-.pip2{border:1px solid var(--g-faint);color:var(--g-dim);padding:2px 7px;
-  font-size:9.5px;letter-spacing:.12em;border-radius:2px}
-.pip2.on{color:var(--g);border-color:var(--g-dim);background:#07200f}
-.pip2.off{color:#5a2b2b;border-color:#4a2020}
-.tlive{color:#ff5f56;font-size:10px;letter-spacing:.14em}
-.tlive.on{color:var(--g)}
+/* ---------- the live panel ----------
+   One wide stage, three cards under it, everything else folded away. The
+   panel uses the page's own tokens so it reads as part of the page rather
+   than as a borrowed instrument. */
+.wrap.livew{max-width:1180px}
+.live{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-dim)}
+.lhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;
+  gap:6px 24px;padding:0 0 10px;font-size:11.5px;letter-spacing:.06em}
+.lwho{display:flex;align-items:baseline;gap:12px;min-width:0;flex:1 1 260px}
+/* the dot is grey until a frame has arrived; the class comes from the socket */
+.ldot{color:var(--ink-faint);letter-spacing:.14em;white-space:nowrap;
+  transition:color .3s}
+.ldot.on{color:var(--cyan)}
+.lwho #r-url{min-width:0;flex:1;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;color:var(--ink)}
+.lcount{color:var(--ink-faint);font-variant-numeric:tabular-nums;text-align:right}
+.lcount b{font-weight:400;color:var(--ink-dim)}
 
-.tgrid{display:grid;grid-template-columns:1fr 320px;gap:1px;background:#123a24}
-@media (max-width:880px){.tgrid{grid-template-columns:1fr}}
-.tscreen{position:relative;background:#000;min-height:320px;display:flex;
-  align-items:center;justify-content:center;overflow:hidden}
-.tscreen img{width:100%;max-height:100%;object-fit:contain;display:block}
-.tscreen canvas{position:absolute;inset:0;width:100%;height:100%}
-.toff[hidden]{display:none}
-.toff{position:absolute;inset:0;display:flex;flex-direction:column;
+.lstage{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden;
+  border:1px solid var(--cyan)}
+.lstage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  display:block}
+.lstage canvas{position:absolute;inset:0;width:100%;height:100%}
+.loff[hidden]{display:none}
+.loff{position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:6px;background:#000;
-  color:var(--g-dim);letter-spacing:.14em;font-size:11px;text-align:center}
-.turl{position:absolute;left:0;right:0;bottom:0;display:flex;gap:12px;
-  padding:5px 10px;background:rgba(2,7,4,.92);border-top:1px solid #123a24;
-  font-size:11px;color:var(--g-dim)}
-.turl #r-url{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tfps{color:var(--g-faint)}
+  color:var(--ink-faint);letter-spacing:.14em;font-size:11px;text-align:center;
+  padding:24px}
+.loff .tdim{color:var(--ink-faint);opacity:.7;letter-spacing:.1em;font-size:10.5px}
 
-.tside{background:var(--g-bg);display:grid;align-content:start}
-.tblk{padding:10px 12px;border-bottom:1px solid #0d2c1b}
-.tk{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--g-faint)}
-.tbig{font-size:30px;line-height:1.1;margin-top:5px;letter-spacing:.01em;
+.lcards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-top:0}
+@media (max-width:720px){.lcards{grid-template-columns:1fr}}
+.lcard{background:var(--plate);padding:16px 18px 18px;display:grid;
+  grid-template-rows:auto 1fr auto;gap:10px;min-width:0}
+.lk{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--ink-faint);font-weight:500}
+.lbig{font-family:var(--serif);font-size:40px;line-height:1;color:#eaf4fa;
   font-variant-numeric:tabular-nums}
-.tsub{font-size:9.5px;letter-spacing:.13em;color:var(--g-dim);margin-top:1px}
-.spark{width:100%;height:34px;display:block;margin-top:9px}
-.tquad{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-top:9px}
-.tql{font-size:9px;letter-spacing:.13em;text-transform:uppercase;
-  color:var(--g-faint)}
-.tqv{font-size:12.5px;color:var(--g);margin-top:1px;font-variant-numeric:tabular-nums}
-.scatter{width:100%;height:78px;display:block;margin-top:8px;background:#000;
-  border:1px solid #0d2c1b}
-.tbars{display:grid;gap:5px;margin-top:8px}
-.trow{display:grid;grid-template-columns:60px 1fr 42px;gap:8px;align-items:center;
-  font-size:10.5px}
-.trow .tn{color:var(--g-dim)}
-.trow .tt{height:6px;background:#06180e;border:1px solid #0d2c1b}
-.trow .tf{height:100%;background:var(--g);width:0%;transition:width .2s linear}
-.trow .tv{text-align:right;color:var(--g-dim);font-variant-numeric:tabular-nums}
-.tvis{display:grid;grid-template-columns:1fr 88px;gap:10px;margin-top:8px;
-  align-items:start}
-.tvis canvas{width:100%;height:74px;display:block;background:#000;
-  border:1px solid #0d2c1b}
-.tvismeta{display:grid;gap:6px}
+.lbig small{font-family:var(--mono);font-size:11px;color:var(--ink-faint);
+  letter-spacing:.06em;margin-left:8px;vertical-align:baseline}
+.spark{width:100%;height:30px;display:block;margin-top:10px}
+.lsay{font-family:var(--sans);font-size:14.5px;line-height:1.55;color:var(--ink-dim);
+  margin:0;max-width:none}
 
-.tevents{padding:10px 12px;border-top:1px solid #123a24}
-.tlog{margin-top:7px;height:92px;overflow:auto;font-size:11px;
-  color:var(--g-dim);display:flex;flex-direction:column-reverse}
-.tlog div{padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tlog .veto{color:#e8c15f}
+/* bars: label, track, value. Shared by the steering card and the details. */
+.tbars{display:grid;gap:8px;align-content:center}
+.trow{display:grid;grid-template-columns:56px 1fr 46px;gap:10px;align-items:center;
+  font-size:11px;letter-spacing:.06em}
+.trow .tn{color:var(--ink-dim);text-transform:uppercase}
+/* the bars are spans made by script, so they need a display to take a size */
+.trow .tt{display:block;height:8px;background:#11151c;border:1px solid var(--line);
+  overflow:hidden}
+.trow .tf{display:block;height:100%;background:var(--cyan);width:0%;
+  transition:width .2s linear}
+.trow .tv{text-align:right;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.lsteer .trow{grid-template-columns:56px 1fr 46px}
+.lsteer .trow .tt{height:14px}
+
+/* the log: newest first, six lines, the rest are in the DOM but not shown */
+.tlog{display:flex;flex-direction:column;gap:3px;font-size:13px;min-width:0;max-width:100%;overflow:hidden;
+  font-family:var(--sans);color:var(--ink-dim);min-height:120px;align-content:start}
+.tlog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;min-width:0;max-width:100%}
+.tlog div:nth-child(n+7){display:none}
+.tlog .veto{color:var(--amber)}
 .tlog .blk{color:#ff8b7a}
-.tlog b{color:var(--g-faint);font-weight:400;margin-right:8px}
+.tlog b{font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:400;
+  margin-right:10px;font-variant-numeric:tabular-nums}
+.tlog:empty::before{content:"nothing yet";color:var(--ink-faint);font-family:var(--mono);
+  font-size:11px;letter-spacing:.1em}
 
-.tfoot{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:#123a24;
-  border-top:1px solid #123a24}
-.tfoot>div{background:#04100a;padding:8px 12px;display:flex;
-  justify-content:space-between;align-items:baseline;gap:8px}
-.tfv{font-size:16px;color:var(--g);font-variant-numeric:tabular-nums}
-@media (max-width:640px){.tfoot{grid-template-columns:repeat(2,1fr)}}
+.lmore{display:block;margin:14px 0 0;padding:0;background:none;border:0;cursor:pointer;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink-faint);border-bottom:1px solid var(--line)}
+.lmore:hover{color:var(--cyan);border-bottom-color:var(--cyan)}
+.ldetails[hidden]{display:none}
+.ldetails{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);margin-top:14px}
+@media (max-width:720px){.ldetails{grid-template-columns:1fr}}
+.dblk{background:var(--plate);padding:14px 18px 16px;min-width:0}
+.tquad{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:10px}
+.tql{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint)}
+.tqv{font-size:13px;color:var(--ink);margin-top:1px;font-variant-numeric:tabular-nums}
+.live .scatter{width:100%;height:96px;display:block;margin-top:10px;background:#000;
+  border:1px solid var(--line)}
+.tvis{display:grid;grid-template-columns:1fr 88px;gap:12px;margin-top:10px;
+  align-items:start}
+.tvis canvas{width:100%;height:96px;display:block;background:#000;
+  border:1px solid var(--line)}
+.tvismeta{display:grid;gap:8px}
+.dnote{font-size:11px;color:var(--ink-faint);margin-top:10px;line-height:1.55}
 
 /* ---------- the rig ---------- */
 /* The side column is taller than a 16:10 screenshot, and a stretched grid row
@@ -325,136 +437,140 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 }
 
 @media (max-width:640px){
-  .step{grid-template-columns:26px 1fr;}
+  .step{grid-template-columns:26px 1fr;gap:10px 12px}
+  .step .thumb{grid-column:1/-1;width:96px;margin-bottom:2px}
   .step .tag{grid-column:2;margin-top:4px}
-  /* the absolutely-placed corner labels land on top of the wordmark at this
-     width, so the plate becomes a column and they take their turn in it */
-  .plate{display:flex;flex-direction:column;min-height:0}
-  #fly{height:38vh;order:1}
-  .title{position:static;order:2;padding:4px 20px 0}
   .title h1{font-size:clamp(46px,15vw,72px)}
-  .bl,.br{position:static;order:3;padding:0 20px;text-align:left;line-height:1.5}
-  .bl{padding-top:26px}
-  .br{padding-top:10px;padding-bottom:26px}
+  /* the lower corners would sit under the wordmark on a phone; the numbers
+     they carry are repeated in the sections below */
+  .film:not(.still) .bl,.film:not(.still) .br{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
-<div class="plate">
-  <canvas id="fly" aria-label="A fruit fly drawn as a cloud of points"></canvas>
-  <div class="corner tl">specimen<br><span style="color:var(--ink-dim)">FlyWire FAFB v783, female</span></div>
-  <div class="corner tr">Robinhood Chain<br><span id="blk" style="color:var(--ink-dim)">block —</span></div>
-  <div class="corner bl">139,255 neurons<br><span style="color:var(--ink-dim)">3,641,142 connections</span></div>
-  <div class="corner br"><span class="tick" id="livedot">●</span> observed live<br><span id="upd" style="color:var(--ink-dim)">—</span></div>
-  <div class="title">
-    <h1>FEMALE FLYBRAIN</h1>
-    <div class="latin">sister build of FLYBRAIN. same experiment, the other sex.</div>
+<div class="film" id="film">
+  <div class="stage" id="stagebox">
+    <canvas id="stage" aria-hidden="true"></canvas>
+    <div class="shade"></div>
+    <div class="scene s0 on" data-scene="0">
+      <div class="corners">
+        <div class="corner tl">specimen<br><span style="color:var(--ink-dim)">FlyWire FAFB v783, female</span></div>
+        <div class="corner tr">Robinhood Chain<br><span id="blk" style="color:var(--ink-dim)">block —</span></div>
+        <div class="corner bl">139,255 neurons<br><span style="color:var(--ink-dim)">3,641,142 connections</span></div>
+        <div class="corner br"><span class="tick" id="livedot">●</span> observed live<br><span id="upd" style="color:var(--ink-dim)">—</span></div>
+      </div>
+      <div class="title">
+        <h1>FEMALE FLYBRAIN</h1>
+        <div class="latin">sister build of FLYBRAIN. same experiment, the other sex.</div>
+      </div>
+    </div>
+    <div class="scene left high dark" data-scene="1"><p>Blind at first. On a white screen 19,215 neurons fired at once.</p></div>
+    <div class="scene right low" data-scene="2"><p>Relabelled by cell type. 22,889 labels changed; the noise fell to 691.</p></div>
+    <div class="scene left low" data-scene="3"><p>Both eyes. 783 left, 789 right, one shared grid.</p></div>
+    <div class="scene right high" data-scene="4"><p>She walks. Two constants instead of a training run.</p></div>
+    <div class="scene left low" data-scene="5"><p>She typed the ticker herself.</p></div>
+    <div class="scene mid" data-scene="6"><p>$HER. Launched by the female fly, from her own wallet.</p>
+      <div class="note">The film is an illustration. The measurements below are the evidence.</div></div>
+    <div class="marks" id="marks" aria-hidden="true"></div>
+    <div class="hint" id="hint">scroll</div>
   </div>
 </div>
+<div class="fade" aria-hidden="true"></div>
 
 <section id="live" style="padding-top:44px">
-  <div class="wrap wide">
+  <div class="wrap livew">
     <div class="eyebrow">live</div>
     <h2>Where the fly is right now</h2>
     <p class="lede">A page goes in through 785 hex columns per eye, both eyes on one shared grid; 139,255 neurons integrate, and a cursor comes out. Every number on this panel is read out of the running simulation.</p>
 
-    <div class="term">
-      <div class="tbar">
-        <span class="tname">FEMALE FLYBRAIN LIVE</span>
-        <span class="tdim">DROSOPHILA CONNECTOME &middot; OPEN INTERNET</span>
-        <span class="tpills">
-          <span class="pip2" id="p-vision">VISION</span>
-          <span class="pip2" id="p-motor">MOTOR</span>
-          <span class="pip2" id="p-sim">SIMULATION</span>
-          <span class="pip2" id="p-net">INTERNET</span>
-          <span class="pip2 off" id="p-wallet">WALLET</span>
-        </span>
-        <span class="tspacer"></span>
-        <span class="tdim">139,255 NEURONS &nbsp; 3,641,142 EDGES</span>
-        <span class="tlive" id="t-live">&#9679; LIVE</span>
+    <div class="live">
+      <div class="lhead">
+        <div class="lwho">
+          <span class="ldot" id="t-live">&#9679; LIVE</span>
+          <span id="r-url">&mdash;</span>
+        </div>
+        <div class="lcount"><b id="r-hops">&mdash;</b> pages &middot; <b id="r-clicks">&mdash;</b> clicks &middot; <b id="r-scrolled">&mdash;</b> scrolls &middot; <b id="r-steps">&mdash;</b> brain steps &middot; <b id="r-vetoes">&mdash;</b> vetoed</div>
       </div>
 
-      <div class="tgrid">
-        <div class="tscreen">
-          <img id="r-img" alt="the page the fly is looking at">
-          <canvas id="r-cur"></canvas>
-          <div class="toff" id="r-off">THE FLY IS BETWEEN RUNS<br><span class="tdim">nothing is being streamed right now</span></div>
-          <div class="turl"><span id="r-url">&mdash;</span><span class="tfps" id="r-fps">&mdash;</span></div>
-        </div>
+      <div class="lstage">
+        <img id="r-img" alt="the page the fly is looking at">
+        <canvas id="r-cur"></canvas>
+        <div class="loff" id="r-off">THE FLY IS BETWEEN RUNS<br><span class="tdim">nothing is being streamed right now</span></div>
+      </div>
 
-        <div class="tside">
-          <div class="tblk">
-            <div class="tk">Neural activity</div>
-            <div class="tbig" id="n-firing">&mdash;</div>
-            <div class="tsub">NEURONS FIRING <span class="tdim">of 139,255</span></div>
+      <div class="lcards">
+        <div class="lcard">
+          <div class="lk">Neurons firing</div>
+          <div>
+            <div class="lbig"><span id="n-firing">&mdash;</span><small>of 139,255</small></div>
             <canvas id="n-spark" class="spark"></canvas>
-            <div class="tquad">
-              <div><div class="tql">spikes/sec</div><div class="tqv" id="n-spikes">&mdash;</div></div>
-              <div><div class="tql">membrane</div><div class="tqv" id="n-mv">&mdash;</div></div>
-              <div><div class="tql">visual</div><div class="tqv" id="n-vis">&mdash;</div></div>
-              <div><div class="tql">motor</div><div class="tqv" id="n-mot">&mdash;</div></div>
-            </div>
           </div>
-
-          <div class="tblk">
-            <div class="tk">Firing neurons &middot; soma positions</div>
-            <canvas id="n-scatter" class="scatter"></canvas>
-          </div>
-
-          <div class="tblk">
-            <div class="tk">Descending neurons</div>
-            <div id="n-dn" class="tbars"></div>
-          </div>
-
-          <div class="tblk">
-            <div class="tk">Vision, retina</div>
-            <div class="tvis">
-              <canvas id="n-retina"></canvas>
-              <div class="tvismeta">
-                <div><div class="tql">L1 on</div><div class="tqv" id="n-on">&mdash;</div></div>
-                <div><div class="tql">L2 off</div><div class="tqv" id="n-off">&mdash;</div></div>
-                <div><div class="tql">columns</div><div class="tqv" id="n-cols">&mdash;</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="tblk">
-            <div class="tk">Mushroom body &middot; learning</div>
-            <div class="tquad" style="margin-top:8px">
-              <div><div class="tql">depressed</div><div class="tqv" id="l-dep">&mdash;</div></div>
-              <div><div class="tql">mean gain</div><div class="tqv" id="l-gain">&mdash;</div></div>
-              <div><div class="tql">rewards</div><div class="tqv" id="l-rew">&mdash;</div></div>
-              <div><div class="tql">punishments</div><div class="tqv" id="l-pun">&mdash;</div></div>
-            </div>
-            <div class="tsub" style="margin-top:8px;text-transform:none;letter-spacing:0">
-              <span class="tdim">KC to MBON synapses under dopamine. Depression only &mdash; that is the rule a fly actually uses.</span>
-            </div>
-          </div>
-
-          <div class="tblk">
-            <div class="tk">Motor output</div>
-            <div id="n-out" class="tbars"></div>
-          </div>
+          <p class="lsay">How much of her brain is active this second.</p>
+        </div>
+        <div class="lcard lsteer">
+          <div class="lk">Steering</div>
+          <div id="n-steer" class="tbars"></div>
+          <p class="lsay">Left minus right is where the cursor goes.</p>
+        </div>
+        <div class="lcard">
+          <div class="lk">What she just did</div>
+          <div id="r-events" class="tlog"></div>
+          <p class="lsay">Every click is checked before it lands and refused if it looks like a submit, a sign-in or a purchase.</p>
         </div>
       </div>
 
-      <div class="tevents">
-        <div class="tk">Event stream</div>
-        <div id="r-events" class="tlog"></div>
-      </div>
+      <button class="lmore" id="live-more" type="button" aria-expanded="false" aria-controls="live-details">details</button>
 
-      <div class="tfoot">
-        <div><span class="tql">pages</span><span class="tfv" id="r-hops">&mdash;</span></div>
-        <div><span class="tql">clicks</span><span class="tfv" id="r-clicks">&mdash;</span></div>
-        <div><span class="tql">scrolls</span><span class="tfv" id="r-scrolled">&mdash;</span></div>
-        <div><span class="tql">brain steps</span><span class="tfv" id="r-steps">&mdash;</span></div>
-        <div><span class="tql">vetoed</span><span class="tfv" id="r-vetoes">&mdash;</span></div>
+      <div class="ldetails" id="live-details" hidden>
+        <div class="dblk">
+          <div class="lk">Neural activity</div>
+          <div class="tquad">
+            <div><div class="tql">spikes/sec</div><div class="tqv" id="n-spikes">&mdash;</div></div>
+            <div><div class="tql">membrane</div><div class="tqv" id="n-mv">&mdash;</div></div>
+            <div><div class="tql">visual</div><div class="tqv" id="n-vis">&mdash;</div></div>
+            <div><div class="tql">motor</div><div class="tqv" id="n-mot">&mdash;</div></div>
+            <div><div class="tql">stream</div><div class="tqv" id="r-fps">&mdash;</div></div>
+          </div>
+        </div>
+        <div class="dblk">
+          <div class="lk">Firing neurons &middot; soma positions</div>
+          <canvas id="n-scatter" class="scatter"></canvas>
+        </div>
+        <div class="dblk">
+          <div class="lk">Vision, retina</div>
+          <div class="tvis">
+            <canvas id="n-retina"></canvas>
+            <div class="tvismeta">
+              <div><div class="tql">L1 on</div><div class="tqv" id="n-on">&mdash;</div></div>
+              <div><div class="tql">L2 off</div><div class="tqv" id="n-off">&mdash;</div></div>
+              <div><div class="tql">columns</div><div class="tqv" id="n-cols">&mdash;</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="dblk">
+          <div class="lk">Other descending neurons</div>
+          <div id="n-dn" class="tbars" style="margin-top:10px"></div>
+        </div>
+        <div class="dblk">
+          <div class="lk">Motor output</div>
+          <div id="n-out" class="tbars" style="margin-top:10px"></div>
+        </div>
+        <div class="dblk">
+          <div class="lk">Mushroom body &middot; learning</div>
+          <div class="tquad">
+            <div><div class="tql">depressed</div><div class="tqv" id="l-dep">&mdash;</div></div>
+            <div><div class="tql">mean gain</div><div class="tqv" id="l-gain">&mdash;</div></div>
+            <div><div class="tql">rewards</div><div class="tqv" id="l-rew">&mdash;</div></div>
+            <div><div class="tql">punishments</div><div class="tqv" id="l-pun">&mdash;</div></div>
+          </div>
+          <div class="dnote">KC to MBON synapses under dopamine. Depression only &mdash; that is the rule a fly actually uses.</div>
+        </div>
       </div>
     </div>
 
-    <p style="margin-top:22px;color:var(--ink-dim);font-size:15px">No wallet, no keyboard, no downloads. Every click is checked before it lands and vetoed if it looks like it commits something &mdash; a submit, a sign-in, a purchase.</p>
+    <p style="margin-top:22px;color:var(--ink-dim);font-size:15px">No wallet, no keyboard, no downloads.</p>
   </div>
 </section>
 
@@ -505,21 +621,34 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <div class="eyebrow">the comparison</div>
     <h2>Same experiment, the other sex</h2>
     <p class="lede">The same rig runs both brains. The dataset, retina and click source differ.</p>
-    <div class="scroll"><table>
-      <thead><tr><th scope="col"></th><th scope="col">Male</th><th scope="col">Female</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">Dataset</th><td>Janelia male CNS v1.0 (HHMI Janelia FlyEM, Cambridge Connectomics Group, Google Research), CC-BY</td><td>FlyWire FAFB v783 (FlyWire Consortium, Princeton University, University of Cambridge), CC-BY</td></tr>
-        <tr><th scope="row">Neurons</th><td>165,122</td><td>139,255</td></tr>
-        <tr><th scope="row">Connections</th><td>10,228,000, at least 3 synapses per pair</td><td>3,641,142 signed, filtered export with at least 5 synapses per pair</td></tr>
-        <tr><th scope="row">Hex columns per eye</th><td>892</td><td>785</td></tr>
-        <tr><th scope="row">Retina</th><td>892 columns</td><td>both eyes on one shared grid, 783 left L1 and 789 right L1 cells</td></tr>
-        <tr><th scope="row">Descending neurons used, per side</th><td>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</td><td>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</td></tr>
-        <tr><th scope="row">Click neuron</th><td>MN9, threshold 330 Hz</td><td>no MN9 in the export; 24 proboscis motor neurons, threshold 100 Hz</td></tr>
-        <tr><th scope="row">Simulation step time</th><td>0.33 s</td><td>0.12 s, same code, smaller graph</td></tr>
-        <tr><th scope="row">Offline form score</th><td>2 of 3 fields</td><td>2 of 3 fields</td></tr>
-        <tr><th scope="row">Live form score</th><td>not published</td><td>1 of 3 fields, ticker</td></tr>
-      </tbody>
-    </table></div>
+    <div class="cmp">
+      <dl class="card male">
+        <div class="who">Male</div>
+        <div class="cmp-row"><dt>Dataset</dt><dd>Janelia male CNS v1.0 (HHMI Janelia FlyEM, Cambridge Connectomics Group, Google Research), CC-BY</dd></div>
+        <div class="cmp-row"><dt>Neurons</dt><dd>165,122</dd></div>
+        <div class="cmp-row"><dt>Connections</dt><dd>10,228,000, at least 3 synapses per pair</dd></div>
+        <div class="cmp-row"><dt>Hex columns per eye</dt><dd>892</dd></div>
+        <div class="cmp-row"><dt>Retina</dt><dd>892 columns</dd></div>
+        <div class="cmp-row"><dt>Descending neurons used, per side</dt><dd>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</dd></div>
+        <div class="cmp-row"><dt>Click neuron</dt><dd>MN9, threshold 330 Hz</dd></div>
+        <div class="cmp-row"><dt>Simulation step time</dt><dd>0.33 s</dd></div>
+        <div class="cmp-row"><dt>Offline form score</dt><dd>2 of 3 fields</dd></div>
+        <div class="cmp-row"><dt>Live form score</dt><dd>not published</dd></div>
+      </dl>
+      <dl class="card female">
+        <div class="who">Female</div>
+        <div class="cmp-row"><dt>Dataset</dt><dd>FlyWire FAFB v783 (FlyWire Consortium, Princeton University, University of Cambridge), CC-BY</dd></div>
+        <div class="cmp-row"><dt>Neurons</dt><dd>139,255</dd></div>
+        <div class="cmp-row"><dt>Connections</dt><dd>3,641,142 signed, filtered export with at least 5 synapses per pair</dd></div>
+        <div class="cmp-row"><dt>Hex columns per eye</dt><dd>785</dd></div>
+        <div class="cmp-row"><dt>Retina</dt><dd>both eyes on one shared grid, 783 left L1 and 789 right L1 cells</dd></div>
+        <div class="cmp-row"><dt>Descending neurons used, per side</dt><dd>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</dd></div>
+        <div class="cmp-row"><dt>Click neuron</dt><dd>no MN9 in the export; 24 proboscis motor neurons, threshold 100 Hz</dd></div>
+        <div class="cmp-row"><dt>Simulation step time</dt><dd>0.12 s, same code, smaller graph</dd></div>
+        <div class="cmp-row"><dt>Offline form score</dt><dd>2 of 3 fields</dd></div>
+        <div class="cmp-row"><dt>Live form score</dt><dd>1 of 3 fields, ticker</dd></div>
+      </dl>
+    </div>
     <p style="margin-top:22px">The descending motor side is identical by name and count in both brains. The fixes that made her walk were two constants and one relabelling, all in the repo, all measurable with <code>compare.py</code> and <code>measure.py</code>.</p>
   </div>
 </section>
@@ -530,14 +659,14 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <h2>How it got here</h2>
     <p class="lede">Not a roadmap of promises — a sequence, with everything before the amber line already done and checkable in the repo.</p>
     <div class="path">
-      <div class="step done"><div class="no">01</div><div class="what">Forked<em>Started from FLYBRAIN's public rig. Three setup bugs fixed and reported upstream.</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">02</div><div class="what">Female connectome loaded<em>139,255 neurons, 3,641,142 signed connections, FlyWire FAFB v783.</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">03</div><div class="what">Blind at first<em>On a white screen 19,215 neurons fired and the steering neurons sat at their ceiling. Cause: per-cell neurotransmitter labels in the female export are noisy; a single mislabelled L1 to L5 synapse lit the whole medulla.</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">04</div><div class="what">Relabelled by cell type<em>One transmitter per type by majority vote, 22,889 labels changed; the white screen dropped to 691 neurons firing and the steering neurons went quiet.</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">05</div><div class="what">Both eyes<em>783 left and 789 right L1 cells on one shared hex grid, 785 columns per eye.</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">06</div><div class="what">One constant instead of a training run<em>Excitatory weights scaled by 0.5 put the steering neurons in the same band as the trained male; click threshold set to 100 Hz for her.</em></div><div class="tag">done</div></div>
-      <div class="step done"><div class="no">07</div><div class="what">Taught the form<em>55 cell-type gains by evolution strategy, 247 evaluations, offline 2 of 3 fields, the same as the male; live on the launchpad she typed the ticker herself, 1 of 3.</em></div><div class="tag">done</div></div>
-      <div class="step now"><div class="no">08</div><div class="what">Launch<em>She launches $HER from her own wallet on the same launchpad. Not yet.</em></div><div class="tag">building</div></div>
+      <div class="step done"><img class="thumb" data-scene="0" data-at="first" loading="lazy" width="1280" height="720" alt="Forked"><div class="no">01</div><div class="what">Forked<em>Started from FLYBRAIN's public rig. Three setup bugs fixed and reported upstream.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="0" data-at="last" loading="lazy" width="1280" height="720" alt="Female connectome loaded"><div class="no">02</div><div class="what">Female connectome loaded<em>139,255 neurons, 3,641,142 signed connections, FlyWire FAFB v783.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="1" data-at="mid" loading="lazy" width="1280" height="720" alt="Blind at first"><div class="no">03</div><div class="what">Blind at first<em>On a white screen 19,215 neurons fired and the steering neurons sat at their ceiling. Cause: per-cell neurotransmitter labels in the female export are noisy; a single mislabelled L1 to L5 synapse lit the whole medulla.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="2" data-at="last" loading="lazy" width="1280" height="720" alt="Relabelled by cell type"><div class="no">04</div><div class="what">Relabelled by cell type<em>One transmitter per type by majority vote, 22,889 labels changed; the white screen dropped to 691 neurons firing and the steering neurons went quiet.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="3" data-at="last" loading="lazy" width="1280" height="720" alt="Both eyes"><div class="no">05</div><div class="what">Both eyes<em>783 left and 789 right L1 cells on one shared hex grid, 785 columns per eye.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="4" data-at="mid" loading="lazy" width="1280" height="720" alt="One constant instead of a training run"><div class="no">06</div><div class="what">One constant instead of a training run<em>Excitatory weights scaled by 0.5 put the steering neurons in the same band as the trained male; click threshold set to 100 Hz for her.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="5" data-at="last" loading="lazy" width="1280" height="720" alt="Taught the form"><div class="no">07</div><div class="what">Taught the form<em>55 cell-type gains by evolution strategy, 247 evaluations, offline 2 of 3 fields, the same as the male; live on the launchpad she typed the ticker herself, 1 of 3.</em></div><div class="tag">done</div></div>
+      <div class="step now"><img class="thumb" data-scene="6" data-at="last" loading="lazy" width="1280" height="720" alt="Launch"><div class="no">08</div><div class="what">Launch<em>She launches $HER from her own wallet on the same launchpad. Not yet.</em></div><div class="tag">building</div></div>
     </div>
   </div>
 </section>
@@ -588,111 +717,216 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 
 <script>
 /* ---------------------------------------------------------------------------
-   The fly.
+   The film.
 
-   Same generator the live rig uses for its idle state: a point cloud with a
-   head, thorax, abdomen, two compound eyes, two wings and six legs, built from
-   gaussian shells so it reads as a specimen rather than a logo. It is drawn,
-   not traced - there is no path data anywhere in this file.
+   A frame sequence rather than a video element: a browser cannot seek a
+   video frame by frame fast enough to follow a scroll wheel, but it can draw
+   a decoded image in one paint. Frames are decoded ahead of use, the first
+   thirty at once and the rest in order; if the wanted frame has not arrived
+   yet the nearest decoded one below it stays on screen.
 --------------------------------------------------------------------------- */
-const N = 15000;
-function buildFly(n){
-  const P = new Float32Array(n*3), R = Math.random;
-  const gauss = () => { let u=0,v=0; while(!u)u=R(); while(!v)v=R();
-    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
-  let i = 0;
-  const put = (x,y,z) => { if(i>=n) return; P[i*3]=x; P[i*3+1]=y; P[i*3+2]=z; i++; };
-  const ell = (cx,cy,cz,rx,ry,rz,k,shell) => { for(let j=0;j<k;j++){
-    let x=gauss(), y=gauss(), z=gauss();
-    const d = Math.hypot(x,y,z)||1; x/=d; y/=d; z/=d;
-    const r = shell ? 0.86+0.14*R() : Math.cbrt(R());
-    put(cx+x*rx*r, cy+y*ry*r, cz+z*rz*r); } };
+(function(){
+  const film = document.getElementById('film');
+  const box = document.getElementById('stagebox');
+  const cv = document.getElementById('stage');
+  const cx = cv.getContext('2d', {alpha:false});
+  const scenes = Array.from(document.querySelectorAll('.scene'));
+  const marks = document.getElementById('marks');
+  const hint = document.getElementById('hint');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // phones get the quarter-size set; the frames are identical otherwise
+  const FILM = innerWidth < 900 ? 'film/m/' : 'film/';
+  let V = '';
+  const src = i => FILM + 'f' + String(i + 1).padStart(4, '0') + '.webp' + V;
+  window.__filmFrame = -1;
+  window.__filmLoaded = 0;
 
-  ell( 0.42, 0,    0,    0.20,0.19,0.19, Math.floor(n*0.10), true);
-  ell( 0.12, 0,    0,    0.26,0.22,0.22, Math.floor(n*0.16), true);
-  ell(-0.38, 0.02, 0,    0.42,0.24,0.23, Math.floor(n*0.24), true);
-  ell( 0.50, 0.05, 0.15, 0.10,0.12,0.07, Math.floor(n*0.05), false);
-  ell( 0.50, 0.05,-0.15, 0.10,0.12,0.07, Math.floor(n*0.05), false);
+  fetch('film/manifest.json', {cache:'no-cache'})
+    .then(r => r.json())
+    .then(m => { V = m.v ? '?v=' + m.v : ''; return still ? stacked(m) : scrub(m); })
+    .catch(() => {});
 
-  for (const sgn of [1,-1]) {
-    const k = Math.floor(n*0.13);
-    for (let j=0;j<k;j++){
-      const t=R(), a=(R()-0.5);
-      const len = 0.95*t, wid = 0.16*Math.sin(Math.PI*t)*(1+0.3*a);
-      put(0.05-len*0.92, 0.20+len*0.34+wid*a*0.7, sgn*(0.10+len*0.20+wid*a));
+  function stacked(m){
+    film.classList.add('still');
+    m.scenes.forEach((s, k) => {
+      if (!scenes[k]) return;
+      const im = new Image();
+      im.src = src(s.start); im.alt = ''; im.width = m.width; im.height = m.height;
+      scenes[k].prepend(im);
+      scenes[k].classList.add('on');
+    });
+  }
+
+  function scrub(m){
+    const N = m.frames;
+    const imgs = new Array(N), ready = new Uint8Array(N);
+    const ranges = m.scenes.map(s => [s.start, s.end]);
+    film.style.height = (N * 12) + 'px';
+    window.__filmFrames = N;
+
+    for (let k = 0; k < ranges.length; k++) marks.appendChild(document.createElement('i'));
+    const dots = Array.from(marks.children);
+
+    let dirty = true;
+    function load(i){
+      const im = new Image();
+      im.src = src(i);
+      const done = im.decode ? im.decode() : new Promise((res, rej) => { im.onload = res; im.onerror = rej; });
+      return done.then(() => { imgs[i] = im; ready[i] = 1; window.__filmLoaded++; dirty = true; },
+                       () => {});
     }
-  }
-  for (let L=0; L<6; L++) {
-    const sgn = L<3?1:-1, seg = L%3;
-    const bx = 0.24-seg*0.16, k = Math.floor(n*0.022);
-    for (let j=0;j<k;j++){
-      const t=R();
-      put(bx-t*0.34, -0.18-t*0.42, sgn*(0.16+t*0.20+0.03*gauss()));
+    let next = Math.min(30, N);
+    for (let i = 0; i < next; i++) load(i);
+    function pump(){ if (next >= N) return; load(next++).then(pump); }
+    pump(); pump();
+
+    let W = 0, H = 0;
+    function fit(){
+      const d = Math.min(devicePixelRatio || 1, 2);
+      W = cv.width = Math.max(2, Math.floor(box.clientWidth * d));
+      H = cv.height = Math.max(2, Math.floor(box.clientHeight * d));
+      dirty = true;
     }
+    addEventListener('resize', fit);
+    fit();
+
+    function paint(im){
+      // landscape: cover, crop the sides. Portrait: contain, so the whole
+      // frame shows and the black above and below reads as more film.
+      const portrait = H > W;
+      document.documentElement.classList.toggle('wide', !portrait && box.clientWidth >= 900);
+      const s = portrait ? Math.min(W / im.naturalWidth, H / im.naturalHeight)
+                         : Math.max(W / im.naturalWidth, H / im.naturalHeight);
+      if (portrait){ cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H); }
+      const w = im.naturalWidth * s, h = im.naturalHeight * s;
+      cx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+    }
+    function progress(){
+      const span = film.offsetHeight - box.offsetHeight;
+      if (span <= 0) return 0;
+      const top = film.getBoundingClientRect().top;
+      return Math.min(1, Math.max(0, -top / span));
+    }
+    // Each sentence is split into words once; the loop then sets each word from
+    // the scene's local progress, so the text scrubs with the film instead of
+    // toggling on and off.
+    const words = scenes.map(el => {
+      const p = el.querySelector('p');
+      if (!p || el.classList.contains('s0')) return [];
+      const parts = p.textContent.trim().split(/\s+/);
+      p.textContent = '';
+      return parts.map((w, i) => {
+        const s = document.createElement('span'); s.className = 'w'; s.textContent = w;
+        p.appendChild(s); if (i < parts.length - 1) p.appendChild(document.createTextNode(' '));
+        return s;
+      });
+    });
+    function setWords(k, t){
+      const el = scenes[k]; if (!el) return;
+      const p = el.querySelector('p'); if (!p) return;
+      const ws = words[k];
+      const n = ws.length;
+      for (let j = 0; j < n; j++){
+        const f = Math.min(1, Math.max(0, ((t - 0.04) / 0.42) * n - j));
+        ws[j].style.opacity = f;
+        ws[j].style.filter = f < 1 ? 'blur(' + ((1 - f) * 10).toFixed(1) + 'px)' : 'none';
+        ws[j].style.transform = f < 1 ? 'translateY(' + ((1 - f) * 0.4).toFixed(3) + 'em)' : 'none';
+      }
+      const e = Math.min(1, Math.max(0, (t - 0.84) / 0.16));
+      const target = n ? p : el.querySelector('.title');
+      if (target){
+        target.style.opacity = 1 - e;
+        target.style.transform = e > 0 ? 'translateY(' + (-e * 48).toFixed(1) + 'px)' : 'none';
+      }
+      const note = el.querySelector('.note');
+      if (note) note.style.opacity = Math.min(1, Math.max(0, (t - 0.5) / 0.3));
+    }
+    let cur = -1, drawn = -1, lastT = -1;
+    function setScene(frame){
+      let k = 0;
+      for (let j = 0; j < ranges.length; j++) if (frame >= ranges[j][0]) k = j;
+      if (k === cur) return;
+      cur = k;
+      scenes.forEach((el, j) => el.classList.toggle('on', j === k));
+      dots.forEach((el, j) => el.classList.toggle('on', j === k));
+    }
+    function loop(){
+      const p = progress();
+      const want = Math.round(p * (N - 1));
+      let i = want;
+      while (i >= 0 && !ready[i]) i--;
+      if (i >= 0 && (i !== drawn || dirty)){
+        paint(imgs[i]); drawn = i; dirty = false; window.__filmFrame = i;
+      }
+      setScene(want);
+      if (cur >= 0){
+        const [a, b] = ranges[cur];
+        const tl = b > a ? (want - a) / (b - a) : 1;
+        if (tl !== lastT){ setWords(cur, tl); lastT = tl; }
+      }
+      hint.classList.toggle('off', p > 0.02);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
   }
-  while (i<n) put(gauss()*0.5, gauss()*0.28, gauss()*0.28);
-  return P;
-}
+})();
 
-const FLY = buildFly(N);
-const heat = new Float32Array(N);
-const cv = document.getElementById('fly');
-const cx = cv.getContext('2d', {alpha:false});
-/* A full spin makes the fly unreadable most of the time - head-on it is just
-   a blob. It sways around side-on instead, which is the view the specimen is
-   recognisable from, and the pointer nudges it a little further. */
-let t = 0, pointer = 0, targetPointer = 0;
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ---------------------------------------------------------------------------
+   Below the film.
 
-function fit(){
-  const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio||1, 2);
-  cv.width = Math.max(2, Math.floor(r.width*d));
-  cv.height = Math.max(2, Math.floor(r.height*d));
-}
-addEventListener('resize', fit);
-addEventListener('pointermove', e => {
-  targetPointer = (e.clientX / innerWidth - 0.5) * 0.55;
-});
-
-function draw(){
-  const W = cv.width, H = cv.height;
-  cx.fillStyle = '#06070a';
-  cx.fillRect(0,0,W,H);
-  pointer += (targetPointer - pointer) * 0.04;
-  const ang = Math.sin(t * 0.19) * 0.34 + pointer;
-  const ct = Math.cos(ang), st = Math.sin(ang);
-  const S = Math.min(W * 0.82, H * 1.15) * 0.42;
-  const bob = reduced ? 0 : Math.sin(t * 0.9) * H * 0.010;
-  // on a phone the canvas is short and the wordmark sits below it in flow,
-  // so the fly can use more of its own box before it crowds anything
-  const cyOff = H * (innerWidth < 640 ? 0.50 : 0.40);
-
-  for (let i=0;i<N;i++){
-    const ax = FLY[i*3], ay = FLY[i*3+2], az = -FLY[i*3+1];
-    const dx = ax*ct - ay*st;              // rotate about the vertical
-    const dz = ax*st + ay*ct;              // depth, for size and haze
-    const X = W/2 - dx*S;      // head to the left, as in the logo
-    const Y = cyOff + az*S + bob;
-    const depth = (dz + 1) * 0.5;          // 0 far, 1 near
-    const h = heat[i];
-    const a = 0.24 + depth*0.55 + h*0.9;
-    const r = (0.62 + depth*0.95 + h*1.7) * (Math.min(devicePixelRatio||1,2));
-    cx.globalAlpha = Math.min(1, a);
-    cx.fillStyle = h > 0.25 ? '#ff79b0' : (depth > 0.58 ? '#fbe8f0' : '#b8688a');
-    cx.fillRect(X, Y, r, r);
-    if (h > 0) heat[i] = h - 0.022;
+   Sections fade up as they arrive, and the step rows carry a still from the
+   scene they describe. Both are additive: with no IntersectionObserver or
+   with reduced motion nothing is hidden, and a missing manifest leaves the
+   steps as text.
+--------------------------------------------------------------------------- */
+(function(){
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!still && 'IntersectionObserver' in window){
+    const groups = [
+      Array.from(document.querySelectorAll('section, footer')),
+      Array.from(document.querySelectorAll('.step')),
+      Array.from(document.querySelectorAll('.cmp-row'))
+    ];
+    const io = new IntersectionObserver(entries => {
+      for (const e of entries){
+        // a section taller than the viewport never reaches the ratio, so any
+        // overlap counts for it
+        const tall = e.boundingClientRect.height > innerHeight * 0.6;
+        if (!e.isIntersecting || (e.intersectionRatio < 0.15 && !tall)) continue;
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    }, {threshold:[0, 0.15]});
+    groups.forEach((els, g) => {
+      let k = 0, parent = null;
+      for (const el of els){
+        if (g > 0){
+          // stagger restarts for each container
+          if (el.parentNode !== parent){ parent = el.parentNode; k = 0; }
+          el.style.transitionDelay = (k++ * 60) + 'ms';
+        }
+        el.classList.add('reveal');
+        io.observe(el);
+      }
+    });
   }
-  cx.globalAlpha = 1;
 
-  if (!reduced) {
-    t += 0.016;
-    for (let k=0;k<16;k++) heat[(Math.random()*N)|0] = 0.35 + Math.random()*0.5;
-  }
-  requestAnimationFrame(draw);
-}
-fit();
-for (let k=0;k<400;k++) heat[(Math.random()*N)|0] = Math.random()*0.5;
-draw();
+  const thumbs = Array.from(document.querySelectorAll('.step .thumb'));
+  if (!thumbs.length) return;
+  fetch('film/manifest.json', {cache:'no-cache'})
+    .then(r => r.json())
+    .then(m => {
+      const v = m.v ? '?v=' + m.v : '';
+      for (const im of thumbs){
+        const s = m.scenes[Number(im.dataset.scene)];
+        if (!s) continue;
+        const at = im.dataset.at;
+        const f = at === 'first' ? s.start : at === 'last' ? s.end : Math.round((s.start + s.end) / 2);
+        im.src = 'film/m/f' + String(f + 1).padStart(4, '0') + '.webp' + v;
+      }
+    })
+    .catch(() => {});
+})();
 
 /* ---------------------------------------------------------------------------
    Live state, read in your browser.
@@ -709,7 +943,7 @@ const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523
 const FEE_ETH = 0.00055;
 
 const $ = id => document.getElementById(id);
-const nf = (v, d=0) => v==null ? '—' : Number(v).toLocaleString(undefined,
+const nf = (v, d=0) => v==null ? '—' : Number(v).toLocaleString('en-US',
   {minimumFractionDigits:d, maximumFractionDigits:d});
 
 let rpcId = 0;
@@ -861,8 +1095,10 @@ function rdraw(){
 }
 rdraw();
 
-const DN_ROWS = [['steer_L','DNa02 L'],['steer_R','DNa02 R'],
-                 ['fwd_L','DNa01 L'],['fwd_R','DNa01 R'],
+/* the DNa02 pair is the steering card; the other descending neurons fold
+   into the details, all six share one map so the readout loop is unchanged */
+const STEER_ROWS = [['steer_L','left'],['steer_R','right']];
+const DN_ROWS = [['fwd_L','DNa01 L'],['fwd_R','DNa01 R'],
                  ['back','MDN'],['stop','DNp09']];
 const OUT_ROWS = [['turn_l','turn L'],['turn_r','turn R'],['forward','forward'],
                   ['reverse','reverse'],['click','click']];
@@ -880,7 +1116,7 @@ function makeBars(host, rows){
   }
   return map;
 }
-const dnBars  = makeBars($$('n-dn'), DN_ROWS);
+const dnBars  = Object.assign(makeBars($$('n-steer'), STEER_ROWS), makeBars($$('n-dn'), DN_ROWS));
 const outBars = makeBars($$('n-out'), OUT_ROWS);
 
 function fitCanvas(c){
@@ -904,23 +1140,23 @@ function paintPanels(){
   let d = fitCanvas(sc);
   sg.fillStyle = '#000'; sg.fillRect(0,0,sc.width,sc.height);
   for (const [x,y] of points){
-    sg.fillStyle = 'rgba(61,255,136,' + (0.3+Math.random()*0.55).toFixed(2) + ')';
+    sg.fillStyle = 'rgba(255,121,176,' + (0.3+Math.random()*0.55).toFixed(2) + ')';
     sg.fillRect(4 + x*(sc.width-8), 4 + (1-y)*(sc.height-8), 1.3*d, 1.3*d);
   }
 
   d = fitCanvas(rt);
   rtg.fillStyle = '#000'; rtg.fillRect(0,0,rt.width,rt.height);
   for (const [u,v,hz] of cols){
-    rtg.fillStyle = 'rgba(61,255,136,' + Math.max(0.05, Math.min(1,hz)).toFixed(2) + ')';
+    rtg.fillStyle = 'rgba(255,121,176,' + Math.max(0.05, Math.min(1,hz)).toFixed(2) + ')';
     rtg.fillRect(3 + u*(rt.width-6), 3 + v*(rt.height-6), 2.2*d, 2.2*d);
   }
 
   d = fitCanvas(sp);
-  pg.fillStyle = '#020704'; pg.fillRect(0,0,sp.width,sp.height);
+  pg.fillStyle = '#0b0d12'; pg.fillRect(0,0,sp.width,sp.height);
   if (hist.length > 1){
     const mx = Math.max.apply(null, hist), mn = Math.min.apply(null, hist);
     const rng = Math.max(1, mx-mn);
-    pg.strokeStyle = '#3dff88'; pg.lineWidth = 1.2*d; pg.beginPath();
+    pg.strokeStyle = '#ff79b0'; pg.lineWidth = 1.2*d; pg.beginPath();
     hist.forEach(function(v,i){
       const x = (i/(hist.length-1))*sp.width;
       const y = sp.height - 3 - ((v-mn)/rng)*(sp.height-6);
@@ -932,7 +1168,7 @@ function paintPanels(){
 }
 paintPanels();
 
-const nf0 = v => v==null ? '—' : Number(v).toLocaleString();
+const nf0 = v => v==null ? '—' : Number(v).toLocaleString('en-US');
 let lastEvents = '';
 
 function renderState(d){
@@ -941,9 +1177,9 @@ function renderState(d){
   for (const k of ['hops','clicks','steps','vetoes','scrolled']){
     const el = $$('r-'+k); if (el && d[k] != null) el.textContent = nf0(d[k]);
   }
-  if (d.url) $$('r-url').textContent = d.url;
+  if (d.url) $$('r-url').textContent = d.url.replace(/^https?:\/\//, '');
   $$('t-live').classList.add('on');
-  for (const id of ['p-vision','p-motor','p-sim','p-net']) $$(id).classList.add('on');
+  for (const id of ['p-vision','p-motor','p-sim','p-net']){ const p = $$(id); if (p) p.classList.add('on'); }
 
   const n = d.neural;
   if (n){
@@ -984,7 +1220,7 @@ function renderState(d){
     lastEvents = ev;
     const host = $$('r-events');
     host.innerHTML = '';
-    for (const e of d.events.slice().reverse()){
+    for (const e of d.events.slice().reverse().slice(0, 6)){
       const row = document.createElement('div');
       if (/did not click|veto/.test(e.m)) row.className = 'veto';
       else if (/blocked/.test(e.m)) row.className = 'blk';
@@ -998,12 +1234,25 @@ function renderState(d){
   }
 }
 
+/* The details area is folded by default so the panel reads at a glance; the
+   readouts in it keep updating while hidden. */
+(function(){
+  const btn = $$('live-more'), box = $$('live-details');
+  if (!btn || !box) return;
+  btn.addEventListener('click', function(){
+    const open = box.hidden;
+    box.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = open ? 'hide details' : 'details';
+  });
+})();
+
 function goOffline(){
   roamOn = false; points = []; cols = []; hist = [];
   $$('r-img').removeAttribute('src');
   $$('r-off').hidden = false;
   $$('t-live').classList.remove('on');
-  for (const id of ['p-vision','p-motor','p-sim','p-net']) $$(id).classList.remove('on');
+  for (const id of ['p-vision','p-motor','p-sim','p-net']){ const p = $$(id); if (p) p.classList.remove('on'); }
 }
 
 /* ---- the live socket --------------------------------------------------
@@ -1046,6 +1295,10 @@ let tickN = 0;
    no object store in the path any more: pushing two frames a second to one
    suspended it on operation count and every read started answering 403. */
 async function findStream(){
+  // ?stream=http://host:port points the page at a rig directly, for
+  // watching a local run before anything is published
+  const local = new URLSearchParams(location.search).get('stream');
+  if (local) return local;
   try {
     /* Read from the repo, not from this deployment: the fly writes the
        address there and this page is only redeployed when someone deploys
