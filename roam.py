@@ -59,18 +59,27 @@ OUT = ROOT / "build"
 # Link-rich, text-heavy, safe places to be dropped into. The fly leaves them
 # on its own within a few clicks; these only decide where a life starts.
 SEEDS = [
-    # Her world: the dataset she was built from, her own species, the papers
-    # behind the model, and the two places her token life happens. Consent
-    # walls, login walls and search engines were all tried upstream and all
-    # fail headless, so the list stays with pages a retina can work on.
+    # Weighted toward Special:Random on purpose: every time a hop budget runs
+    # out she is put back on a seed, and a short fixed list means the same
+    # few pages forever. A random article is somewhere new each time.
+    "https://en.wikipedia.org/wiki/Special:Random",
+    "https://en.wikipedia.org/wiki/Special:Random",
+    "https://en.wikipedia.org/wiki/Special:Random",
+    "https://en.wikipedia.org/wiki/Special:Random",
+    "https://commons.wikimedia.org/wiki/Special:Random",
+    "https://en.wikisource.org/wiki/Special:Random",
+    "https://en.wikiquote.org/wiki/Special:Random",
+    "https://www.gutenberg.org/browse/scores/top",
+    "https://openlibrary.org/",
+    "https://xkcd.com/",
+    # Her world: the dataset she was built from, her own species, the lab
+    # behind the model. Consent walls, login walls and search engines were
+    # all tried upstream and all fail headless.
     "https://codex.flywire.ai/",
     "https://en.wikipedia.org/wiki/Drosophila_melanogaster",
     "https://en.wikipedia.org/wiki/FlyWire",
     "https://en.wikipedia.org/wiki/Connectome",
-    "https://en.wikipedia.org/wiki/Compound_eye",
     "https://commons.wikimedia.org/wiki/Category:Drosophila_melanogaster",
-    "https://arxiv.org/list/q-bio.NC/recent",
-    "https://www.biorxiv.org/collection/neuroscience",
     "https://www.janelia.org/project-team/flyem",
     # her brother, and the chain both of them launch on
     "https://www.ponsfamily.com/launchpad/0x4eb990547bce4a982432ca88cf5fae7eed1a2d35",
@@ -78,9 +87,11 @@ SEEDS = [
     "https://robinhoodchain.blockscout.com/txs",
     # herself, watched
     "https://femaleflybrain.com/",
-    # one book
-    "https://www.gutenberg.org/cache/epub/5200/pg5200-images.html",
 ]
+
+# arXiv and bioRxiv were seeds and had to go: almost every link on them
+# points at a domain that is not allowed, so a click goes nowhere, the
+# budget expires and she is bounced back to a seed. Rich-looking traps.
 
 # Checked against every URL the browser tries to commit to.
 CHALLENGE = re.compile(r"just a moment|attention required|verify you are|access denied|are you a human|checking your browser", re.I)
@@ -104,7 +115,10 @@ BLOCK = re.compile(
 ALLOW = {
     "codex.flywire.ai", "flywire.ai", "www.flywire.ai",
     "en.wikipedia.org", "en.m.wikipedia.org", "commons.wikimedia.org",
+    "en.wikisource.org", "en.wikiquote.org", "en.wikibooks.org",
     "species.wikimedia.org", "www.wikidata.org",
+    "openlibrary.org",
+    "xkcd.com", "www.xkcd.com",
     "arxiv.org", "www.arxiv.org",
     "www.biorxiv.org", "biorxiv.org",
     "www.janelia.org", "janelia.org",
