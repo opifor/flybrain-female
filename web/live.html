@@ -9,7 +9,7 @@
   :root{
     --ground:#06070a; --panel:#0c0e13; --panel-2:#11141c; --line:#1b1f2a;
     --ink:#e6eaf2; --dim:#98a2b8; --muted:#5f6a80; --faint:#2e3542;
-    --spike:#63e6ff; --go:#4ade80; --warn:#f0b34a; --bad:#ff6b6b;
+    --spike:#ff79b0; --go:#4ade80; --warn:#f0b34a; --bad:#ff6b6b;
   }
   *{box-sizing:border-box}
   html,body{height:100%}
@@ -22,7 +22,7 @@
   .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   .brand{display:flex;align-items:baseline;gap:10px}
   .brand h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em}
-  .brand h1 em{font-style:italic;font-weight:500;color:var(--dim)}
+  .brand h1 em{font-style:italic;font-weight:500;color:var(--spike)}
   .brand .tag{font-family:"IBM Plex Mono",monospace;font-size:11.5px;
     letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
   .grow{flex:1}
@@ -70,7 +70,7 @@
   #cur{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;
     pointer-events:none;z-index:4;
     filter:drop-shadow(0 0 9px rgba(99,230,255,.9)) drop-shadow(0 0 3px rgba(0,0,0,.9))}
-  #ring{position:absolute;border:2px solid var(--go);border-radius:50%;opacity:0;
+  #ring{position:absolute;border:2px solid var(--spike);border-radius:50%;opacity:0;
     pointer-events:none;z-index:5}
   #idle{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:11px}
@@ -91,7 +91,7 @@
   .track{height:7px;background:#0a0d13;border-radius:1px;overflow:hidden}
   .track i{display:block;height:100%;width:0;background:var(--spike);
     transition:width .12s linear}
-  .track i.hi{background:var(--go)}
+  .track i.hi{background:var(--spike)}
   .dn .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
 
   .foot{display:grid;grid-template-columns:1.42fr 1fr;gap:10px;min-height:0}
@@ -119,19 +119,20 @@
   <div>
     <div class="bar">
       <div class="brand">
-        <h1>Flybrain <em>Live</em></h1>
-        <span class="tag">Drosophila melanogaster &nbsp;&middot;&nbsp; male CNS connectome v1.0</span>
+        <h1>Flybrain <em>Female</em></h1>
+        <span class="tag">&hellip;</span>
       </div>
       <span class="grow"></span>
-      <span class="chip"><b>165,122</b> neurons &nbsp;&middot;&nbsp; <b>10,228,000</b> synapses</span>
+      <span class="chip" id="counts">&hellip;</span>
       <span class="chip" id="wallet">wallet&hellip;</span>
       <span class="chip dry" id="mode">&hellip;</span>
     </div>
     <div class="bar" style="margin-top:9px">
       <button id="start">START</button>
-      <input id="name" value="test" placeholder="name">
-      <input id="ticker" value="test" placeholder="ticker">
-      <input id="desc" value="launched by a fruit fly connectome" placeholder="description">
+      <input id="name" value="female fly" placeholder="name">
+      <input id="ticker" value="FEMALE" placeholder="ticker">
+      <input id="desc" value="launched by a female fruit fly connectome" placeholder="description">
+      <span class="chip">sister build of the male rig · the other sex</span>
       <span class="grow"></span>
       <div class="steps" id="steps"></div>
     </div>
@@ -176,6 +177,14 @@
 
 <script>
 const $ = id => document.getElementById(id);
+document.title=document.querySelector('.brand h1').textContent;
+const spike=getComputedStyle(document.documentElement).getPropertyValue('--spike').trim();
+let totalNeurons=null;
+function neuronCount(measured=false){
+  $('ncount').textContent=totalNeurons===null || !N ? '…' :
+    N.toLocaleString('en-US')+' of '+totalNeurons.toLocaleString('en-US')+
+    (measured?' at measured coordinates':' sampled');
+}
 let XYZ=null,GRP=null,N=0,heat=null,px=null,py=null,pz=null,theta=.45,idleMode=true;
 
 const STAGES=[['wallet','wallet'],['image','image'],['fill','form'],
@@ -204,8 +213,12 @@ fetch('/status').then(r=>r.json()).then(s=>{
       +(s.sol||0).toFixed(4)+' '+(s.unit||'SOL')
     : 'no wallet';
   if(s.venue){ document.querySelector('.hd .t').textContent='Live — '+s.venue; }
-  if(s.chain){ document.querySelector('.brand .tag').textContent=
-    'Drosophila melanogaster · ' + s.chain; }
+  document.querySelector('.brand .tag').textContent=
+    [(s.sex?s.sex+' ':'')+'Drosophila melanogaster',s.dataset,s.chain&&s.chain.replace('Robinhood Chain','chain')].filter(Boolean).join(' · ');
+  totalNeurons=s.neurons;
+  $('counts').innerHTML='<b>'+s.neurons.toLocaleString('en-US')+'</b> neurons · <b>'+
+    s.edges.toLocaleString('en-US')+'</b> connections';
+  neuronCount();
   const m=$('mode');
   m.textContent = s.live ? 'LIVE — will mint' : 'DRY RUN';
   m.className = 'chip ' + (s.live ? 'live' : 'dry');
@@ -280,8 +293,8 @@ fetch('/neurons').then(async r=>{
   const cx=(a[0]+a[1])/2,cy=(a[2]+a[3])/2,cz=(a[4]+a[5])/2,s=(a[5]-a[4])/2;
   for(let i=0;i<n;i++){px[i]=(XYZ[i*3]-cx)/s;py[i]=(XYZ[i*3+1]-cy)/s;pz[i]=(XYZ[i*3+2]-cz)/s;}
   FLY=buildFly(n);
-  $('ncount').textContent=n.toLocaleString()+' of 165,122 sampled';
-  fit();log('connectome loaded — '+n.toLocaleString()+' neurons at measured coordinates');
+  neuronCount();
+  fit();log('connectome loaded — '+n.toLocaleString('en-US')+' neurons at measured coordinates');
 });
 
 function draw(){
@@ -298,7 +311,7 @@ function draw(){
             Y=H/2+az*S*(useFly?1.15:1.06), h=heat[i];
       if(h>.03){
         bx.globalAlpha=Math.min(1,.4+h);
-        bx.fillStyle=h>.6?'#ffffff':'#63e6ff';
+        bx.fillStyle=h>.6?'#ffffff':spike;
         const s2=(h>.6?2.6:2.0)*d;bx.fillRect(X-s2/2,Y-s2/2,s2,s2);
       }else{
         bx.globalAlpha=GRP[i]?.30:.13;
@@ -331,7 +344,7 @@ function baseline(on){
   if(on){ u.textContent='spontaneous baseline'; $('firing').style.opacity='.55';
           $('ncount').textContent='idle — spontaneous activity'; }
   else  { u.textContent='neurons firing';       $('firing').style.opacity='1';
-          $('ncount').textContent='11,000 of 165,122 at measured coordinates'; }
+          neuronCount(true); }
 }
 
 let ws=null;
@@ -432,7 +445,7 @@ function handle(m){
     const idx=Uint8Array.from(atob(m.idx),function(c){return c.charCodeAt(0);});
     const u16=new Uint16Array(idx.buffer);
     if(heat)for(let i=0;i<u16.length;i++)heat[u16[i]]=1;
-    $('firing').textContent=u16.length.toLocaleString();
+    $('firing').textContent=u16.length.toLocaleString('en-US');
     document.querySelector('.readout .u').textContent='neurons firing — watching';
     DNS.forEach(function(p){const k=p[1],v=m.hz[k]||0;
       dnEl[k].i.style.width=Math.min(100,v/460*100)+'%';
@@ -460,14 +473,14 @@ function handle(m){
     const u16=new Uint16Array(idx.buffer);
     baseline(false);
     if(heat)for(let i=0;i<u16.length;i++)heat[u16[i]]=1;
-    $('firing').textContent=u16.length.toLocaleString();
+    $('firing').textContent=u16.length.toLocaleString('en-US');
     DNS.forEach(function(p){const k=p[1],v=m.hz[k]||0;
       dnEl[k].i.style.width=Math.min(100,v/460*100)+'%';
       dnEl[k].i.classList.toggle('hi',v>=330);dnEl[k].v.textContent=v;});
     $('t-step').textContent=String(m.t+1).padStart(2,'0');
     $('t-fields').innerHTML=m.filled.length+' <small>/ 3</small>';
     $('t-target').textContent=m.target;
-    $('t-spikes').textContent=m.spikes.toLocaleString();
+    $('t-spikes').textContent=m.spikes.toLocaleString('en-US');
     $('phase').textContent=m.create_label||'filling the form';
     curTo={x:m.cx,y:m.cy}; if(!curNow) curNow={x:m.cx,y:m.cy};
     if(m.click){const r=$('ring'),img=$('shot');

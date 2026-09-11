@@ -30,6 +30,8 @@ async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--width", type=int, default=1600)
     ap.add_argument("--height", type=int, default=900)
+    ap.add_argument("--scale", type=int, default=2,
+                    help="2 records the 1600x900 layout at 3200x1800")
     ap.add_argument("--timeout", type=int, default=360,
                     help="seconds to wait for the run to finish")
     ap.add_argument("--dry", action="store_true",
@@ -57,11 +59,16 @@ async def main():
     stamp = time.strftime("%Y%m%d-%H%M%S")
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=True)
+        # the layout is designed for 1600x900; a higher device scale factor
+        # records the same picture with more pixels
+        browser = await pw.chromium.launch(
+            headless=True, args=[f"--force-device-scale-factor={a.scale}"])
         ctx = await browser.new_context(
             viewport={"width": a.width, "height": a.height},
+            device_scale_factor=a.scale,
             record_video_dir=str(OUT),
-            record_video_size={"width": a.width, "height": a.height},
+            record_video_size={"width": a.width * a.scale,
+                               "height": a.height * a.scale},
         )
         page = await ctx.new_page()
         page.on("console", lambda m: m.type == "error"
@@ -72,7 +79,7 @@ async def main():
         # does not open on a blank panel
         await page.wait_for_function(
             "() => document.getElementById('ncount')"
-            " && /of 165,122/.test(document.getElementById('ncount').textContent)",
+            r" && / of [\d,]+ /.test(document.getElementById('ncount').textContent)",
             timeout=60000)
         await page.wait_for_timeout(2500)
         print("connectome loaded in the UI")
@@ -116,7 +123,7 @@ async def main():
     if shutil.which("ffmpeg"):
         mp4 = OUT / f"flybrain-{stamp}.mp4"
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(webm),
-                        "-c:v", "libx264", "-preset", "slow", "-crf", "20",
+                        "-c:v", "libx264", "-preset", "slow", "-crf", "18",
                         "-pix_fmt", "yuv420p", str(mp4)], check=False)
         if mp4.exists():
             print(f"wrote {mp4}  ({mp4.stat().st_size/1e6:.1f} MB)")

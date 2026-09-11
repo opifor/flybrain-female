@@ -44,7 +44,7 @@ TAX_PCT = int(_ENV.get("FLY_RH_TAX") or 2)
 
 app = FastAPI()
 STATE = {"brain": None, "pilot": None, "remap": None, "xyz": None,
-         "grp": None, "running": False}
+         "grp": None, "running": False, "n": 0, "edges": 0, "graph": None}
 
 
 def say(*parts):
@@ -87,6 +87,7 @@ def boot(n_keep=11000):
     remap = np.full(fb.n, -1, dtype=np.int32)
     remap[keep] = np.arange(len(keep))
     STATE.update(brain=fb, pilot=pilot, remap=remap,
+                 n=fb.n, edges=int(fb.W.nnz), graph=fb.graph_path.name,
                  xyz=P[keep].astype(np.float32), grp=grp[keep])
     print(f"brain ready: {fb.n:,} neurons, {fb.W.nnz:,} edges; "
           f"{len(keep):,} streamed to the viewer")
@@ -107,16 +108,23 @@ async def neurons():
 @app.get("/status")
 async def status():
     env = load_env()
+    graph = STATE["graph"]
+    female = "female" in (graph or "")
+    facts = {"neurons": STATE["n"], "edges": STATE["edges"], "graph": graph,
+             "sex": ("female" if female else "male") if graph else None,
+             "dataset": ("FlyWire FAFB v783" if female else "Janelia male CNS v1.0")
+                        if graph else None}
     try:
         acct = account(env)
         eth = balance(env, quiet=True)
-        return {"wallet": acct.address, "sol": eth, "unit": "ETH",
+        return {**facts, "wallet": acct.address, "sol": eth, "unit": "ETH",
                 "venue": "ponsfamily.com/launchpad",
                 "chain": f"Robinhood Chain {CHAIN_ID}",
                 "live": env.get("FLY_RH_LIVE", "0") == "1",
                 "armed": browser_allowed()}
     except SystemExit:
-        return {"wallet": None, "sol": 0, "unit": "ETH", "live": False,
+        return {**facts, "wallet": None, "sol": 0, "unit": "ETH", "live": False,
+                "chain": f"Robinhood Chain {CHAIN_ID}",
                 "armed": browser_allowed()}
 
 
