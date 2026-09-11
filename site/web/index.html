@@ -611,7 +611,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
         </div>
         <div class="dblk">
           <div class="lk">Where she may go</div>
-          <div class="chips"><span>codex.flywire.ai</span><span>en.wikipedia.org</span><span>commons.wikimedia.org</span><span>arxiv.org</span><span>biorxiv.org</span><span>janelia.org</span><span>gutenberg.org</span><span>ponsfamily.com</span><span>robinhoodchain.blockscout.com</span><span>femaleflybrain.com</span></div>
+          <div class="chips"><span>en.wikipedia.org</span><span>commons.wikimedia.org</span><span>en.wikisource.org</span><span>en.wikiquote.org</span><span>openlibrary.org</span><span>gutenberg.org</span><span>xkcd.com</span><span>codex.flywire.ai</span><span>janelia.org</span><span>arxiv.org</span><span>biorxiv.org</span><span>ponsfamily.com</span><span>robinhoodchain.blockscout.com</span><span>femaleflybrain.com</span></div>
           <div class="chips next" aria-hidden="true"><span>more to come</span><span>and more</span><span>soon</span><span>later</span><span>one day</span></div>
           <p class="lsay" style="margin-top:10px">The list grows as she proves she can be trusted with more.</p>
         </div>
@@ -756,7 +756,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
       <a href="https://github.com/opifor/flybrain-female">source</a>
       <a href="https://x.com/opifor">@opifor</a>
       <span>sister of <a href="https://github.com/fruitflydev/flycoinrh">FLYBRAIN</a></span>
-      <a id="f-scan" href="https://robinhoodchain.blockscout.com">explorer</a>
+      <a id="f-scan" href="https://robinhoodchain.blockscout.com/address/0xc88f1622748007B441f2f2B8D07562Ad2ad93681">her wallet</a>
     </div>
     <div><span class="pill"><span class="pip" id="pip"></span><span id="pip-t">reading the chain</span></span></div>
     <p style="margin-top:22px;max-width:66ch">Connectome data: FlyWire FAFB v783, released CC-BY by the FlyWire Consortium, Princeton University and the University of Cambridge. Dorkenwald et al. 2024 (Nature) and Schlegel et al. 2024 (Nature). Simulation after Shiu et&nbsp;al. 2024 and Lappalainen et&nbsp;al. 2024. Not affiliated with any of them, nor with pons or Robinhood. $HER is an art experiment, not an investment.</p>
@@ -1059,11 +1059,11 @@ function render(d){
     $('t-tax').textContent = t.creator_tax_pct.toFixed(2) + ' %';
     $('t-sup').textContent = nf(t.supply) + ' ' + t.symbol;
     $('t-link').href = 'https://www.ponsfamily.com/launchpad/' + t.address;
-    if ($('f-scan')) $('f-scan').href = 'https://robinhoodchain.blockscout.com/token/' + t.address;
+    if ($('f-scan')) { $('f-scan').href = 'https://robinhoodchain.blockscout.com/token/' + t.address; $('f-scan').textContent = 'her token'; }
   } else {
     for (const id of ['t-ca', 't-pair', 't-tax', 't-sup']) $(id).textContent = '\u2014';
     $('t-link').href = 'https://www.ponsfamily.com/launchpad';
-    if ($('f-scan')) $('f-scan').href = 'https://robinhoodchain.blockscout.com/';
+    if ($('f-scan')) { $('f-scan').href = 'https://robinhoodchain.blockscout.com/address/0xc88f1622748007B441f2f2B8D07562Ad2ad93681'; $('f-scan').textContent = 'her wallet'; }
   }
   $('upd').textContent = new Date().toISOString().slice(11,19) + ' UTC';
   $('pip').classList.remove('stale');
