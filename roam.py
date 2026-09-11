@@ -69,7 +69,6 @@ SEEDS = [
     "https://en.wikipedia.org/wiki/Connectome",
     "https://en.wikipedia.org/wiki/Compound_eye",
     "https://commons.wikimedia.org/wiki/Category:Drosophila_melanogaster",
-    "https://www.inaturalist.org/taxa/47217-Drosophila",
     "https://arxiv.org/list/q-bio.NC/recent",
     "https://www.biorxiv.org/collection/neuroscience",
     "https://www.janelia.org/project-team/flyem",
@@ -84,6 +83,7 @@ SEEDS = [
 ]
 
 # Checked against every URL the browser tries to commit to.
+CHALLENGE = re.compile(r"just a moment|attention required|verify you are|access denied|are you a human|checking your browser", re.I)
 BLOCK = re.compile(
     r"(#/media/|porn|xxx|adult|nsfw|escort|hentai|onlyfans|camsoda|chaturbate"
     r"|casino|bet365|poker|gambl|lottery"
@@ -105,7 +105,6 @@ ALLOW = {
     "codex.flywire.ai", "flywire.ai", "www.flywire.ai",
     "en.wikipedia.org", "en.m.wikipedia.org", "commons.wikimedia.org",
     "species.wikimedia.org", "www.wikidata.org",
-    "www.inaturalist.org", "inaturalist.org",
     "arxiv.org", "www.arxiv.org",
     "www.biorxiv.org", "biorxiv.org",
     "www.janelia.org", "janelia.org",
@@ -546,8 +545,13 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             try:
                 await page.goto(url, wait_until="domcontentloaded", timeout=30000)
                 await page.wait_for_timeout(1200)
-                stats["hops"] += 1
                 title = (await page.title())[:70]
+                if CHALLENGE.search(title):
+                    # a bot check is a wall with a spinner; nothing to see here
+                    stats["blocked"] += 1
+                    await log(f"a verification page, moving on: {page.url[:60]}")
+                    return False
+                stats["hops"] += 1
                 stats["visited"].append({"url": page.url, "title": title,
                                          "at": int(time.time())})
                 stats["visited"] = stats["visited"][-40:]
@@ -737,6 +741,11 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                                 mb.dopamine(+1, 1.0)     # somewhere new
                                 mb.apply()
                             title = (await page.title())[:70]
+                            if CHALLENGE.search(title):
+                                stats["blocked"] += 1
+                                await log("a verification page, moving on")
+                                await goto(rng.choice(SEEDS), "bot check")
+                                continue
                             stats["visited"].append(
                                 {"url": page.url, "title": title,
                                  "at": int(time.time())})
