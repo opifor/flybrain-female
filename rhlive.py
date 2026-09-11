@@ -37,9 +37,10 @@ from rhprovider import attach
 ROOT = Path(__file__).parent
 URL = "https://www.ponsfamily.com/launchpad/create"
 IMAGE = "assets/flycoin_square.png"
-PAIR = os.environ.get("FLY_RH_PAIR", "GOOGL")   # default on the page is ETH
-X_HANDLE = os.environ.get("FLY_RH_X", "elonmusk")   # x.com/<handle> on the coin
-TAX_PCT = int(os.environ.get("FLY_RH_TAX", "2"))
+_ENV = load_env()
+PAIR = _ENV.get("FLY_RH_PAIR") or "GOOGL"   # default on the page is ETH
+X_HANDLE = _ENV.get("FLY_RH_X") or ""   # x.com/<handle> on the coin; empty leaves the field alone
+TAX_PCT = int(_ENV.get("FLY_RH_TAX") or 2)
 
 app = FastAPI()
 STATE = {"brain": None, "pilot": None, "remap": None, "xyz": None,
