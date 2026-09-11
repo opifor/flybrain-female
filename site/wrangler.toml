@@ -1,0 +1,14 @@
+name = "femaleflybrain"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+routes = [
+  { pattern = "femaleflybrain.com", custom_domain = true },
+  { pattern = "www.femaleflybrain.com", custom_domain = true },
+]
+
+# the page and the film frames are plain files; the edge serves them
+[assets]
+directory = "web"
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
