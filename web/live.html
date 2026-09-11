@@ -69,7 +69,7 @@
   #shot{width:100%;height:100%;object-fit:contain;display:block}
   #cur{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;
     pointer-events:none;z-index:4;
-    filter:drop-shadow(0 0 9px rgba(99,230,255,.9)) drop-shadow(0 0 3px rgba(0,0,0,.9))}
+    filter:drop-shadow(0 0 9px rgba(255,121,176,.9)) drop-shadow(0 0 3px rgba(0,0,0,.9))}
   #ring{position:absolute;border:2px solid var(--spike);border-radius:50%;opacity:0;
     pointer-events:none;z-index:5}
   #idle{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -81,7 +81,7 @@
     background:radial-gradient(120px 70px at 30% 40%, rgba(6,7,10,.92), rgba(6,7,10,0))}
   .readout .n{font-family:"IBM Plex Mono",monospace;font-size:56px;font-weight:600;
     line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
-    color:#fff;text-shadow:0 0 26px rgba(99,230,255,.55)}
+    color:#fff;text-shadow:0 0 26px rgba(255,121,176,.55)}
   .readout .u{font-family:"IBM Plex Mono",monospace;font-size:12.5px;
     letter-spacing:.17em;text-transform:uppercase;color:var(--dim);margin-top:3px}
   .dns{padding:10px 14px 12px;display:flex;flex-direction:column;gap:7px;
@@ -385,8 +385,8 @@ function drawFlySprite(speed){
   const beat=Math.sin(wingT)*(0.4+Math.min(speed,14)/14*0.6);
   for(let i=0;i<20;i++){                        // wings
     const t=i/19, sp=7+t*15, y=-5-t*9-beat*7;
-    dot(-sp*0.6, y, 1.9, 0.85-t*0.3, '#8fe9ff');
-    dot( sp*0.6, y, 1.9, 0.85-t*0.3, '#8fe9ff');
+    dot(-sp*0.6, y, 1.9, 0.85-t*0.3, '#ffb3d1');
+    dot( sp*0.6, y, 1.9, 0.85-t*0.3, '#ffb3d1');
   }
   for(let i=0;i<10;i++){                        // abdomen
     const t=i/9; dot(0, 4+t*12, 4.2-t*2.2, 1, '#ffffff');
@@ -395,11 +395,11 @@ function drawFlySprite(speed){
     const t=i/5; dot(0, -2+t*5, 4.8, 1, '#ffffff');
   }
   dot(0,-8.5,4.0,1,'#ffffff');                  // head
-  dot(-3.4,-9.5,2.6,1,'#63e6ff');               // eyes
-  dot( 3.4,-9.5,2.6,1,'#63e6ff');
+  dot(-3.4,-9.5,2.6,1,'#ff79b0');               // eyes
+  dot( 3.4,-9.5,2.6,1,'#ff79b0');
   for(const sgn of [-1,1]) for(let L=0;L<3;L++){ // legs
     for(let i=0;i<4;i++){const t=i/3;
-      dot(sgn*(4+t*8), 2+L*4+t*6, 1.3, 0.8, '#bfefff');}
+      dot(sgn*(4+t*8), 2+L*4+t*6, 1.3, 0.8, '#ffd1e3');}
   }
   cx2.restore(); cx2.globalAlpha=1;
 }

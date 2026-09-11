@@ -1123,10 +1123,10 @@ function rdraw(){
     const x = rcur.x*W, y = rcur.y*H, s = Math.min(W,H)*0.03;
     rwing += 0.5;
     rg.save(); rg.translate(x,y);
-    rg.fillStyle = 'rgba(125,234,255,0.92)';
+    rg.fillStyle = 'rgba(255,121,176,0.95)';
     rg.beginPath(); rg.ellipse(0,0,s*0.62,s*0.42,0,0,7); rg.fill();
     rg.beginPath(); rg.ellipse(s*0.62,-s*0.06,s*0.30,s*0.28,0,0,7); rg.fill();
-    rg.fillStyle = 'rgba(125,234,255,0.32)';
+    rg.fillStyle = 'rgba(255,121,176,0.35)';
     for (const sg of [1,-1]){
       rg.beginPath();
       rg.ellipse(-s*0.22, sg*(s*0.42+Math.abs(Math.sin(rwing))*s*0.16),
