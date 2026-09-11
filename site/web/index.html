@@ -146,10 +146,11 @@ a:hover{border-bottom-color:var(--cyan)}
              rgba(6,7,10,.78) 65%,var(--ground) 100%)}
 /* 16vh, not more: scene 6's caption sits 12vh above the stage's bottom edge
    and the section's eyebrow must clear it once both scroll together */
-#live{position:relative;z-index:2;margin-top:-16vh}
+#story{position:relative;z-index:2;margin-top:-16vh}
+#live{position:relative;z-index:2}
 /* the stacked stills have no sticky tail to pull into */
 .film.still+.fade{display:none}
-.film.still~#live{margin-top:0}
+.film.still~#story{margin-top:0}
 
 /* ---------- reveal ----------
    The class is added by script, so without it everything is simply visible. */
@@ -165,7 +166,8 @@ h2{
   margin:0 0 6px;color:#eaf4fa;text-wrap:balance;
 }
 .lede{color:var(--ink-dim);max-width:62ch;margin:0 0 30px;font-size:18px;line-height:1.65}
-.story{max-width:66ch;margin:0;padding-left:1.2em;color:var(--ink-dim);font-size:17px;line-height:1.6}
+.story{max-width:66ch;margin:0;padding-left:1.3em;color:var(--ink-dim);font-size:17px;line-height:1.65}
+@media (max-width:640px){.story{font-size:16px;padding-left:1.2em}}
 .story li{margin:0 0 12px}
 .story b{color:var(--ink)}
 .story a{color:var(--rose,#ff79b0)}
@@ -501,7 +503,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 <div class="fade" aria-hidden="true"></div>
 
 <section id="story" style="padding-top:44px">
-  <div class="wrap">
+  <div class="wrap livew">
     <div class="eyebrow">the story, in 60 seconds</div>
     <h2>How a female fly ended up here</h2>
     <ol class="story">
