@@ -555,6 +555,7 @@ async def roam(steps_per_page=26, headful=False, seed=None):
         cx, cy = 640.0, 400.0
         px_, py_ = cx, cy
         on_page = 0
+        walls = 0
 
         # Screencast, not screenshots.
         #
@@ -709,11 +710,20 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                                 mb.dopamine(-1, 1.0)     # a wall
                                 mb.apply()
                             await log(f"landed somewhere blocked, going back")
-                            try:
-                                await page.go_back(timeout=15000)
-                            except Exception:
-                                await goto(rng.choice(SEEDS), "bounced")
+                            walls += 1
+                            # three walls from the same spot means the page is a
+                            # trap (an image viewer, a login wall); leave it
+                            if walls >= 3:
+                                walls = 0
+                                on_page = 0
+                                await goto(rng.choice(SEEDS), "stuck at a wall")
+                            else:
+                                try:
+                                    await page.go_back(timeout=15000)
+                                except Exception:
+                                    await goto(rng.choice(SEEDS), "bounced")
                         else:
+                            walls = 0
                             stats["hops"] += 1
                             if mb is not None:
                                 mb.dopamine(+1, 1.0)     # somewhere new
