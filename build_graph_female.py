@@ -17,10 +17,11 @@ BUILD = ROOT / "build"
 
 def main():
     ap = argparse.ArgumentParser()
-    # On 8 real frames at 3 cursor positions, 0.6 reduced DN ceiling saturation to 0.04.
-    ap.add_argument("--exc-scale", type=float, default=0.6)
-    # Cooler DNp09 (mean 103 Hz, max 167) gave 13/48 clicks at 150 Hz, 0/48 at 330 (male 3/48, mean 172 Hz).
-    ap.add_argument("--click-hz", type=float, default=150)
+    ap.add_argument("--eye", choices=("both", "left", "right"), default="both")
+    # Largest tested scale meeting the ceiling and movement limits with both eyes.
+    ap.add_argument("--exc-scale", type=float, default=0.5)
+    # 100 and 120 Hz tie at 5/48 clicks; use the lower stopping threshold.
+    ap.add_argument("--click-hz", type=float, default=100)
     args = ap.parse_args()
     print("loading annotations ...")
     ann = pd.read_csv(DATA / "classification.csv.gz", keep_default_na=False)
@@ -55,9 +56,10 @@ def main():
 
     columns = pd.read_csv(DATA / "column_assignment.csv.gz")
     assigned = columns.column_id.notna() & columns.p.notna() & columns.q.notna()
-    counts = columns.loc[assigned & columns.type.isin(["L1", "L2"])].groupby("hemisphere").size()
-    eye = counts.idxmax()
-    columns = columns.loc[assigned & (columns.hemisphere == eye)].set_index("root_id").reindex(bodies)
+    eye = args.eye
+    selected = columns.hemisphere.isin(("left", "right") if eye == "both" else (eye,))
+    # Both hemispheres sample the same screen in their shared raw axial coordinates.
+    columns = columns.loc[assigned & selected].set_index("root_id").reindex(bodies)
     has_hex = columns.p.notna().to_numpy() & columns.q.notna().to_numpy()
     hex1 = columns.p.fillna(0).to_numpy(dtype=np.int32)
     hex2 = columns.q.fillna(0).to_numpy(dtype=np.int32)
@@ -89,6 +91,9 @@ def main():
     print(f"  dropped (modulatory/unknown NT): {(~keep).sum():,}")
     for t in ("L1", "L2"):
         print(f"  {t} with hex: {((types == t) & has_hex).sum():,}")
+        for hemisphere in ("left", "right"):
+            mask = (types == t) & has_hex & (columns.hemisphere.to_numpy() == hemisphere)
+            print(f"  {t} with hex {hemisphere}: {mask.sum():,}")
     for side in ("L", "R", ""):
         print(f"  DN side {side or 'unspecified'}: {((superclass == 'descending') & (soma_side == side)).sum():,}")
     print(f"  proboscis motor neurons: {(subclass == 'proboscis_motor_neuron').sum():,}")
