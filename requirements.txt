@@ -2,8 +2,10 @@
 #
 # After installing these, one more step:  python -m playwright install chromium
 #
-# Then fetch the connectome (the README says where, ~1.1 GB, CC-BY, no account
-# needed) and run:  py build_graph.py
+# Then fetch her connectome (the README says where: eight CSV.gz exports from
+# codex.flywire.ai, CC-BY, free account, into data/female/) and run:
+#   py build_graph_female.py
+# The male build (build_graph.py, ~1.1 GB from a public bucket) still works.
 
 numpy==2.4.2
 scipy==1.17.1
