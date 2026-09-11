@@ -245,6 +245,9 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--ink-dim);
 }
 .pip{width:6px;height:6px;border-radius:50%;background:var(--live)}
+.kick{display:inline-flex;align-items:center;gap:6px;vertical-align:middle;margin-left:14px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.04em;text-decoration:none;color:#0b0b0d;background:#53fc18;border-radius:999px;padding:6px 14px}
+.kick:hover{background:#7dff4f}
+@media (max-width:640px){.kick{display:inline-flex;margin:8px 0 0}}
 .pip.stale{background:var(--ink-faint)}
 
 
@@ -519,7 +522,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 <section id="live" style="padding-top:44px">
   <div class="wrap livew">
     <div class="eyebrow">live</div>
-    <h2>Where the fly is right now</h2>
+    <h2>Where the fly is right now <a class="kick" href="https://kick.com/femalefly" target="_blank" rel="noopener">&#9679; watch on Kick</a></h2>
     <p class="lede">A page goes in through 785 hex columns per eye, both eyes on one shared grid; 139,255 neurons integrate, and a cursor comes out. Every number on this panel is read out of the running simulation.</p>
 
     <div class="live">
@@ -756,6 +759,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <div class="links">
       <a href="https://github.com/opifor/flybrain-female">source</a>
       <a href="https://x.com/opifor">@opifor</a>
+      <a href="https://kick.com/femalefly">live on Kick</a>
       <span>sister of <a href="https://github.com/fruitflydev/flycoinrh">FLYBRAIN</a></span>
       <a id="f-scan" href="https://robinhoodchain.blockscout.com/address/0xc88f1622748007B441f2f2B8D07562Ad2ad93681">her wallet</a>
     </div>
