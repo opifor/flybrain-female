@@ -329,14 +329,17 @@ def soma_xy(fb):
     annotations table - the scatter is anatomy, not a shape.
     """
     try:
-        import pandas as pd
-        a = pd.read_feather(ROOT / "data" / "body-annotations.feather")
-        a = a.drop_duplicates("bodyId").set_index("bodyId")
-        loc = a["somaLocation"].reindex(fb.bodies)
-        xy = np.full((fb.n, 2), np.nan, dtype=np.float32)
-        for i, v in enumerate(loc.to_numpy()):
-            if isinstance(v, (list, tuple, np.ndarray)) and len(v) >= 3:
-                xy[i] = (float(v[0]), float(v[2]))
+        if fb.soma is not None:
+            xy = fb.soma[:, [0, 2]].copy()
+        else:
+            import pandas as pd
+            a = pd.read_feather(ROOT / "data" / "body-annotations.feather")
+            a = a.drop_duplicates("bodyId").set_index("bodyId")
+            loc = a["somaLocation"].reindex(fb.bodies)
+            xy = np.full((fb.n, 2), np.nan, dtype=np.float32)
+            for i, v in enumerate(loc.to_numpy()):
+                if isinstance(v, (list, tuple, np.ndarray)) and len(v) >= 3:
+                    xy[i] = (float(v[0]), float(v[2]))
         ok = ~np.isnan(xy[:, 0])
         if ok.sum() < 100:
             return None

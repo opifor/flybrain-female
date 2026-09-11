@@ -18,6 +18,7 @@ the number of neurons that actually fired, not with the 160k-neuron population.
 import numpy as np
 import scipy.sparse as sp
 from pathlib import Path
+from envcfg import load_env
 
 BUILD = Path(__file__).parent / "build"
 
@@ -32,7 +33,9 @@ class Params:
 
 
 class FlyBrain:
-    def __init__(self, graph_path=BUILD / "graph.npz", p=Params()):
+    def __init__(self, graph_path=None, p=Params()):
+        if graph_path is None:
+            graph_path = load_env().get("FLY_GRAPH", BUILD / "graph.npz")
         z = np.load(graph_path, allow_pickle=False)
         W = sp.csr_matrix(
             (z["data"], z["indices"], z["indptr"]), shape=tuple(z["shape"])
@@ -51,6 +54,12 @@ class FlyBrain:
         self.receptor = z["receptor"].astype(str)
         self.fru = z["fru"].astype(str)
         self.nt = z["nt"].astype(str)
+        self.hex1 = z["hex1"] if "hex1" in z.files else None
+        self.hex2 = z["hex2"] if "hex2" in z.files else None
+        self.has_hex = z["has_hex"] if "has_hex" in z.files else None
+        self.soma_side = z["soma_side"] if "soma_side" in z.files else None
+        self.soma = z["soma"] if "soma" in z.files else None
+        self.eye = z["eye"] if "eye" in z.files else None
         self.p = p
 
         # cell-type codes, for per-type trainable gains

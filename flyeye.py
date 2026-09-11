@@ -14,11 +14,15 @@ class FlyEye:
     """Retinotopic sampling of the screen onto the fly's 892 hex columns."""
 
     def __init__(self, fb, annotations_path="data/body-annotations.feather"):
-        import pandas as pd
-        a = pd.read_feather(annotations_path).drop_duplicates("bodyId").set_index("bodyId")
-        h1 = a["assignedOlHex1"].reindex(fb.bodies).to_numpy()
-        h2 = a["assignedOlHex2"].reindex(fb.bodies).to_numpy()
-        has = ~(np.isnan(h1.astype(float)) | np.isnan(h2.astype(float)))
+        if fb.hex1 is not None:
+            h1, h2 = fb.hex1, fb.hex2
+            has = fb.has_hex
+        else:
+            import pandas as pd
+            a = pd.read_feather(annotations_path).drop_duplicates("bodyId").set_index("bodyId")
+            h1 = a["assignedOlHex1"].reindex(fb.bodies).to_numpy()
+            h2 = a["assignedOlHex2"].reindex(fb.bodies).to_numpy()
+            has = ~(np.isnan(h1.astype(float)) | np.isnan(h2.astype(float)))
 
         self.fb = fb
         types = fb.types
@@ -95,10 +99,13 @@ class FlyPilot:
         self.sim_steps = sim_steps
         self.click_hz = click_hz
 
-        import pandas as pd
-        a = pd.read_feather("data/body-annotations.feather")
-        a = a.drop_duplicates("bodyId").set_index("bodyId")
-        side = a["somaSide"].reindex(fb.bodies).fillna("").to_numpy().astype(str)
+        if fb.soma_side is not None:
+            side = fb.soma_side
+        else:
+            import pandas as pd
+            a = pd.read_feather("data/body-annotations.feather")
+            a = a.drop_duplicates("bodyId").set_index("bodyId")
+            side = a["somaSide"].reindex(fb.bodies).fillna("").to_numpy().astype(str)
 
         def dn(t, s=None):
             sel = fb.where(type_re=rf"^{t}$")
@@ -115,6 +122,8 @@ class FlyPilot:
             "stop": dn("DNp09"),
             "click": dn("MN9"),            # proboscis extension = commit
         }
+        if not len(self.motor["click"]):
+            self.motor["click"] = fb.where(subclass="proboscis_motor_neuron")
 
     def step(self, img, cx, cy, gains=None, seed=0, detail=False):
         """

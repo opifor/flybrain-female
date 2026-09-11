@@ -62,14 +62,18 @@ def boot(n_keep=11000):
     import pandas as pd
     fb = FlyBrain()
     pilot = FlyPilot(fb, sim_steps=60)
-    a = pd.read_feather(ROOT / "data" / "body-annotations.feather")
-    a = a[["bodyId", "somaLocation"]].dropna(subset=["somaLocation"])
-    a = a.drop_duplicates(subset=["bodyId"])
-    pos = pd.Series(list(a.somaLocation), index=a.bodyId.to_numpy())
-    have = pos.reindex(fb.bodies)
-    ok = have.notna().to_numpy()
-    P = np.full((fb.n, 3), np.nan, dtype=np.float32)
-    P[ok] = np.stack(have[ok].to_numpy()).astype(np.float32)
+    if fb.soma is not None:
+        P = fb.soma
+        ok = np.isfinite(P).all(axis=1)
+    else:
+        a = pd.read_feather(ROOT / "data" / "body-annotations.feather")
+        a = a[["bodyId", "somaLocation"]].dropna(subset=["somaLocation"])
+        a = a.drop_duplicates(subset=["bodyId"])
+        pos = pd.Series(list(a.somaLocation), index=a.bodyId.to_numpy())
+        have = pos.reindex(fb.bodies)
+        ok = have.notna().to_numpy()
+        P = np.full((fb.n, 3), np.nan, dtype=np.float32)
+        P[ok] = np.stack(have[ok].to_numpy()).astype(np.float32)
     grp = np.zeros(fb.n, dtype=np.uint8)
     for t, g in (("^L1$|^L2$", 1), ("^DNa02$|^DNa01$|^MDN$|^DNp09$", 2), ("^MN9$", 3)):
         grp[fb.where(type_re=t)] = g
