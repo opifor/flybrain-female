@@ -112,7 +112,10 @@ a:hover{border-bottom-color:var(--cyan)}
   border:1px solid var(--ink-faint);background:transparent;
   transition:background .3s,border-color .3s}
 .marks i.on{background:var(--cyan);border-color:var(--cyan)}
-@media (max-width:599px){.marks{display:none}}
+/* phones keep the marks, smaller and tighter, and the text stays clear of them */
+@media (max-width:599px){.marks{right:10px;gap:8px}
+  .marks i{width:5px;height:5px}
+  .scene{padding-right:30px}}
 .hint{position:absolute;left:0;right:0;bottom:22px;text-align:center;
   font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--ink-faint);pointer-events:none;transition:opacity .4s}
