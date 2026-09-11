@@ -17,7 +17,11 @@ const CACHE_CONTROL = 's-maxage=15, stale-while-revalidate=60';
 let holdersCache = { at: 0, holders: null, transfers: null };
 const HOLD_TTL = 120000;
 
-async function rpc(url, method, params) {
+// The public node rate-limits Cloudflare's edges; a second provider answers
+// when it says slow down. Both are read-only.
+const RPC_FALLBACK = 'https://robinhood.drpc.org';
+
+async function rpcOnce(url, method, params) {
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -26,6 +30,14 @@ async function rpc(url, method, params) {
   const j = await r.json();
   if (j.error) throw new Error(j.error.message || 'rpc error');
   return j.result;
+}
+
+async function rpc(url, method, params) {
+  try { return await rpcOnce(url, method, params); }
+  catch (e) {
+    if (url === RPC_FALLBACK) throw e;
+    return await rpcOnce(RPC_FALLBACK, method, params);
+  }
 }
 
 const int = (h) => (h ? parseInt(h, 16) : 0);
