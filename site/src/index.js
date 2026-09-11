@@ -84,7 +84,7 @@ async function state(env) {
         holders: h.holders,
         transfers: h.transfers,
         pair: env.FLY_PAIR || 'GOOGL',
-        creator_tax_pct: Number(env.FLY_TAX_PCT || 2),
+        creator_tax_pct: Number(env.FLY_TAX_PCT || 1),
       },
       updated: Math.floor(Date.now() / 1000),
     };

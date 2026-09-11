@@ -1419,7 +1419,7 @@ async function relayTick(){
       $$('r-fps').textContent = relayHits.length + ' fps · relay';
     }
   } catch (e) { goOffline(); }
-  setTimeout(relayTick, document.visibilityState === 'hidden' ? 5000 : 1000);
+  finally { setTimeout(relayTick, document.visibilityState === 'hidden' ? 5000 : 1000); }
 }
 
 /* ---- sound ----------------------------------------------------------------

@@ -40,7 +40,7 @@ IMAGE = "assets/flycoin_square.png"
 _ENV = load_env()
 PAIR = _ENV.get("FLY_RH_PAIR") or "GOOGL"   # default on the page is ETH
 X_HANDLE = _ENV.get("FLY_RH_X") or ""   # x.com/<handle> on the coin; empty leaves the field alone
-TAX_PCT = int(_ENV.get("FLY_RH_TAX") or 2)
+TAX_PCT = int(_ENV.get("FLY_RH_TAX") or 1)
 
 app = FastAPI()
 STATE = {"brain": None, "pilot": None, "remap": None, "xyz": None,
@@ -654,6 +654,14 @@ async def run_episode(ws, coin, steps, seed, headful):
                                f"{str(tx.get('to'))[:14]}..."})
             if not live_flag:
                 raise RuntimeError("FLY_RH_LIVE=0 - transaction refused")
+            if sent["n"] > 1:
+                raise RuntimeError("a second transaction was asked for - refused, "
+                                   "one launch is one signature")
+            # The authorization is spent the moment it is used: the next START
+            # is dry again unless someone arms it on purpose.
+            from rhwallet import _write_env_key
+            _write_env_key("FLY_RH_LIVE", "0")
+            await send({"type": "log", "msg": "FLY_RH_LIVE set back to 0 in .env"})
             from rhprovider import send_transaction
             loop = asyncio.get_running_loop()
 
@@ -1053,8 +1061,9 @@ async def finish(ws, page, coin, filled, live_flag, send, shot, sent):
              buttons: bs.slice(0, 14) }; }""")
     await send({"type": "log", "msg": f"after press: {json.dumps(state)[:400]}"})
 
-    # if a confirmation step appeared, take it
-    if state.get("confirm"):
+    # if a confirmation step appeared, take it - but never press anything
+    # again once a signature has already been asked for
+    if state.get("confirm") and not sent["n"]:
         for label in ("Confirm", "Launch", "Approve", "Continue", "Sign"):
             try:
                 btn = page.get_by_role("button", name=label).first
