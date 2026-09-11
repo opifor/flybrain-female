@@ -23,6 +23,40 @@ from envcfg import load_env
 BUILD = Path(__file__).parent / "build"
 
 
+def load_gains(fb):
+    stem = fb.graph_path.stem
+    roots = (BUILD, BUILD.parent / "assets")
+    paths = [root / f"gains_{stem}.npz" for root in roots]
+    if stem.startswith("graph_"):
+        paths += [root / f"gains_{stem[6:]}.npz" for root in roots]
+    if stem == "graph":
+        paths += [root / "gains_ui.npz" for root in roots]
+    path = next((p for p in paths if p.exists()), None)
+    if path is None:
+        return None, "untrained (anatomy only)"
+    with np.load(path, allow_pickle=False) as z:
+        theta = z["theta"]
+        if "type_names" in z.files:
+            names = z["type_names"].astype(str)
+            if names.ndim != 1 or names.shape != theta.shape:
+                return None, "untrained (incompatible gains)"
+            lookup = {name: i for i, name in enumerate(fb.type_names)}
+            keep = np.array([name in lookup for name in names])
+            codes = np.array([lookup[name] for name in names[keep]], dtype=np.int64)
+            theta = theta[keep]
+        else:
+            codes = z["codes"]
+        if (codes.ndim != 1 or codes.shape != theta.shape
+                or codes.dtype.kind not in "iu"
+                or np.any(codes < 0) or np.any(codes >= fb.n_types)):
+            return None, "untrained (incompatible gains)"
+        gains = np.ones(fb.n_types, dtype=np.float32)
+        gains[codes] = np.exp(theta)
+        if not np.isfinite(gains).all():
+            return None, "untrained (non-finite gains)"
+        return gains, f"trained ({len(codes)} cell types)"
+
+
 class Params:
     v_rest = -52.0      # mV
     v_thresh = -45.0    # mV

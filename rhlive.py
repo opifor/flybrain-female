@@ -28,7 +28,7 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, Response
 
-from flysim import FlyBrain
+from flysim import FlyBrain, load_gains
 from flyeye import FlyPilot
 from envcfg import load_env
 from rhwallet import account, CHAIN_ID, RPC, LAUNCH_FEE_ETH, balance
@@ -584,17 +584,7 @@ async def run_episode(ws, coin, steps, seed, headful):
     live_flag = env.get("FLY_RH_LIVE", "0") == "1"
     eth = balance(env, quiet=True)
 
-    gains = None
-    tag = "untrained (anatomy only)"
-    p = ROOT / "build" / "gains_ui.npz"
-    if not p.exists():
-        # the trained gains ship in assets/; build/ is gitignored
-        p = ROOT / "assets" / "gains_ui.npz"
-    if p.exists():
-        z = np.load(p, allow_pickle=False)
-        gains = np.ones(fb.n_types, dtype=np.float32)
-        gains[z["codes"]] = np.exp(z["theta"])
-        tag = f"trained ({len(z['codes'])} cell types)"
+    gains, tag = load_gains(fb)
 
     def _echo(m):
         t = m.get("type")

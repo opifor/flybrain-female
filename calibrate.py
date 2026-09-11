@@ -4,9 +4,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from compare import load_gains
 from flyeye import FlyPilot
-from flysim import FlyBrain
+from flysim import FlyBrain, load_gains
 
 ROOT = Path(__file__).parent
 SCALES = (20, 30, 45, 60, 90, 120, 180)
@@ -15,7 +14,7 @@ SCALES = (20, 30, 45, 60, 90, 120, 180)
 def sweep(path, frames, steps, seed, trained=False):
     fb = FlyBrain(path)
     pilot = FlyPilot(fb, sim_steps=steps)
-    gains, tag = load_gains(fb, fb.type_names) if trained else (None, "untrained")
+    gains, tag = load_gains(fb)
     print(f"Graph: {path.name}; gains: {tag}", flush=True)
     print("max_hz DNa02_mean DNa02_max ceiling_frac dx_nonzero mean_abs_dx fwd_mean back_mean",
           flush=True)

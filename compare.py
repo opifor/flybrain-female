@@ -5,32 +5,10 @@ from time import perf_counter
 import numpy as np
 from PIL import Image
 
-from flysim import FlyBrain
+from flysim import FlyBrain, load_gains
 from flyeye import FlyPilot
 
 ROOT = Path(__file__).parent
-
-
-def load_gains(fb, trained_types):
-    path = ROOT / "build" / "gains_ui.npz"
-    if not path.exists():
-        path = ROOT / "assets" / "gains_ui.npz"
-    if not path.exists():
-        return None, "untrained (no gains file)"
-    # Numeric codes only identify types within the graph used for training.
-    if not np.array_equal(fb.type_names, trained_types):
-        return None, "untrained (type codes differ)"
-    with np.load(path, allow_pickle=False) as z:
-        codes, theta = z["codes"], z["theta"]
-        if (codes.ndim != 1 or codes.shape != theta.shape
-                or codes.dtype.kind not in "iu"
-                or np.any(codes < 0) or np.any(codes >= fb.n_types)):
-            return None, "untrained (incompatible gains)"
-        gains = np.ones(fb.n_types, dtype=np.float32)
-        gains[codes] = np.exp(theta)
-        if not np.isfinite(gains).all():
-            return None, "untrained (non-finite gains)"
-        return gains, f"applied ({len(codes)} types, {path.parent.name}/{path.name})"
 
 
 def compare_graph(path, img, steps, seed, trained_types=None):
@@ -38,7 +16,7 @@ def compare_graph(path, img, steps, seed, trained_types=None):
     if trained_types is None:
         trained_types = fb.type_names.copy()
     pilot = FlyPilot(fb, sim_steps=steps)
-    gains, tag = load_gains(fb, trained_types)
+    gains, tag = load_gains(fb)
     eye = pilot.eye
     rows = [("Neurons", str(fb.n)), ("Edges", str(fb.W.nnz)),
             ("L1/L2 with hex", f"{len(eye.on_idx)} / {len(eye.off_idx)}"),
