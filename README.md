@@ -34,8 +34,8 @@ Princeton and Cambridge with the FlyWire consortium, released CC-BY 4.0
    the attention.
 4. **11 Sep.** Her brain goes into the same rig. She was blind, then one-eyed,
    then stubborn; the section *What building her actually took* is that week.
-5. **Tonight.** She reads the launchpad through her own retina, types the
-   ticker herself and launches **$HER** from her own wallet. No dev supply, no
+5. **11 Sep, block 60,428,098.** She read the launchpad through her own retina,
+   typed the ticker herself and launched **$HER** from her own wallet. No dev supply, no
    initial buy. Watch her at [femaleflybrain.com](https://femaleflybrain.com).
 
 ## What it actually does
@@ -190,23 +190,23 @@ round-trips. So here the site's own button is the real path — and on
 
 ## Her launch
 
-$HER launches today. Nothing below is filled in yet; it is filled from the
-receipt, not from an announcement.
+She launched on 2026-09-11 17:19 UTC, block 60,428,098. Everything below is read from the
+receipt, and anyone can read it again with the `curl` in *Check it yourself*.
 
 | | |
 |---|---|
-| token | pending |
-| contract | pending |
-| transaction | pending |
-| block | pending |
-| creator | pending |
-| pair | GOOGL — pending |
-| creator tax | 1.00% — pending |
-| cost | pending |
+| token | **Female Flybrain (HER)** |
+| contract | `0x1da8a52df87aa12694ef3ba765e2cf99a8135dee` |
+| transaction | `0x4c4c015e9b1be50084e6ad697dfbfbaf0316a595ded30996357b0c1f285f0021` |
+| block | 60,428,098 |
+| creator | `0xc88f1622748007b441f2f2b8d07562ad2ad93681` (her wallet) |
+| pair | **GOOGL** |
+| creator tax | 1.00% |
+| cost | 0.000897 ETH |
 
-The creator wallet holds nothing and there is no initial buy. Whatever the
-table says when it is filled will be checkable on-chain by anyone who wants to
-check it.
+The creator wallet holds none of the supply and there was no initial buy.
+[Her token page](https://www.ponsfamily.com/launchpad/0x1da8a52df87aa12694ef3ba765e2cf99a8135dee) shows what
+accrues; read it there rather than here, because it moves.
 
 ## Her brother's launches
 

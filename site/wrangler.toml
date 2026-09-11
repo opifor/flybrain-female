@@ -17,9 +17,9 @@ html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
 
 # set at launch; an empty FLY_TOKEN means the state endpoint reports not launched
-# [vars]
-# FLY_TOKEN = ""
-# FLY_WALLET = ""
-# FLY_TOKEN_BLOCK = "0x0"
-# FLY_PAIR = "GOOGL"
-# FLY_TAX_PCT = "2"
+[vars]
+FLY_TOKEN = "0x1da8a52df87aa12694ef3ba765e2cf99a8135dee"
+FLY_WALLET = "0xc88f1622748007B441f2f2B8D07562Ad2ad93681"
+FLY_TOKEN_BLOCK = "0x39a0f42"
+FLY_PAIR = "GOOGL"
+FLY_TAX_PCT = "1"

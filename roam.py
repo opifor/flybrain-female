@@ -85,6 +85,8 @@ SEEDS = [
     "https://www.ponsfamily.com/launchpad/0x4eb990547bce4a982432ca88cf5fae7eed1a2d35",
     "https://www.ponsfamily.com/launchpad/explore",
     "https://robinhoodchain.blockscout.com/txs",
+    # her own token page
+    "https://www.ponsfamily.com/launchpad/0x1da8a52df87aa12694ef3ba765e2cf99a8135dee",
     # herself, watched
     "https://femaleflybrain.com/",
 ]
