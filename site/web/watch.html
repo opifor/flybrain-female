@@ -50,7 +50,7 @@
   async function kickTick() {
     let live = null;
     try {
-      const response = await fetch('/api/kick', {signal: AbortSignal.timeout(8000)});
+      const response = await fetch('/api/kick', {cache: 'no-store', signal: AbortSignal.timeout(8000)});
       if (!response.ok) throw new Error('kick unavailable');
       live = (await response.json()).live;
     } catch (_) {}
