@@ -77,6 +77,7 @@
     const controls = document.createElement('div');
     Object.assign(controls.style, {position:'absolute', right:'8px', bottom:'8px', display:'flex', alignItems:'center', gap:'8px', maxWidth:'calc(100% - 16px)', zIndex:'3'});
     container.append(controls);
+    if (forcedMute || broadcast) controls.style.display = 'none';
     function button(label) {
       const b = document.createElement('button'); b.textContent = label; b.type = 'button';
       Object.assign(b.style, {font:'11px ui-monospace,monospace', color:'#c9c4cc', background:'#101116dd', border:'1px solid #4a3a44', borderRadius:'3px', padding:'5px 8px', cursor:'pointer'});
@@ -247,26 +248,39 @@
       text(`${delta(current.today_delta)} today`, 1304, 453, 592, 22, '#8b93a1');
       caption('feed', 1304, 508);
       const progress = clamp((now - feedAt) / 400);
-      function feedRows(rows, offset, alpha) {
-        g.save(); g.beginPath(); g.rect(1304, 523, 592, 537); g.clip(); g.globalAlpha = alpha;
+      function feedRows(rows, offset, alpha, newest = false) {
+        g.save(); g.beginPath(); g.rect(1298, 523, 598, 537); g.clip(); g.globalAlpha = alpha;
         rows.forEach((row, i) => {
           const y = 550 + i * 37 + offset;
-          text(row.at, 1304, y, 112, 22, '#8b93a1');
-          text(row.text, 1428, y, 468);
+          text(row.at, 1304, y, 106, 22, '#8b93a1');
+          g.font = '22px ui-monospace,monospace'; g.fillStyle = '#e9edf3';
+          const line = value(row.text), width = 480;
+          // Keep a full short line beside the clock, even with wide letters.
+          if ([...line].length <= 48 && g.measureText(line).width > width) g.fillText(line, 1416, y, width);
+          else text(line, 1416, y, width);
+          if (newest && i === 0) {
+            g.save(); g.globalAlpha *= 0.6 * clamp(1 - (now - feedAt) / 5000);
+            g.fillStyle = '#ff79b0'; g.fillRect(1298, y - 24, 2, 28); g.restore();
+          }
         }); g.restore();
       }
       if (progress < 1) feedRows(previousFeed, progress * 37, 1 - progress);
-      feedRows(feed.length ? feed : [{at:'—', text:'—'}], (progress - 1) * 37, progress);
+      feedRows(feed.length ? feed : [{at:'—', text:'—'}], (progress - 1) * 37, progress, true);
       caption('last hour', 24, 839);
       const metrics = [['bets','bets'], ['won','won'], ['lost','lost'], ['paper p&l','pnl'], ['pages','pages'], ['clicks','clicks'], ['scrolls','scrolls'], ['sugar','sugar'], ['shock','shock']];
       metrics.forEach(([label, field], i) => {
-        const x = 24 + (i < 5 ? i : i - 5) * 123, y = i < 5 ? 882 : 985;
-        text(label, x, y, 121, 22, '#8b93a1');
+        const x = 24 + i % 5 * 124, y = i < 5 ? 860 : 965;
+        text(label, x, y, 120, 18, '#8b93a1');
         text(field === 'pnl' ? delta(hour[field]) : hour[field], x, y + 38, 121, 30,
           field === 'pnl' && hour[field] != null ? (hour[field] >= 0 ? '#f8d694' : '#ff4153') : '#e9edf3');
       });
       caption('paper', 664, 839);
-      text(feed[0]?.text, 664, 900, 592, 28);
+      let stripFont = 30;
+      for (const font of [30, 26, 22]) {
+        stripFont = font; g.font = `${font}px ui-monospace,monospace`;
+        if (g.measureText(value(feed[0]?.text)).width <= 592) break;
+      }
+      text(feed[0]?.text, 664, 900, 592, stripFont);
       text('paper room · no real bets ·', 664, 997, 592);
       text(`femaleflybrain.com · UTC ${new Date().toISOString().slice(11, 19)}`, 664, 1031, 592);
     }

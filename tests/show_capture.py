@@ -38,7 +38,7 @@ LIFE = dict(
     feed=[dict(at='07:02:11', kind='bet.won', text='eth 15m won +5.20 · sugar'),
           dict(at='07:01:40', kind='page.scroll', text='she scrolled down on arxiv.org'),
           dict(at='07:00:12', kind='bet.fill', text='she bought ETH up')])
-STREAM_FRAME = Path(r'build\shots\stream_frame.png')
+STREAM_FRAME = Path(r'build\shots\stream_frame2.png')
 
 
 def fixture():
@@ -98,7 +98,8 @@ INSTRUMENT = """(() => {
     const original = CanvasRenderingContext2D.prototype[method];
     CanvasRenderingContext2D.prototype[method] = function(...a) {
       if (this.canvas.getAttribute('aria-label') === 'Her brain, path and paper bets') {
-        window.ink.push({method, args:a, fill:this.fillStyle, stroke:this.strokeStyle, alpha:this.globalAlpha});
+        window.ink.push({method, args:a, fill:this.fillStyle, stroke:this.strokeStyle, alpha:this.globalAlpha,
+          font:this.font, width:method === 'fillText' ? Math.min(this.measureText(a[0]).width, a[3] ?? Infinity) : null});
         if (window.ink.length > 3000) window.ink.splice(0,1000);
       }
       return original.apply(this,a);
@@ -108,6 +109,9 @@ INSTRUMENT = """(() => {
 
 
 def check_broadcast(page, checks, errors):
+    from playwright.sync_api import expect
+
+    expect(page.get_by_role('button', name='what she sees', include_hidden=True)).to_be_hidden()
     captions = ['who', 'now', 'feed', 'last hour', 'paper']
     page.wait_for_function("labels => labels.every(label => window.ink.some(e => e.method === 'fillText' && e.args[0] === label))", arg=captions)
     page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'eth 15m won +5.20 · sugar')")
@@ -116,11 +120,40 @@ def check_broadcast(page, checks, errors):
     assert round(page.locator('img').bounding_box()['height']) == 800
     STREAM_FRAME.parent.mkdir(parents=True, exist_ok=True)
     page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'eth 15m won +5.20 · sugar' && e.args[2] === 550 && e.alpha === 1)")
+    short = dict(at='07:02:11', kind='page.click', text='she opened a page about fruit flies ' + 'w' * 12)
+    assert len(short['text']) == 48
+    LIFE['feed'].insert(0, short)
+    page.evaluate('window.ink = []')
+    page.wait_for_function("line => window.ink.some(e => e.method === 'fillText' && e.args[0] === line && e.args[1] === 1416 && e.args[2] === 550 && e.alpha === 1 && e.font.startsWith('22px') && e.args[1] + e.width <= 1896)", arg=short['text'])
+    tiles = ['bets', 'won', 'lost', 'paper p&l', 'pages', 'clicks', 'scrolls', 'sugar', 'shock']
+    positions = page.evaluate("labels => labels.map(label => window.ink.findLast(e => e.method === 'fillText' && e.args[0] === label && [860,965].includes(e.args[2])))", tiles)
+    assert all(positions)
+    for i, entry in enumerate(positions):
+        assert entry['args'][1:3] == [24 + i % 5 * 124, 860 if i < 5 else 965]
+        assert entry['width'] < 124
+        if i % 5:
+            previous = positions[i - 1]
+            assert previous['args'][1] + previous['width'] < entry['args'][1]
+    assert positions[3]['args'][0] == 'paper p&l'
+    page.wait_for_function("window.ink.some(e => e.method === 'fillRect' && e.args[0] === 1298 && e.args[1] === 526 && e.args[2] === 2 && e.alpha > 0 && e.alpha < 0.6)")
     page.screenshot(path=str(STREAM_FRAME))
+    page.wait_for_timeout(5100)
+    page.evaluate('window.ink = []')
+    page.wait_for_function("window.ink.some(e => e.method === 'fillRect' && e.args[0] === 1298 && e.args[2] === 2 && e.alpha === 0)")
+    for length, font in [(30, 30), (36, 26), (42, 22), (80, 22)]:
+        short['text'] = 'w' * length
+        page.evaluate('window.ink = []')
+        page.wait_for_function("([length, font]) => window.ink.some(e => e.method === 'fillText' && e.args[1] === 664 && e.args[2] === 900 && e.font.startsWith(font + 'px') && (length === 80 ? e.args[0].endsWith('…') : e.args[0] === 'w'.repeat(length)) && e.width <= 592)", arg=[length, font])
+    LIFE['feed'].pop(0)
+    muted = page.context.new_page()
+    muted.goto(page.url + '&mute=1')
+    expect(muted.get_by_role('button', name='what she sees', include_hidden=True)).to_be_hidden()
+    assert muted.locator('button:visible, input[type=range]:visible').count() == 0
+    muted.close()
     incoming = dict(at='07:03:00', kind='page.click', text='she opened the next page ' + 'x' * 100)
     LIFE['feed'].insert(0, incoming)
     page.evaluate('window.ink = []')
-    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0].startsWith('she opened') && e.args[0].endsWith('…') && e.args[1] === 1428 && e.args[2] < 550 && e.alpha > 0 && e.alpha < 1)")
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0].startsWith('she opened') && e.args[0].endsWith('…') && e.args[1] === 1416 && e.args[2] < 550 && e.alpha > 0 && e.alpha < 1)")
     page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0].startsWith('she opened') && e.args[2] === 550 && e.alpha === 1)")
     LIFE['feed'].pop(0)
     DATA['with_life'] = False
@@ -141,6 +174,7 @@ def check_broadcast(page, checks, errors):
     page.wait_for_function('window.received?.life?.now.spikes === 1312400')
     checks.append('Broadcast captions, feed, paper tag and arena bounds render; absent life draws placeholders without page errors.')
     checks.append('Incoming feed slides and ellipsises; the transparent strip prefers life and retains its fallback.')
+    checks.append('48 characters fit beside the clock; nine tiles do not overlap; controls hide; strip type steps down; newest marker fades.')
 
 
 def capture(port):
@@ -168,6 +202,8 @@ def capture(port):
         page.wait_for_function("document.querySelector('img').naturalWidth === 1280")
         page.evaluate("() => { window.paperShow.onState(d => window.received = d); }")
         check_broadcast(page, checks, errors)
+        page.evaluate("() => { const container = document.querySelector('canvas').parentElement; window.paperShow.destroy(); window.soundContexts = []; window.notes = []; window.ink = []; window.paperShow = window.mountShow(container, {audio:true}); window.paperShow.onState(d => window.received = d); }")
+        page.get_by_role('button', name='what she sees', exact=True).wait_for(state='visible')
         page.mouse.click(20,20)
         page.wait_for_function("window.soundContexts[0]?.state === 'running'")
         page.wait_for_function("[...document.querySelectorAll('span')].find(e=>e.textContent==='click for sound').hidden")
