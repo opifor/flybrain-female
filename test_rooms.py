@@ -83,6 +83,60 @@ def test_hall_hides_an_executor_that_does_not_answer(tmp_path):
     assert [c["path"] for c in room.board()["cards"]] == ["/betroom"]
 
 
+def test_hall_order_rotates_with_visits_and_survives_restart(tmp_path):
+    room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
+    for visit in range(1, 5):
+        asyncio.run(room.enter(FakePage([])))
+        board = room.board()
+        expected = ["/betroom", "/tiproom"] if visit % 2 else ["/tiproom", "/betroom"]
+        assert board["order_seed"] == visit - 1
+        assert [c["token"] for c in board["cards"]] == expected
+        assert [c["token"] for c in room.registry.healthy(room.http)] == ["/betroom", "/tiproom"]
+        assert [c["token"] for c in room.board()["cards"]] == expected
+        room.leave()
+        room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
+
+
+def test_margin_escape_replaces_only_the_sixth_motor_output(tmp_path):
+    room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
+    room.refresh_board(force=True)
+    page = FakePage([{"token": "/betroom", "x": 400, "y": 400, "w": 100, "h": 100},
+                     {"token": "/tiproom", "x": 100, "y": 200, "w": 100, "h": 100}])
+    room.pilot.click = True
+    async def walk():
+        for step in range(1, 13):
+            before = len(room.mb.log)
+            dx, dy, click, hz, info = await room.step(page, IMG, 0, 50, step)
+            if step % 6:
+                assert (dx, dy, click) == (0, 0, True)
+            else:
+                assert (dx, dy, click) == pytest.approx((36, 48, False))
+            assert room.counters["nudges"] == step // 6
+            assert room.mb.log[before:] == [("observe", 2), ("forget", None)]
+            assert info["hall"]["drive"] is None and room._dwell is None
+        assert room.state()["nudges"] == 2
+    asyncio.run(walk())
+
+
+@pytest.mark.parametrize("position", [(100, 100), (-12, 100), (292, 100), (100, -12), (100, 212)])
+def test_card_and_its_padding_reset_margin_rounds(tmp_path, position):
+    room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
+    room.refresh_board(force=True)
+    page = FakePage([{"token": "/betroom", "x": 0, "y": 0, "w": 280, "h": 200}])
+    async def walk():
+        for _ in range(5):
+            await room.step(page, IMG, 900, 600, 1)
+        for _ in range(7):
+            assert (await room.step(page, IMG, *position, 1))[:2] == (0, 0)
+        for _ in range(5):
+            await room.step(page, IMG, 900, 600, 1)
+        assert room.state()["nudges"] == 0
+        await room.enter(page)
+        await room.step(page, IMG, 900, 600, 1)
+        assert room.state()["nudges"] == 0
+    asyncio.run(walk())
+
+
 @pytest.mark.parametrize("reply", [(503, {"ok": True}), (200, {"ok": False}),
                                    (200, {"ok": True, "publish_error": "disk full"}), (200, [])])
 def test_unhealthy_replies_leave_no_door(reply):

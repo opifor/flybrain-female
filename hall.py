@@ -9,7 +9,12 @@ DECLARATION = Declaration(
     cards={"source": "registered rooms with healthy loopback executors", "refresh_seconds": 2},
     commit_means="entering that room",
     reward_source="The hall delivers no sugar or shock; the entered room declares its own reward source.",
-    chosen=[DISCLOSURE], measured=["Two readings and a descending-neuron stop open a door."])
+    chosen=[DISCLOSURE, "door order rotates every visit so no door owns the left"],
+    measured=["Two readings and a descending-neuron stop open a door.",
+              "nudges: how often the page had to push her out of an empty margin"],
+    how=("door order rotates every visit so no door owns the left.",
+         "she needs readings from another door before a stop can open this one.",
+         "entering a room brings her to that room's cards."))
 
 
 class Hall(RoomWalk):
@@ -29,6 +34,11 @@ class Hall(RoomWalk):
 
     def board(self):
         board = super().board()
+        board["order_seed"] = max(0, self.counters["visits"] - 1)
+        cards = board["cards"]
+        if cards:
+            offset = board["order_seed"] % len(cards)
+            board["cards"] = cards[offset:] + cards[:offset]
         if self._now() - board["updated"] > 4:
             board["cards"] = []
         return board

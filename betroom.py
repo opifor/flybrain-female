@@ -15,7 +15,8 @@ DECLARATION = Declaration(
          "her mushroom body remembers whether that smell brought sugar or shock before.",
          "while she stays, the drive it produces is summed; positive means YES, negative means NO, zero means she walks away.",
          "the paper bookie takes the bet; when the market resolves, a win is sugar and a loss is shock, and she learns."),
-    measured=["Stops and relative drive come from the female brain; this does not establish predictive skill."])
+    measured=["Stops and relative drive come from the female brain; this does not establish predictive skill.",
+              "nudges: how often the page had to push her out of an empty margin"])
 
 
 class Room(RoomWalk):

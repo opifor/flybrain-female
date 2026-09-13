@@ -30,7 +30,7 @@ body.hall .name{font-size:42px;margin-top:120px}
 <div id="cards" class="grid"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "the hall", "path": "/hall", "cards": {"source": "registered rooms with healthy loopback executors", "refresh_seconds": 2}, "commit_means": "entering that room", "reward_source": "The hall delivers no sugar or shock; the entered room declares its own reward source.", "chosen": ["The doors are the rooms people built. Which one she walks into is her stop."], "measured": ["Two readings and a descending-neuron stop open a door."], "how": []}</script>
+<script id="room-declaration" type="application/json">{"name": "the hall", "path": "/hall", "cards": {"source": "registered rooms with healthy loopback executors", "refresh_seconds": 2}, "commit_means": "entering that room", "reward_source": "The hall delivers no sugar or shock; the entered room declares its own reward source.", "chosen": ["The doors are the rooms people built. Which one she walks into is her stop.", "door order rotates every visit so no door owns the left"], "measured": ["Two readings and a descending-neuron stop open a door.", "nudges: how often the page had to push her out of an empty margin"], "how": ["door order rotates every visit so no door owns the left.", "she needs readings from another door before a stop can open this one.", "entering a room brings her to that room's cards."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);

@@ -14,6 +14,7 @@ import calibration
 from roomkit import atomic_write as _atomic_write
 
 DWELL_MIN = 2
+MARGIN_STEPS = 6
 BOARD_MAX_AGE_S = 30
 CHAIN_TIMEOUT_S = 45
 FOV_W, FOV_H = 300, 210
@@ -275,7 +276,8 @@ class Room:
         self._claimed = set()
         self.in_room = False
         self.counters = dict.fromkeys(("visits", "looks", "commits", "intents", "booked",
-                                      "refused", "dislikes", "busy", "sugar", "shock"), 0)
+                                      "refused", "dislikes", "busy", "sugar", "shock", "nudges"), 0)
+        self._margin_steps = 0
         self._board = {"cards": [], "updated": 0}
         self._board_busy = False
         self._board_error = None
@@ -336,6 +338,7 @@ class Room:
     async def enter(self, page):
         self.in_room = True
         self.counters["visits"] += 1
+        self._margin_steps = 0
         self._dwell = None
         self._seen = {}
         self.refresh_board(force=True)
@@ -393,6 +396,20 @@ class Room:
         elif click:
             pass                                   # a stop off a card, or too soon, is nothing
 
+
+        outside = rects and not any(
+            r["x"] - 12 <= cx <= r["x"] + r["w"] + 12 and
+            r["y"] - 12 <= cy <= r["y"] + r["h"] + 12 for r in rects)
+        self._margin_steps = self._margin_steps + 1 if outside else 0
+        if self._margin_steps >= MARGIN_STEPS:
+            target = min(rects, key=lambda r:
+                         (r["x"] + r["w"] / 2 - cx) ** 2 + (r["y"] + r["h"] / 2 - cy) ** 2)
+            tx, ty = target["x"] + target["w"] / 2 - cx, target["y"] + target["h"] / 2 - cy
+            distance = (tx * tx + ty * ty) ** 0.5
+            # This page rule replaces one motor output, leaving drive, dwell and the mushroom body alone.
+            dx, dy, click = 60 * tx / distance, 60 * ty / distance, False
+            self.counters["nudges"] += 1
+            self._margin_steps = 0
 
         info[self.declaration.path.strip("/")] = {"token": token, "drive": drive,
                             "dwell_steps": int(self._dwell["steps"]) if self._dwell else 0}
@@ -600,7 +617,7 @@ class Room:
         return {"room": self.declaration.public(), "in_room": bool(self.in_room), "visits": c["visits"], "looks": c["looks"],
                 "commits": c["commits"], "intents": c["intents"], "booked": c["booked"],
                 "refused": c["refused"], "dislikes": c["dislikes"], "busy": c["busy"],
-                "seen": len(self._seen),
+                "seen": len(self._seen), "nudges": c["nudges"],
                 "now": now, "gaze": gaze, "last_intents": self.last_intents[-10:],
                 "learning": {"sugar": c["sugar"], "shock": c["shock"],
                              "last": self.last_dopamine[-10:]},
