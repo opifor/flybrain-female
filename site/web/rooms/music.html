@@ -5,9 +5,17 @@
 <link rel="icon" href="/fly.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Archivo:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
 <style>:root{--ground:#06070a;--plate:#0b0d12;--line:#1a1f28;--ink:#e2eaf1;--dim:#9dabb7;--rose:#ff79b0;--sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
-*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font:17px/1.7 var(--sans)}a{color:var(--rose)}header{padding:12px 5%;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}header a{text-decoration:none}nav{display:flex;gap:20px;flex-wrap:wrap}nav a{display:inline-flex;align-items:center;min-height:56px}main{max-width:1120px;margin:auto;padding:56px 24px 96px}h1{font:clamp(44px,8vw,80px)/1.1 "Instrument Serif",Georgia,serif;margin:24px 0}h2{font-size:23px;font-weight:500;line-height:1.3}p{margin:12px 0}.lede{max-width:780px;color:var(--dim);font-size:20px;margin-bottom:40px}.paper,.path,.badge,.pending{font:12px/1.7 var(--mono)}.paper{border:1px solid var(--rose);color:var(--rose);padding:4px 10px;border-radius:4px}.badge{color:#6fdca6}.pending{color:#f0bc5f}.rooms,.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}article{padding:28px;background:var(--plate);border:1px solid var(--line);display:flex;flex-direction:column}article .button{margin-top:auto}.button,button{min-height:56px!important}.button{display:flex;align-items:center;padding:12px 0;text-underline-offset:5px}section{padding:20px 0;border-bottom:1px solid var(--line)}li{padding:6px 0}ol,ul{padding-left:24px}.counters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.counters dt{font:12px var(--mono);color:var(--dim)}dd{margin:8px 0;font-size:26px}table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px}th,td{padding:12px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-weight:400}main *{overflow-wrap:anywhere;min-width:0}#bet-stage{width:100%;aspect-ratio:16/10;background:var(--plate)}@media(max-width:650px){main{padding:32px 20px 60px}.rooms,.columns{grid-template-columns:1fr}.counters{grid-template-columns:repeat(3,minmax(0,1fr))}article{padding:22px}header{padding:12px 20px}nav{gap:18px}}
+*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font:17px/1.7 var(--sans)}a{color:var(--rose)}header{padding:12px 5%;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}header a{text-decoration:none}nav{display:flex;gap:20px;flex-wrap:wrap}nav a{display:inline-flex;align-items:center;min-height:56px}main{max-width:1120px;margin:auto;padding:56px 24px 96px}h1{font:clamp(44px,8vw,80px)/1.1 "Instrument Serif",Georgia,serif;margin:24px 0}h2{font-size:23px;font-weight:500;line-height:1.3}p{margin:12px 0}.lede{max-width:780px;color:var(--dim);font-size:20px;margin-bottom:40px}.path,.badge,.pending{font:12px/1.7 var(--mono)}.badge{color:#6fdca6}.pending{color:#f0bc5f}.rooms,.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}article{padding:28px;background:var(--plate);border:1px solid var(--line);display:flex;flex-direction:column}article .button{margin-top:auto}.button,button{min-height:56px!important}.button{display:flex;align-items:center;padding:12px 0;text-underline-offset:5px}section{padding:20px 0;border-bottom:1px solid var(--line)}li{padding:6px 0}ol,ul{padding-left:24px}.counters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.counters dt{font:12px var(--mono);color:var(--dim)}dd{margin:8px 0;font-size:26px}table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px}th,td{padding:12px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-weight:400}main *{overflow-wrap:anywhere;min-width:0}#bet-stage{width:100%;aspect-ratio:16/10;background:var(--plate)}@media(max-width:650px){main{padding:32px 20px 60px}.rooms,.columns{grid-template-columns:1fr}.counters{grid-template-columns:repeat(3,minmax(0,1fr))}article{padding:22px}header{padding:12px 20px}nav{gap:18px}}
 
 .rooms{align-items:start}
+.room-back{align-items:center;margin-bottom:20px}.room-back button{background:none;border:0;color:var(--dim);font:inherit;text-decoration:underline;cursor:pointer;padding:0 12px}.room-back [hidden]{display:none}
+.vision{max-width:800px;padding:0 0 32px;margin-bottom:32px;border:0;color:var(--dim)}
+.steps-section{border:0;padding:16px 0 24px}.steps{list-style:none;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;counter-reset:step}
+.steps li{counter-increment:step;background:var(--plate);border:1px solid var(--line);padding:24px;line-height:1.6}
+.steps li::before{content:counter(step,decimal-leading-zero);display:block;color:var(--rose);font:36px/1.2 var(--mono);margin-bottom:18px}
+.room-card{background:var(--plate);border:1px solid var(--line);padding:28px;margin-bottom:24px}.room-card h2:first-child{margin-top:0}.columns{gap:24px}.sources h2{font:13px/1.7 var(--mono);color:var(--rose);margin-bottom:4px}.sources p{margin-top:0}
+.counters>div{background:var(--ground);border:1px solid var(--line);padding:16px 12px}.promise{max-width:800px}
+@media(max-width:650px){.steps{grid-template-columns:1fr}.room-card{padding:22px}.columns{gap:0}}
 @media(max-width:600px){
   [data-room="/betroom"] table{table-layout:auto}
   [data-room="/betroom"] thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
@@ -23,17 +31,22 @@
 </style></head><body>
 <header><a href="/">Female Flybrain · Her Rooms</a><nav aria-label="Main">
 <a href="/rooms/">rooms</a><a href="/brain.html">brain</a><a href="/story.html">story</a><a href="/#ca-text">$HER</a><a href="/watch.html">watch</a></nav></header>
-<main><span class="paper">paper</span><h1>music room</h1><p class="lede">A real female fruit fly brain, 139,255 neurons, simulated live. She lives in a house of rooms and chooses where to go. She never speaks, the numbers do: every room's reward, rule and measure is written down.</p><div data-room="/musicroom"><p class="path">/musicroom</p>
-<section><h2>how she plays here</h2><ol><li>her eye settles on a music card for at least two rounds before she can choose it.</li><li>the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.</li><li>when she stops, the room plays that track if her drive is above or below zero; either sign can play it.</li><li>she stays with a track for at least thirty seconds and cannot restart it while it is playing.</li><li>the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.</li><li>a listener's sugar or shock teaches the cells recorded when she chose that play.</li><li>she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way.</li></ol></section>
-<div class="columns"><section><h2>what a person chose</h2><ul><li>People choose the catalogue search terms, the thirty-second minimum and the six-card board.</li><li>a ten-minute room clock and a door in every room</li></ul></section>
-<section><h2>what is measured</h2><ul><li>The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.</li><li>nudges: how often the page had to push her out of an empty margin</li></ul></section></div>
-<section><h2>where the cards come from</h2><p>a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license. Refreshed every one minute.</p>
-<h2>reward</h2><p>Listeners supply sugar and shock through reactions kept in the room's paper record; the stream carries them later.</p></section>
-<section><h2>her paper record</h2><p class="badge" data-live="badge">relay offline</p><dl class="counters"><div><dt>visits</dt><dd data-live="visits">—</dd></div><div><dt>looks</dt><dd data-live="looks">—</dd></div><div><dt>commits</dt><dd data-live="commits">—</dd></div><div><dt>nudges</dt><dd data-live="nudges">—</dd></div><div><dt>sugar</dt><dd data-live="sugar">—</dd></div><div><dt>shock</dt><dd data-live="shock">—</dd></div></dl>
+<main><nav class="room-back" aria-label="Return"><a href="/rooms/">← her rooms</a><button type="button" data-back hidden>back</button></nav><h1>music room</h1><p class="lede">A real female fruit fly brain, 139,255 neurons, simulated live. She lives in a house of rooms and chooses where to go. She never speaks, the numbers do: every room's reward, rule and measure is written down.</p><div data-room="/musicroom"><p class="path">/musicroom</p><p class="pending">beta · v1</p><p>The shelf holds test tracks from Wikimedia Commons under CC licences; more are coming. Listener reactions will reach her through the stream chat later.</p>
+<section class="steps-section"><h2>how she plays here</h2><ol class="steps"><li>her eye settles on a music card for at least two rounds before she can choose it.</li><li>the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.</li><li>when she stops, the room plays that track if her drive is above or below zero; either sign can play it.</li><li>she stays with a track for at least thirty seconds and cannot restart it while it is playing.</li><li>the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.</li><li>a listener's sugar or shock teaches the cells recorded when she chose that play.</li><li>she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way.</li></ol></section>
+<div class="columns"><section class="room-card"><h2>what a person chose</h2><ul><li>People choose the catalogue search terms, the thirty-second minimum and the six-card board.</li><li>a ten-minute room clock and a door in every room</li><li>beta · v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming.</li></ul></section>
+<section class="room-card"><h2>what is measured</h2><ul><li>The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.</li><li>nudges: how often the page had to push her out of an empty margin</li></ul></section></div>
+<section class="room-card sources"><h2>where the cards come from</h2><p>a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license. Refreshed every one minute.</p>
+<h2>reward</h2><p>Listener reactions supply sugar and shock in the paper (for now) record; they will reach her through the stream chat later.</p></section>
+<section class="room-card record"><h2>her paper (for now) record</h2><p class="badge" data-live="badge">relay offline</p><dl class="counters"><div><dt>visits</dt><dd data-live="visits">—</dd></div><div><dt>looks</dt><dd data-live="looks">—</dd></div><div><dt>commits</dt><dd data-live="commits">—</dd></div><div><dt>nudges</dt><dd data-live="nudges">—</dd></div><div><dt>sugar</dt><dd data-live="sugar">—</dd></div><div><dt>shock</dt><dd data-live="shock">—</dd></div></dl>
 <p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
-<div data-live="book">Paper book unavailable.</div></section></div><section><h2>her screen right now</h2><p>whatever room she is in appears here; the paper record above is this room's</p><div id="bet-stage"></div></section></main>
+<div data-live="book">Paper (for now) book unavailable.</div></section></div><section><h2>her screen right now</h2><p>whatever room she is in appears here; the paper (for now) record above is this room's</p><div id="bet-stage"></div></section></main>
 <script src="show.js"></script><script>(() => {
   'use strict';
+  const back = document.querySelector('[data-back]');
+  if (back && history.length > 1) {
+    back.hidden = false;
+    back.addEventListener('click', () => history.back());
+  }
   const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
   const number = value => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-US');
   const time = value => {
@@ -78,7 +91,7 @@
       const entries = b?.entries || room.events || [];
       out.append(table(['last entries', 'at'], entries.slice(-10).reverse().map(e => [e.text || e.path, time(e.at)])));
       if (!entries.length) out.append(node('p', 'No entries available.'));
-    } else if (!b) out.append(node('p', 'Paper book unavailable.'));
+    } else if (!b) out.append(node('p', 'Paper (for now) book unavailable.'));
     else if (path === '/betroom') {
       const rows = [];
       for (const [key, status] of [['open_bets', 'open'], ['settled_bets', 'settled']]) {
@@ -96,7 +109,7 @@
       for (const play of (b.plays || []).slice(-10).reverse()) rows.push([time(play.started_at), play.title, ...credits(play)]);
       out.append(table(['play', 'track', 'license', 'source'], rows));
       out.append(node('p', `listener reactions: ${number(b.reactions?.sugar)} sugar · ${number(b.reactions?.shock)} shock`));
-    } else out.append(node('p', 'Not open yet.'));
+    } else out.append(node('p', 'In preparation.'));
     return out;
   }
   function render(state) {
@@ -106,7 +119,7 @@
       const path = block.dataset.room, room = live ? state.rooms?.[path] : null;
       for (const field of block.querySelectorAll('[data-live]')) {
         const key = field.dataset.live;
-        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Paper book unavailable.')); continue; }
+        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Paper (for now) book unavailable.')); continue; }
         let value = '—';
         if (key === 'badge') {
           const seen = time(room?.last_exit?.at ?? room?.entered_at);

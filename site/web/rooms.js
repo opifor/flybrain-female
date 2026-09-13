@@ -1,5 +1,10 @@
 (() => {
   'use strict';
+  const back = document.querySelector('[data-back]');
+  if (back && history.length > 1) {
+    back.hidden = false;
+    back.addEventListener('click', () => history.back());
+  }
   const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
   const number = value => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-US');
   const time = value => {
@@ -44,7 +49,7 @@
       const entries = b?.entries || room.events || [];
       out.append(table(['last entries', 'at'], entries.slice(-10).reverse().map(e => [e.text || e.path, time(e.at)])));
       if (!entries.length) out.append(node('p', 'No entries available.'));
-    } else if (!b) out.append(node('p', 'Paper book unavailable.'));
+    } else if (!b) out.append(node('p', 'Paper (for now) book unavailable.'));
     else if (path === '/betroom') {
       const rows = [];
       for (const [key, status] of [['open_bets', 'open'], ['settled_bets', 'settled']]) {
@@ -62,7 +67,7 @@
       for (const play of (b.plays || []).slice(-10).reverse()) rows.push([time(play.started_at), play.title, ...credits(play)]);
       out.append(table(['play', 'track', 'license', 'source'], rows));
       out.append(node('p', `listener reactions: ${number(b.reactions?.sugar)} sugar · ${number(b.reactions?.shock)} shock`));
-    } else out.append(node('p', 'Not open yet.'));
+    } else out.append(node('p', 'In preparation.'));
     return out;
   }
   function render(state) {
@@ -72,7 +77,7 @@
       const path = block.dataset.room, room = live ? state.rooms?.[path] : null;
       for (const field of block.querySelectorAll('[data-live]')) {
         const key = field.dataset.live;
-        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Paper book unavailable.')); continue; }
+        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Paper (for now) book unavailable.')); continue; }
         let value = '—';
         if (key === 'badge') {
           const seen = time(room?.last_exit?.at ?? room?.entered_at);

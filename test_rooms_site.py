@@ -22,11 +22,27 @@ def test_rooms_pages(tmp_path):
         assert declaration.reward_source in text
         if slug in ('betting', 'music', 'hall'):
             assert text.count('<h2>her screen right now</h2>') == 1
-            assert "whatever room she is in appears here; the paper record above is this room's" in text
+            assert "whatever room she is in appears here; the paper (for now) record above is this room's" in text
             assert text.count('id="bet-stage"') == 1
             assert '<script src="show.js"></script>' in text
         positions.append(index.index(f'<h2>{declaration.name}</h2>'))
     assert positions == sorted(positions)
+    assert 'class="vision"' in index
+    assert 'Many more rooms are coming.' in index
+    assert 'https://x.com/opifor' in index
+    assert 'https://github.com/opifor/flybrain-female' in index
+    assert 'in preparation' in index and 'beta · v1' in index
+    for slug, declaration in pages.ROOMS:
+        text = (tmp_path / f'{slug}.html').read_text(encoding='utf-8')
+        assert '<a href="/rooms/">← her rooms</a>' in text
+        assert 'data-back hidden' in text and 'history.back()' in text
+        assert '<span class="paper">' not in text
+        assert '<ol class="steps">' in text
+        assert 'class="room-card record"' in text
+    assert 'paper (for now)' in (tmp_path / 'betting.html').read_text(encoding='utf-8')
+    tips = (tmp_path / 'tips.html').read_text(encoding='utf-8')
+    assert all(word in tips for word in ('surprise', 'rehearsal', 'closed and nothing moves', '$HER'))
+    assert 'beta · v1' in (tmp_path / 'music.html').read_text(encoding='utf-8')
     for path in tmp_path.iterdir():
         raw = path.read_bytes()
         text = raw.decode('utf-8')

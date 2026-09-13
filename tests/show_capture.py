@@ -882,9 +882,22 @@ def check_rooms(browser, origin, checks, errors):
             page.on('pageerror', lambda error: errors.append(str(error)))
             page.route(origin + '/state', lambda route: route.fulfill(json=state))
             page.goto(f'{origin}/rooms/{slug}.html?relay={origin}')
+            if slug == 'betting':
+                assert page.locator('[data-back]').is_visible() == page.evaluate('history.length > 1')
             room = page.locator('[data-room="/betroom"]')
             expect(room.locator('[data-live="badge"]')).to_have_text('she is here')
             if slug == 'betting':
+                steps = room.locator('.steps > li')
+                boxes = steps.evaluate_all('(cards) => cards.map(card => { const r = card.getBoundingClientRect(); const s = getComputedStyle(card); return {x:r.x,y:r.y,width:r.width,height:r.height,border:s.borderTopWidth,background:s.backgroundColor}; })')
+                assert len(boxes) == 6
+                assert all(box['border'] == '1px' and box['background'] != 'rgba(0, 0, 0, 0)' for box in boxes)
+                if width == 1280:
+                    assert abs(boxes[0]['y'] - boxes[1]['y']) < 1
+                    assert boxes[1]['x'] >= boxes[0]['x'] + boxes[0]['width']
+                else:
+                    assert all(abs(box['x'] - boxes[0]['x']) < 1 for box in boxes)
+                    assert all(b['y'] >= a['y'] + a['height'] for a, b in zip(boxes, boxes[1:]))
+                expect(page.get_by_role('link', name='← her rooms')).to_have_attribute('href', '/rooms/')
                 for key, value in dict(visits='1,234', looks='56', commits='7', nudges='2', sugar='3', shock='1').items():
                     expect(room.locator(f'[data-live="{key}"]')).to_have_text(value)
                 expect(room.locator('[data-live="book"]')).to_contain_text('-1.25')
@@ -897,13 +910,22 @@ def check_rooms(browser, origin, checks, errors):
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             if width == 1280:
                 page.screenshot(path=str(SHOTS / f'rooms_{slug}.png'), full_page=True)
+            name = 'rooms_betting_cards' if slug == 'betting' else 'rooms_index_vision'
+            page.screenshot(path=str(SHOTS / f'{name}{"_400" if width == 400 else ""}.png'), full_page=True)
             state['rooms']['/betroom']['in_room'] = False
             expect(room.locator('[data-live="badge"]')).to_have_text('last seen 06:00 UTC')
             state['live'] = False
             expect(room.locator('[data-live="badge"]')).to_have_text('relay offline')
             if slug == 'betting':
                 expect(room.locator('[data-live="visits"]')).to_have_text('—')
-                expect(room.locator('[data-live="book"]')).to_have_text('Paper book unavailable.')
+                expect(room.locator('[data-live="book"]')).to_have_text('Paper (for now) book unavailable.')
+                page.route('https://live.femaleflybrain.com/**', lambda route: route.abort())
+                page.get_by_role('link', name='← her rooms').click()
+                expect(page.locator('.vision')).to_be_visible()
+                page.locator('[data-room="/betroom"] .button').click()
+                expect(page.locator('[data-back]')).to_be_visible()
+                page.locator('[data-back]').click()
+                expect(page.locator('.vision')).to_be_visible()
             assert not errors, errors
             page.close()
             checks.append(f'Rooms {slug} at {width}px: live, exit, offline, safe text and no overflow.')
