@@ -13,6 +13,7 @@ Sign convention follows Shiu et al. 2024 (Nature): acetylcholine excitatory,
 GABA and glutamate inhibitory. Monoamines are modulatory in reality; they are
 given zero fast weight here rather than being faked as excitatory.
 """
+import argparse
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
@@ -38,7 +39,22 @@ DATA = ROOT / "data"
 BUILD = ROOT / "build"
 
 
-def main():
+def select_neurons(ann, brain_only=False):
+    traced = ann.loc[(ann.status == "Traced") & (ann.statusLabel != "Glia")]
+    dropped = traced.iloc[:0]
+    if brain_only:
+        mask = traced.superclass.fillna("").str.startswith("vnc_")
+        dropped = traced.loc[mask].drop_duplicates("bodyId")
+        traced = traced.loc[~mask]
+    counts = dropped.groupby("superclass").bodyId.nunique().sort_index()
+    return np.sort(traced.bodyId.unique()), counts
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--brain-only", action="store_true",
+                    help="remove VNC neurons and write build/graph_brain.npz")
+    args = ap.parse_args(argv)
     BUILD.mkdir(exist_ok=True)
 
     print(f"loading weights (keeping pairs with >= {MIN_SYN} synapses) ...")
@@ -66,8 +82,9 @@ def main():
     # The weights table is keyed on every EM segment, including millions of
     # unproofread fragments. Only 'Traced' bodies are actual reconstructed
     # neurons (165,122 of them - the number in the paper's headline).
-    neurons = ann.loc[(ann.status == "Traced") & (ann.statusLabel != "Glia"), "bodyId"]
-    bodies = np.sort(neurons.unique())
+    bodies, dropped = select_neurons(ann, args.brain_only)
+    for superclass_name, count in dropped.items():
+        print(f"  dropped {superclass_name}: {count:,}")
     n = len(bodies)
     print(f"  {n:,} traced neurons (of {ann.bodyId.nunique():,} annotated bodies)")
 
@@ -109,13 +126,26 @@ def main():
     print(f"  inhibitory edges: {(W.data < 0).sum():,}")
     print(f"  dropped (modulatory/unknown NT): {(~keep).sum():,}")
 
+    output = BUILD / ("graph_brain.npz" if args.brain_only else "graph.npz")
+    metadata = {}
+    if args.brain_only:
+        metadata = dict(brain_only=np.bool_(True),
+                        dropped_superclasses=dropped.index.to_numpy(dtype=str),
+                        dropped_superclass_counts=dropped.to_numpy(dtype=np.int64))
     np.savez_compressed(
-        BUILD / "graph.npz",
+        output,
         data=W.data, indices=W.indices, indptr=W.indptr, shape=W.shape,
         bodies=bodies, sign=sign, types=types, superclass=superclass,
-        subclass=subclass, receptor=receptor, fru=fru, nt=nt_str,
+        subclass=subclass, receptor=receptor, fru=fru, nt=nt_str, **metadata,
     )
-    print(f"wrote {BUILD / 'graph.npz'}")
+    print(f"wrote {output}")
+    if args.brain_only:
+        print(f"{'Graph':<20} {'Neurons':>12} {'Nonzero edges':>16}")
+        for name in ("graph", "graph_brain", "graph_female"):
+            path = BUILD / f"{name}.npz"
+            if path.exists():
+                with np.load(path, allow_pickle=False) as graph:
+                    print(f"{name:<20} {len(graph['bodies']):>12,} {len(graph['data']):>16,}")
 
 
 if __name__ == "__main__":

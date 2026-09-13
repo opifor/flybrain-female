@@ -2009,6 +2009,8 @@ def main(argv=None):
     if getattr(fb, "graph_path", None) is not None:
         from plume_graph import prepare
         gains, graph_record = prepare(fb)
+        from graph_disclosure import disclose
+        disclose(fb, graph_record)
     for population, counts in graph_record["selections"].items():
         log(f"{population}: {counts}")
     fly_kw = dict(odorant=args.odorant, sim_steps=spec["sim_steps"], seed=0)

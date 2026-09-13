@@ -132,8 +132,12 @@ class FlyPilot:
             "stop": dn("DNp09"),
             "click": dn("MN9"),            # proboscis extension = commit
         }
+        self.click_source = "MN9"
         if not len(self.motor["click"]):
             self.motor["click"] = fb.where(subclass="proboscis_motor_neuron")
+            self.click_source = "proboscis_motor_neuron"
+        if self.click_source != "MN9":
+            print(f"click readout: {self.click_source}; {len(self.motor['click'])} cells")
 
     def step(self, img, cx, cy, gains=None, seed=0, detail=False,
              extra_drive=None, extra_record=None):

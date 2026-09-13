@@ -29,6 +29,11 @@ def compare_graph(path, img, steps, seed, trained_types=None):
                      f"u=[{u.min():.4f}, {u.max():.4f}] "
                      f"v=[{v.min():.4f}, {v.max():.4f}]"))
     height, width = img.shape
+    rows.append(("Graph", str(fb.graph_path)))
+    _, _, _, _, white_info = pilot.step(
+        np.ones((480, 640), dtype=np.float32), 320, 240,
+        gains=gains, seed=seed, detail=True)
+    rows.append(("White-screen firing neurons", str(white_info["firing"])))
     cx, cy = min(320.0, width - 1), min(240.0, height - 1)
     for t in range(1, 6):
         start = perf_counter()
@@ -67,7 +72,7 @@ def main():
         img[270:335, 360:435] = 0.35
         label = "synthetic (background 0.05, upper-left 1.0, lower-right 0.35)"
     male, trained_types = compare_graph(
-        ROOT / "build" / "graph.npz", img, args.steps, args.seed)
+        None, img, args.steps, args.seed)
     female, _ = compare_graph(
         ROOT / "build" / "graph_female.npz", img, args.steps, args.seed, trained_types)
     print(f"Image: {label}; {img.shape[1]}x{img.shape[0]}")
