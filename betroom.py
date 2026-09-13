@@ -8,14 +8,14 @@ DECLARATION = Declaration(
     name="the betting room", path="/betroom",
     cards={"source": "Polymarket current binary markets", "refresh_seconds": 30},
     commit_means="a bet",
-    reward_source="Resolved wins deliver sugar and losses shock; a sale teaches the sign of its paper (for now) profit.",
-    chosen=[DISCLOSURE, "a ten-minute room clock and a door in every room"],
+    reward_source="Resolved wins deliver sugar and losses shock; a sale teaches the sign of its profit. Every bet here is paper for now; the plan is to take the rooms on-chain.",
+    chosen=[DISCLOSURE, "a six-minute room clock and a door in every room"],
     how=("her eye settles on a card; a decision only starts once she has stayed on it for two rounds.",
          "the card's question is turned into a smell, word by word, and fed to her olfactory neurons.",
          "her mushroom body remembers whether that smell brought sugar or shock before.",
          "while she stays, the drive it produces is summed; positive means YES, negative means NO, zero means she walks away.",
-         "the paper (for now) bookie takes the bet; a resolved win brings sugar and a loss brings shock, and she learns.",
-         "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."),
+         "the bookie takes the bet; a resolved win brings sugar and a loss brings shock, and she learns.",
+         "she may leave by the door at the bottom of the room; the house closes a room after six minutes either way."),
     measured=["Stops and relative drive come from the female brain; this does not establish predictive skill.",
               "nudges: how often the page had to push her out of an empty margin"])
 

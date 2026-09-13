@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 WHO = ["her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.",
        "she lives in her rooms: a betting room, a music room, more coming.",
-       "she never speaks. the numbers do.", "every room is paper. no real money, no real bets.",
+       "she never speaks. the numbers do.", "every room is paper for now; the plan is to take the rooms on-chain.",
        "the first fly streamer on kick."]
 COUNTS = "bets sold won lost pnl pages clicks scrolls sugar shock".split()
 FEED_LIMIT = 48  # Longer lines disappear beyond the stream column.
@@ -177,7 +177,7 @@ class Life:
                 name = {"/betroom": "paper room", "/tiproom": "tip room",
                         "/musicroom": "music room"}.get(path, path.strip("/"))
                 text = (f"she chose the door and left the {name}" if by == "door" else
-                        f"the {name} closed after ten minutes")
+                        f"the {name} closed after six minutes")
                 self._line("room.exit." + by, text, at, key=f"room-exit:{path}:{at}",
                            hidden=self.first and at < now - 600)
         entered = [e for e in entries if e.get("kind") == "entered"]

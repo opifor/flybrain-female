@@ -33,13 +33,13 @@
 <a href="/rooms/">rooms</a><a href="/brain.html">brain</a><a href="/story.html">story</a><a href="/show.html">show</a><a href="/#ca-text">$HER</a><a href="/watch.html">watch</a></nav></header>
 <main><nav class="room-back" aria-label="Return"><a href="/rooms/">← her rooms</a><button type="button" data-back hidden>back</button></nav><h1>the hall</h1><p class="lede">A real female fruit fly brain, 139,255 neurons, simulated live. She lives in a house of rooms and chooses where to go. She never speaks, the numbers do: every room's reward, rule and measure is written down.</p><div data-room="/hall"><p class="path">/hall</p>
 <section class="steps-section"><h2>how she plays here</h2><ol class="steps"><li>door order rotates every visit so no door owns the left.</li><li>she needs readings from another door before a stop can open this one.</li><li>entering a room brings her to that room's cards.</li><li>every room leads back here, by her door or by the clock.</li></ol></section>
-<div class="columns"><section class="room-card"><h2>what a person chose</h2><ul><li>The doors are the rooms people built. Which one she walks into is her stop.</li><li>door order rotates every visit so no door owns the left</li><li>The rooms keep paper (for now) records.</li></ul></section>
+<div class="columns"><section class="room-card"><h2>what a person chose</h2><ul><li>The doors are the rooms people built. Which one she walks into is her stop.</li><li>door order rotates every visit so no door owns the left</li><li>The rooms are paper for now; the plan is to take them on-chain.</li></ul></section>
 <section class="room-card"><h2>what is measured</h2><ul><li>She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.</li><li>The page counts how often it pushes her out of an empty margin.</li></ul></section></div>
 <section class="room-card sources"><h2>where the cards come from</h2><p>rooms whose doors are ready to open. Refreshed every two seconds.</p>
 <h2>reward</h2><p>The hall brings no sugar or shock; each room says where its own sugar and shock come from.</p></section>
-<section class="room-card record"><h2>her paper (for now) record</h2><p class="badge" data-live="badge">relay offline</p><dl class="counters"><div><dt>visits</dt><dd data-live="visits">—</dd></div><div><dt>looks</dt><dd data-live="looks">—</dd></div><div><dt>commits</dt><dd data-live="commits">—</dd></div><div><dt>nudges</dt><dd data-live="nudges">—</dd></div><div><dt>sugar</dt><dd data-live="sugar">—</dd></div><div><dt>shock</dt><dd data-live="shock">—</dd></div></dl>
+<section class="room-card record"><h2>her record</h2><p class="badge" data-live="badge">relay offline</p><dl class="counters"><div><dt>visits</dt><dd data-live="visits">—</dd></div><div><dt>looks</dt><dd data-live="looks">—</dd></div><div><dt>commits</dt><dd data-live="commits">—</dd></div><div><dt>nudges</dt><dd data-live="nudges">—</dd></div><div><dt>sugar</dt><dd data-live="sugar">—</dd></div><div><dt>shock</dt><dd data-live="shock">—</dd></div></dl>
 <p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
-<div data-live="book">Paper (for now) book unavailable.</div></section></div><section><h2>her screen right now</h2><p>whatever room she is in appears here; the paper (for now) record above is this room's</p><div id="bet-stage"></div></section></main>
+<div data-live="book">Book unavailable.</div></section></div><section><h2>her screen right now</h2><p>whatever room she is in appears here; the record above is this room's</p><div id="bet-stage"></div></section></main>
 <script src="show.js"></script><script>(() => {
   'use strict';
   const back = document.querySelector('[data-back]');
@@ -91,7 +91,7 @@
       const entries = b?.entries || room.events || [];
       out.append(table(['last entries', 'at'], entries.slice(-10).reverse().map(e => [e.text || e.path, time(e.at)])));
       if (!entries.length) out.append(node('p', 'No entries available.'));
-    } else if (!b) out.append(node('p', 'Paper (for now) book unavailable.'));
+    } else if (!b) out.append(node('p', 'Book unavailable.'));
     else if (path === '/betroom') {
       const rows = [];
       for (const [key, status] of [['open_bets', 'open'], ['settled_bets', 'settled']]) {
@@ -119,7 +119,7 @@
       const path = block.dataset.room, room = live ? state.rooms?.[path] : null;
       for (const field of block.querySelectorAll('[data-live]')) {
         const key = field.dataset.live;
-        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Paper (for now) book unavailable.')); continue; }
+        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Book unavailable.')); continue; }
         let value = '—';
         if (key === 'badge') {
           const seen = time(room?.last_exit?.at ?? room?.entered_at);

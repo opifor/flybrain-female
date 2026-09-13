@@ -12,9 +12,9 @@ DECLARATION = Declaration(
     cards={"source": "a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license",
            "refresh_seconds": 60},
     commit_means="she plays the track on the card she settled on",
-    reward_source="Listener reactions supply sugar and shock in the paper (for now) record; they will reach her through the stream chat later.",
+    reward_source="Listener reactions supply sugar and shock in her record; they will reach her through the stream chat later. The rooms are paper for now; the plan is to take them on-chain.",
     chosen=["People choose the catalogue search terms, the ninety-second minimum and the six-card board.",
-            "a ten-minute room clock and a door in every room",
+            "a six-minute room clock and a door in every room",
             "beta · v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming."],
     measured=["The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.",
               "nudges: how often the page had to push her out of an empty margin"],
@@ -24,7 +24,7 @@ DECLARATION = Declaration(
          "she stays with a track for at least ninety seconds and cannot restart it while it is playing.",
          "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.",
          "a listener's sugar or shock teaches the cells recorded when she chose that play.",
-         "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."))
+         "she may leave by the door at the bottom of the room; the house closes a room after six minutes either way."))
 
 
 def catalogue(path=CATALOGUE):

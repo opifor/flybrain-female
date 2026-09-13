@@ -14,7 +14,7 @@ def test_house_identity_and_hour(tmp_path):
         "her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.",
         "she lives in her rooms: a betting room, a music room, more coming.",
         "she never speaks. the numbers do.",
-        "every room is paper. no real money, no real bets.",
+        "every room is paper for now; the plan is to take the rooms on-chain.",
         "the first fly streamer on kick."]
     assert block["hour"]["rooms"] == 1 and block["hour"]["plays"] == 0
     play = dict(track_id="1", title="Rain", started_at=101)
@@ -402,7 +402,7 @@ def test_a_removed_directory_comes_back(tmp_path):
 
 @pytest.mark.parametrize("by,sentence", [
     ("door", "she chose the door and left the music room"),
-    ("clock", "the music room closed after ten minutes"),
+    ("clock", "the music room closed after six minutes"),
 ])
 def test_room_exit_sentences_and_repeated_observations(tmp_path, by, sentence):
     life = Life(tmp_path)

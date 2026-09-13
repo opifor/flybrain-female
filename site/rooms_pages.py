@@ -70,13 +70,13 @@ def generate(destination=WEB / 'rooms'):
 <section class="room-card"><h2>what is measured</h2><ul>{items(d['measured'])}</ul></section></div>
 <section class="room-card sources"><h2>where the cards come from</h2><p>{escape(d['cards']['source'], quote=False)}. Refreshed every {period}.</p>
 <h2>reward</h2><p>{e('reward_source')}</p></section>
-<section class="room-card record"><h2>her paper (for now) record</h2>{badge}<dl class="counters">{counters}</dl>
+<section class="room-card record"><h2>her record</h2>{badge}<dl class="counters">{counters}</dl>
 <p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
-<div data-live="book">Paper (for now) book unavailable.</div></section></div>'''
+<div data-live="book">Book unavailable.</div></section></div>'''
         arena = slug in ('betting', 'music', 'hall')
         if arena:
             body += ('<section><h2>her screen right now</h2>'
-                     "<p>whatever room she is in appears here; the paper (for now) record above is this room's</p>"
+                     "<p>whatever room she is in appears here; the record above is this room's</p>"
                      '<div id="bet-stage"></div></section>')
         write(slug, d['name'], body, arena)
     write('index', 'Her Rooms', VISION + '<div class="rooms">' + ''.join(cards) + '</div>')

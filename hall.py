@@ -10,7 +10,7 @@ DECLARATION = Declaration(
     commit_means="she enters that room",
     reward_source="The hall brings no sugar or shock; each room says where its own sugar and shock come from.",
     chosen=[DISCLOSURE, "door order rotates every visit so no door owns the left",
-            "The rooms keep paper (for now) records."],
+            "The rooms are paper for now; the plan is to take them on-chain."],
     measured=["She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.",
               "The page counts how often it pushes her out of an empty margin."],
     how=("door order rotates every visit so no door owns the left.",

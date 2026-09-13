@@ -22,7 +22,7 @@ def test_rooms_pages(tmp_path):
         assert declaration.reward_source in text
         if slug in ('betting', 'music', 'hall'):
             assert text.count('<h2>her screen right now</h2>') == 1
-            assert "whatever room she is in appears here; the paper (for now) record above is this room's" in text
+            assert "whatever room she is in appears here; the record above is this room's" in text
             assert text.count('id="bet-stage"') == 1
             assert '<script src="show.js"></script>' in text
         positions.append(index.index(f'<h2>{declaration.name}</h2>'))
@@ -39,13 +39,20 @@ def test_rooms_pages(tmp_path):
         assert '<span class="paper">' not in text
         assert '<ol class="steps">' in text
         assert 'class="room-card record"' in text
-    assert 'paper (for now)' in (tmp_path / 'betting.html').read_text(encoding='utf-8')
+    for slug in ('betting', 'music', 'tips'):
+        text = (tmp_path / f'{slug}.html').read_text(encoding='utf-8')
+        assert text.count('paper for now') == 1
+        assert 'the plan is to take' in text and 'on-chain.' in text
+    for card in re.findall(r'<article.*?</article>', index):
+        if any(f'rooms/{slug}.html' in card for slug in ('betting', 'music', 'tips')):
+            assert card.count('paper for now') == 1
     tips = (tmp_path / 'tips.html').read_text(encoding='utf-8')
     assert all(word in tips for word in ('surprise', 'rehearsal', 'closed and nothing moves', '$HER'))
     assert 'beta · v1' in (tmp_path / 'music.html').read_text(encoding='utf-8')
     for path in tmp_path.iterdir():
         raw = path.read_bytes()
         text = raw.decode('utf-8')
+        assert '(' + 'for now)' not in text
         assert not raw.startswith(b'\xef\xbb\xbf')
         assert 'Temp' not in text
         assert not re.search(r'\b[A-Za-z]:[\\/]|file://|/Users/|/home/', text)
