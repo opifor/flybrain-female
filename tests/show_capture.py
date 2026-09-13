@@ -690,7 +690,7 @@ def check_entry(browser, origin, checks, errors):
         assert page.locator('#betting, #matches, #comparison').count() == 0
         assert page.locator('.film, #story, .step').count() == 0
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
-            '/rooms/', '/brain.html', '/story.html', '/#ca-text', '/watch.html']
+            '/rooms/', '/brain.html', '/story.html', '/show.html', '/#ca-text', '/watch.html']
         state['life'] = dict(now=dict(doing='looking at ETH 15m', room='paper room',
                                      spikes=1312400, sugar_10m=3, shock_10m=1,
                                      balance=106.2, today_delta=6.2),
@@ -760,7 +760,7 @@ def check_story(browser, origin, checks, errors):
         page.goto(origin + '/story.html')
         expect(page.locator('.site-nav')).to_be_visible()
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
-            '/rooms/', '/brain.html', '/story.html', '/#ca-text', '/watch.html']
+            '/rooms/', '/brain.html', '/story.html', '/show.html', '/#ca-text', '/watch.html']
         expect(page.locator('.story-intro h1')).to_have_text('Her Story')
         expect(page.locator('#story .step .no')).to_have_text([f'{i:02}' for i in range(1, 16)])
         expect(page.locator('#story .step .tag')).to_have_text(['done'] * 7 + ['done · 11 sep'] + ['done'] * 4 + ['now', 'next', 'next'])
