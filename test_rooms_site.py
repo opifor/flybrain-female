@@ -47,7 +47,7 @@ def test_rooms_pages(tmp_path):
         if any(f'rooms/{slug}.html' in card for slug in ('betting', 'music', 'tips')):
             assert card.count('paper for now') == 1
     tips = (tmp_path / 'tips.html').read_text(encoding='utf-8')
-    assert all(word in tips for word in ('surprise', 'rehearsal', 'closed and nothing moves', '$HER'))
+    assert all(word in tips for word in ('post about her', 'rehearsal', 'nothing moves', '$HER'))
     assert 'beta · v1' in (tmp_path / 'music.html').read_text(encoding='utf-8')
     for path in tmp_path.iterdir():
         raw = path.read_bytes()

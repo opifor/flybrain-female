@@ -162,7 +162,7 @@ def test_rooms_explain_their_own_play():
     for declaration in (betroom.DECLARATION, tiproom.DECLARATION, musicroom.DECLARATION):
         assert 3 <= len(declaration.public()["how"]) <= 8
     assert "YES" in betroom.DECLARATION.how[3]
-    assert "practice thank-you" in tiproom.DECLARATION.how[-2]
+    assert "practice thank-you" in tiproom.DECLARATION.how[-3]
     assert "Johnston organs" in musicroom.DECLARATION.how[-3]
 
 
