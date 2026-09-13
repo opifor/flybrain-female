@@ -278,3 +278,12 @@ def test_old_lessons_are_absorbed_on_a_fresh_start(tmp_path):
     assert [r["kind"] for r in block["feed"] if r["kind"] in ("sugar", "shock")] == ["shock"]
     assert next(r for r in block["feed"] if r["kind"] == "shock")["at"] == "00:58:20"
     assert block["hour"]["sugar"] == 1 and block["hour"]["shock"] == 1
+
+
+def test_a_removed_directory_comes_back(tmp_path):
+    import shutil
+    life = Life(tmp_path / "life")
+    shutil.rmtree(tmp_path / "life")
+    block = life.observe(paper(), 100)
+    assert block["now"]["room"] == "paper room"
+    assert (tmp_path / "life" / "feed.jsonl").exists()

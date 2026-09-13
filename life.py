@@ -105,6 +105,7 @@ class Life:
         return True
 
     def _line(self, kind, text, now, counts=None, key=None, **extra):
+        self.dir.mkdir(parents=True, exist_ok=True)
         self.serial += 1
         key = key or f"{now}:{self.serial}"
         row = dict(id=key, serial=self.serial, ts=now, at=stamp(now, "%H:%M:%S"),
@@ -277,6 +278,7 @@ class Life:
         self.day.update(since=self.since, memory=dict(seen=sorted(self.seen), stats=self.stats,
                         url=self.url, room=self.room, high=self.high, wins=self.wins,
                         cooldown=self.cooldown, cards=self.cards))
+        self.dir.mkdir(parents=True, exist_ok=True)
         pending = self.dir / "day.tmp"
         pending.write_text(json.dumps(self.day), encoding="utf-8")
         pending.replace(self.dir / "day.json")
