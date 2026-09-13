@@ -7,13 +7,15 @@
   const key = e => `${e.kind}:${e.seq ?? e.id ?? `${e.at}:${e.market_id}:${e.action || ''}`}`;
 
   function makeSound(media) {
-    let ctx, master, pan, tone, filt, lfo, on = false, volume = 0.5;
+    let ctx, master, pan, tone, drone, filt, lfo, on = false, volume = 0.5, ducked = false;
     function init() {
       if (ctx) return;
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       master = ctx.createGain(); master.gain.value = 0;
       ctx.createMediaElementSource(media).connect(master);
       pan = ctx.createStereoPanner(); tone = ctx.createGain(); tone.gain.value = 0;
+      drone = ctx.createGain(); drone.gain.value = media.paused ? 1 : 0.25;
+      ducked = !media.paused;
       const trem = ctx.createGain(); trem.gain.value = 0.7;
       filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 200; filt.Q.value = 2;
       lfo = ctx.createOscillator(); lfo.frequency.value = 0.5;
@@ -23,7 +25,7 @@
         const o = ctx.createOscillator(); o.type = type; o.frequency.value = 110; o.detune.value = detune;
         o.connect(filt); o.start();
       }
-      filt.connect(trem).connect(tone).connect(pan).connect(master).connect(ctx.destination);
+      filt.connect(trem).connect(tone).connect(drone).connect(pan).connect(master).connect(ctx.destination);
     }
     function ping(freq, dur, level, delay = 0, hard = false) {
       if (!on || ctx?.state !== 'running') return;
@@ -37,6 +39,13 @@
       o.onended = () => { o.disconnect(); g.disconnect(); };
     }
     return {
+      duck(playing) {
+        if (!ctx || playing === ducked) return;
+        ducked = playing;
+        const t = ctx.currentTime;
+        drone.gain.cancelAndHoldAtTime(t);
+        drone.gain.linearRampToValueAtTime(playing ? 0.25 : 1, t + (playing ? 0.08 : 1));
+      },
       async start() { init(); on = true; await ctx.resume(); master.gain.setTargetAtTime(on ? volume * 0.25 : 0, ctx.currentTime, 0.15); return ctx.state === 'running'; },
       mute(value) { on = !value; if (ctx) master.gain.setTargetAtTime(on ? volume * 0.25 : 0, ctx.currentTime, 0.08); },
       volume(value) { volume = clamp(value); if (ctx && on) master.gain.setTargetAtTime(volume * 0.25, ctx.currentTime, 0.08); },
@@ -69,6 +78,9 @@
     container.append(musicAudio);
     const sound = audio && !forcedMute ? makeSound(musicAudio) : null;
     let music = null, musicKey = null, musicCredits = new Map();
+    let musicPlayedAt = -Infinity, musicSeekAt = -Infinity, musicInitial = false;
+    musicAudio.addEventListener('playing', () => sound?.duck(true));
+    for (const event of ['pause', 'ended', 'emptied']) musicAudio.addEventListener(event, () => sound?.duck(false));
     fetch('music/catalog.json').then(r => r.ok ? r.json() : []).then(rows => {
       musicCredits = new Map(rows.map(row => [String(row.id), row]));
     }).catch(() => {});
@@ -79,17 +91,27 @@
       if (musicAudio.readyState >= 1) {
         const end = Number.isFinite(musicAudio.duration) ? musicAudio.duration : number(music.duration);
         if (offset >= end) { musicAudio.pause(); return; }
-        if (Math.abs(musicAudio.currentTime - offset) > 0.75) musicAudio.currentTime = offset;
-        musicAudio.play().catch(() => {});
+        const now = performance.now(), drift = offset - musicAudio.currentTime;
+        if (musicInitial) {
+          musicAudio.currentTime = offset; musicInitial = false;
+        } else if (Math.abs(drift) > 3 && now - musicSeekAt >= 10000 && now - musicPlayedAt >= 2000) {
+          musicAudio.currentTime = offset; musicSeekAt = now;
+          console.log(`music sync ${drift >= 0 ? '+' : ''}${drift.toFixed(1)}s`);
+        }
+        if (musicAudio.paused) {
+          musicPlayedAt = now;
+          musicAudio.play().catch(() => {});
+        }
       }
     }
     musicAudio.addEventListener('loadedmetadata', syncMusic);
     function acceptMusic(d, healthy) {
       const room = d?.rooms?.['/musicroom'];
       music = healthy && room?.in_room ? room.book?.now_playing : null;
-      const next = music ? `${music.track_id}:${music.started_at}` : null;
+      const next = music ? String(music.track_id) : null;
       if (next !== musicKey) {
         musicKey = next; musicAudio.pause();
+        musicInitial = true; musicPlayedAt = -Infinity;
         if (music && audio) musicAudio.src = `music/${encodeURIComponent(String(music.track_id))}.ogg`;
         else { musicAudio.removeAttribute('src'); musicAudio.load(); }
       }
@@ -319,11 +341,12 @@
       if (progress < 1) feedRows(previousFeed, progress * 37, 1 - progress);
       feedRows(feed.length ? feed : [{at:'—', text:'—'}], (progress - 1) * 37, progress, true);
       caption('last hour', 24, 839);
-      const metrics = [['bets','bets'], ['won','won'], ['lost','lost'], ['paper p&l','pnl'], ['pages','pages'], ['clicks','clicks'], ['scrolls','scrolls'], ['sugar','sugar'], ['shock','shock']];
+      const metrics = [['rooms','rooms'], ['plays','plays'], ['bets','bets'], ['won','won'], ['lost','lost'], ['paper p&l','pnl'], ['sugar','sugar'], ['shock','shock'], ['nudges','nudges']];
+      const nudges = Object.values(state?.rooms || {}).reduce((sum, room) => sum + number(room?.nudges), 0);
       metrics.forEach(([label, field], i) => {
         const x = 24 + i % 5 * 124, y = i < 5 ? 860 : 965;
         text(label, x, y, 120, 18, '#8b93a1');
-        text(field === 'pnl' ? delta(hour[field]) : hour[field], x, y + 38, 121, 30,
+        text(field === 'nudges' ? nudges : field === 'pnl' ? delta(hour[field]) : hour[field], x, y + 38, 121, 30,
           field === 'pnl' && hour[field] != null ? (hour[field] >= 0 ? '#f8d694' : '#ff4153') : '#e9edf3');
       });
       caption('paper', 664, 839);
@@ -333,7 +356,7 @@
         if (g.measureText(value(feed[0]?.text)).width <= 592) break;
       }
       text(feed[0]?.text, 664, 900, 592, stripFont);
-      text('paper room · no real bets ·', 664, 997, 592);
+      text('her rooms · all paper ·', 664, 997, 592);
       text(`femaleflybrain.com · UTC ${new Date().toISOString().slice(11, 19)}`, 664, 1031, 592);
     }
     function drawGaze(now, dt) {
@@ -351,18 +374,19 @@
         gazeDrive += (clamp(number(gaze.drive), -1, 1) - gazeDrive) * ease;
         const r = rect({market_id:gaze.token});
         if (r) {
+          g.save(); g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
           ring(r, gazeProgress);
-          const y = r.y + 264, left = r.x + 66, right = r.x + r.w - 70;
+          const y = r.y + r.h - 62, left = r.x + 66, right = r.x + r.w - 70;
           const leaning = gaze.drive != null && Math.abs(number(gaze.drive)) >= 0.02;
-          g.save(); g.fillStyle = '#181b20'; g.fillRect(r.x + 12, y - 22, r.w - 24, 64);
+          g.fillStyle = '#181b20'; g.fillRect(r.x + 20, y - 22, r.w - 40, 70);
           g.font = '20px ui-monospace,monospace';
-          g.fillStyle = leaning && gaze.drive < 0 ? '#e9edf3' : '#818a97'; g.fillText('NO', r.x + 18, y);
-          g.fillStyle = leaning && gaze.drive > 0 ? '#e9edf3' : '#818a97'; g.fillText('YES', right + 14, y);
+          g.fillStyle = leaning && gaze.drive < 0 ? '#e9edf3' : '#818a97'; g.fillText('NO', r.x + 20, y);
+          g.fillStyle = leaning && gaze.drive > 0 ? '#e9edf3' : '#818a97'; g.fillText('YES', r.x + r.w - 20 - g.measureText('YES').width, y);
           g.strokeStyle = '#818a97'; g.lineWidth = 1; g.beginPath(); g.moveTo(left, y - 6); g.lineTo(right, y - 6); g.stroke();
           g.fillStyle = leaning ? '#e9c987' : '#818a97'; ellipse(left + (gazeDrive + 1) / 2 * (right - left), y - 6, 4, 4);
           g.font = '18px ui-sans-serif,system-ui,sans-serif'; g.fillStyle = '#818a97';
           const words = (gaze.smell || []).slice(0, 6);
-          g.fillText(words.length ? `smells like: ${words.join(' · ')}` : 'smells like nothing she knows', r.x + 18, y + 30, r.w - 36);
+          g.fillText(words.length ? `smells like: ${words.join(' · ')}` : 'smells like nothing she knows', r.x + 20, r.y + r.h - 26, r.w - 40);
           g.restore();
         }
       }
@@ -370,6 +394,7 @@
       const r = rect({market_id:decision.token}), age = now - decision.started;
       if (!r || !['yes', 'no'].includes(decision.side)) return;
       g.save();
+      g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
       if (decision.status === 'booked') {
         if (age < 600) ring(r, 1);
         g.globalAlpha *= clamp((1200 - age) / 500);

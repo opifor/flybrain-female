@@ -9,7 +9,8 @@ from statistics import median
 from urllib.parse import urlsplit
 
 WHO = ["her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.",
-       "she never speaks. the numbers do.", "paper money only. no real bets.",
+       "she lives in her rooms: a betting room, a music room, more coming.",
+       "she never speaks. the numbers do.", "every room is paper. no real money, no real bets.",
        "the first fly streamer on kick."]
 COUNTS = "bets sold won lost pnl pages clicks scrolls sugar shock".split()
 FEED_LIMIT = 48  # Longer lines disappear beyond the stream column.
@@ -304,6 +305,8 @@ class Life:
         self.first = False
         self.rows = {k: r for k, r in self.rows.items() if now - 3600 < r["ts"] <= now}
         hour = {k: round(sum(r["counts"].get(k, 0) for r in self.rows.values()), 2) for k in COUNTS}
+        hour.update({field: sum(r["kind"] == kind for r in self.rows.values())
+                     for field, kind in (("rooms", "room.enter"), ("plays", "music.play"))})
         recent = {k: sum(r["counts"].get(k, 0) for r in self.rows.values() if r["ts"] > now-600)
                   for k in ("sugar", "shock")}
         doing = {"hall": "walking the hall", "tip room": "visiting the tip room",

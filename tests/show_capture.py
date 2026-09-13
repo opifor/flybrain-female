@@ -20,34 +20,36 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = Path.home() / 'AppData/Local/Temp'
 CARDS = [dict(market_id=str(i), shelf='fast', slot=i, end_at=time.time() + 3600,
               question=q, yes_price=p, category='crypto') for i, (q, p) in enumerate([
-    ('Bitcoin Up or Down - next 5 minutes', .36),
-    ('Ethereum Up or Down - next 5 minutes', .58),
-    ('Bitcoin Up or Down - next 15 minutes', .42),
-    ('Ethereum Up or Down - next 15 minutes', .63),
-    ('Solana Up or Down - next 15 minutes', .47),
-    ('XRP Up or Down - next 15 minutes', .51)])]
+    ('Bitcoin Up or Down - September 13, 1:25AM-1:30AM ET', .36),
+    ('Ethereum Up or Down - September 13, 1:25AM-1:30AM ET', .58),
+    ('Bitcoin Up or Down - September 13, 1:15AM-1:30AM ET', .42),
+    ('Ethereum Up or Down - September 13, 1:15AM-1:30AM ET', .63),
+    ('Solana Up or Down - September 13, 1:15AM-1:30AM ET', .47),
+    ('XRP Up or Down - September 13, 1:15AM-1:30AM ET', .51)])]
 DATA = {'events': [], 'learning': [], 'open': [], 'settled': [], 'live': True, 'cards': CARDS}
 DATA['gaze'] = dict(token='0', steps=1, needed=2, drive=.35, side='yes',
                     smell=['earth', 'rain'], since=time.time(), blind=0)
 DATA['last_intent'] = dict(token='0', side='YES', drive=.35, at=time.time(), status='booked', reason=None)
 MUSIC_TRACK = dict(id='123', title='Rain', artist='River', license='CC BY 3.0',
                    page='https://commons.wikimedia.org/wiki/File:Rain.ogg', duration=60, file='123.ogg')
-DATA['music'] = dict(in_room=False, book=dict(now_playing=None, plays=[], reactions={}))
+DATA['music'] = dict(in_room=False, nudges=2, book=dict(now_playing=None, plays=[], reactions={}))
 FRAME = b''
 SEQ = 0
 START = time.monotonic()
 LIFE = dict(
     since='2026-09-13T04:07:21Z',
     who=['her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.',
-         'she never speaks. the numbers do.'],
+         'she lives in her rooms: a betting room, a music room, more coming.',
+         'she never speaks. the numbers do.', 'every room is paper. no real money, no real bets.',
+         'the first fly streamer on kick.'],
     now=dict(room='paper room', doing='looking at ETH 15m', spikes=1312400,
              turn='left', sugar_10m=3, shock_10m=1, balance=106.2, today_delta=6.2),
-    hour=dict(bets=4, sold=1, won=2, lost=1, pnl=5.8, pages=12, clicks=3,
+    hour=dict(rooms=6, plays=2, bets=4, sold=1, won=2, lost=1, pnl=5.8, pages=12, clicks=3,
               scrolls=20, sugar=3, shock=1),
     feed=[dict(at='07:02:11', kind='bet.won', text='eth 15m won +5.20 · sugar'),
           dict(at='07:01:40', kind='page.scroll', text='she scrolled down on arxiv.org'),
           dict(at='07:00:12', kind='bet.fill', text='she bought ETH up')])
-STREAM_FRAME = Path(r'build\shots\stream_frame2.png')
+STREAM_FRAME = Path(r'build\shots\stream_frame3.png')
 
 
 def fixture():
@@ -55,7 +57,7 @@ def fixture():
     SEQ += 1
     t = time.monotonic() - START
     return dict(seq=SEQ, live=DATA['live'], age=0, url='http://127.0.0.1:4660/betroom',
-                rooms={'/musicroom': DATA['music']},
+                rooms={'/musicroom': DATA['music'], '/hall': {'nudges': 3}, '/betroom': {'nudges': 4}},
                 **({'life': LIFE} if DATA.get('with_life', True) else {}),
                 cursor=dict(x=.3 + .16 * math.sin(t * .8), y=.43 + .15 * math.cos(t * .7)),
                 hz=dict(steer_L=150 + 130 * math.sin(t), steer_R=150 - 130 * math.sin(t),
@@ -127,6 +129,34 @@ class Handler(SimpleHTTPRequestHandler):
 
 INSTRUMENT = """(() => {
   window.soundContexts = []; window.notes = []; window.ink = [];
+  window.seeks = [];
+  window.musicStarts = [];
+  const play = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function(...a) {
+    window.musicStarts.push(performance.now()); return play.apply(this, a);
+  };
+  window.gainRamps = [];
+  const ramp = AudioParam.prototype.linearRampToValueAtTime;
+  AudioParam.prototype.linearRampToValueAtTime = function(value, at) {
+    window.gainRamps.push({param:this, value, at, now:window.soundContexts[0]?.currentTime});
+    return ramp.call(this, value, at);
+  };
+  const time = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'currentTime');
+  Object.defineProperty(HTMLMediaElement.prototype, 'currentTime', {
+    get: time.get, set(value) { window.seeks.push({value, at: performance.now()}); time.set.call(this, value); }
+  });
+  const clips = new WeakMap(), stacks = new WeakMap(), paths = new WeakMap();
+  for (const method of ['save', 'restore', 'beginPath', 'rect', 'clip']) {
+    const original = CanvasRenderingContext2D.prototype[method];
+    CanvasRenderingContext2D.prototype[method] = function(...a) {
+      if (method === 'save') { const stack = stacks.get(this) || []; stack.push(clips.get(this)); stacks.set(this, stack); }
+      if (method === 'restore') clips.set(this, stacks.get(this)?.pop());
+      if (method === 'beginPath') paths.delete(this);
+      if (method === 'rect') paths.set(this, a);
+      if (method === 'clip') clips.set(this, paths.get(this));
+      return original.apply(this, a);
+    };
+  }
   const Native = window.AudioContext;
   window.AudioContext = class extends Native { constructor(...a) { super(...a); window.soundContexts.push(this); } };
   const mediaSource = AudioContext.prototype.createMediaElementSource;
@@ -147,7 +177,8 @@ INSTRUMENT = """(() => {
     CanvasRenderingContext2D.prototype[method] = function(...a) {
       if (this.canvas.getAttribute('aria-label') === 'Her brain, path and paper bets') {
         window.ink.push({method, args:a, fill:this.fillStyle, stroke:this.strokeStyle, alpha:this.globalAlpha,
-          font:this.font, width:method === 'fillText' ? Math.min(this.measureText(a[0]).width, a[3] ?? Infinity) : null});
+          font:this.font, clip:clips.get(this), transform:Array.from(this.getTransform().toFloat64Array()), align:this.textAlign,
+          width:method === 'fillText' ? Math.min(this.measureText(a[0]).width, a[3] ?? Infinity) : null});
         if (window.ink.length > 3000) window.ink.splice(0,1000);
       }
       return original.apply(this,a);
@@ -167,6 +198,18 @@ def check_gaze(page, checks):
     page.evaluate('window.ink = []')
     page.wait_for_function(f"window.ink.some(e => {stamp} && e.alpha === 1)")
     page.wait_for_function(f"window.ink.some(e => {arc} && e.args[4] === Math.PI * 1.5)")
+    drawing = page.evaluate("window.ink.filter(e => e.method === 'fillText' && (['NO','YES','refused'].includes(e.args[0]) || e.args[0].startsWith('smells like')))")
+    assert drawing
+    for entry in drawing:
+        assert entry['clip'] == [56, 48, 368, 336]
+        a, c, x = [entry['transform'][i] for i in [0, 4, 12]]
+        left = entry['args'][1] - (entry['width'] / 2 if entry['align'] == 'center' else 0)
+        bounds = [a * edge + c * entry['args'][2] + x for edge in [left, left + entry['width']]]
+        assert min(bounds) >= 56 and max(bounds) <= 424, entry
+        if entry['args'][0].startswith('smells like'):
+            assert entry['args'][1:3] == [76, 358] and entry['width'] <= 328
+        elif not entry['font'].startswith('bold'):
+            assert entry['args'][2] == 322
     page.screenshot(path=str(STREAM_FRAME.with_name('gaze_frame.png')))
     page.wait_for_timeout(1250)
     page.evaluate('window.ink = []')
@@ -208,7 +251,7 @@ def check_broadcast(page, checks, errors):
     LIFE['feed'].insert(0, short)
     page.evaluate('window.ink = []')
     page.wait_for_function("line => window.ink.some(e => e.method === 'fillText' && e.args[0] === line && e.args[1] === 1416 && e.args[2] === 550 && e.alpha === 1 && e.font.startsWith('22px') && e.args[1] + e.width <= 1896)", arg=short['text'])
-    tiles = ['bets', 'won', 'lost', 'paper p&l', 'pages', 'clicks', 'scrolls', 'sugar', 'shock']
+    tiles = ['rooms', 'plays', 'bets', 'won', 'lost', 'paper p&l', 'sugar', 'shock', 'nudges']
     positions = page.evaluate("labels => labels.map(label => window.ink.findLast(e => e.method === 'fillText' && e.args[0] === label && [860,965].includes(e.args[2])))", tiles)
     assert all(positions)
     for i, entry in enumerate(positions):
@@ -217,7 +260,9 @@ def check_broadcast(page, checks, errors):
         if i % 5:
             previous = positions[i - 1]
             assert previous['args'][1] + previous['width'] < entry['args'][1]
-    assert positions[3]['args'][0] == 'paper p&l'
+    assert positions[5]['args'][0] == 'paper p&l'
+    assert page.evaluate("window.ink.some(e => e.method === 'fillText' && e.args[0] === '9' && e.args[1] === 396 && e.args[2] === 1003)")
+    assert page.evaluate("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'her rooms · all paper ·') && window.ink.some(e => e.method === 'fillText' && /^femaleflybrain.com · UTC \\d{2}:\\d{2}:\\d{2}$/.test(e.args[0]))")
     page.wait_for_function("window.ink.some(e => e.method === 'fillRect' && e.args[0] === 1298 && e.args[1] === 526 && e.args[2] === 2 && e.alpha > 0 && e.alpha < 0.6)")
     page.screenshot(path=str(STREAM_FRAME))
     page.wait_for_timeout(5100)
@@ -283,6 +328,7 @@ def capture(port):
         arena = browser.new_page(viewport=dict(width=1280, height=800))
         arena.goto(origin + '/arena')
         arena.locator('.card:not(.empty)').nth(5).wait_for()
+        assert arena.locator('.question').first.evaluate("e => { const r = document.createRange(); r.selectNodeContents(e); return r.getClientRects().length; }") == 3
         FRAME = arena.screenshot(type='jpeg', quality=90)
         (OUT / 'flybrain-show-frame.jpg').write_bytes(FRAME)
         arena.close()
@@ -546,6 +592,25 @@ def check_music(page, checks):
     page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'Rain · River · CC BY 3.0')")
     page.wait_for_function("(() => { const a = document.querySelector('audio'), p = window.received?.rooms['/musicroom'].book.now_playing; return a?.src.endsWith('/music/123.ogg') && !a.paused && Math.abs(a.currentTime - (Date.now()/1000 - p.started_at)) < 1; })()")
     assert page.locator('audio').count() == 1
+    drone = "window.soundEdges.find(e => e[1] instanceof StereoPannerNode)[0].gain.value"
+    page.wait_for_function(f"Math.abs({drone} - 0.25) < 0.001")
+    page.wait_for_timeout(2100)
+    page.evaluate('window.seeks = []')
+    logs = []
+    page.on('console', lambda message: logs.append(message.text) if message.text.startswith('music sync ') else None)
+    for _ in range(3):
+        play['started_at'] += 0.5
+        page.wait_for_function("start => window.received?.rooms['/musicroom'].book.now_playing.started_at === start", arg=play['started_at'])
+    assert page.evaluate('window.seeks.length') == 0
+    play['started_at'] -= 5
+    page.wait_for_function('window.seeks.length === 1')
+    play['started_at'] -= 5
+    page.wait_for_function("start => window.received?.rooms['/musicroom'].book.now_playing.started_at === start", arg=play['started_at'])
+    assert page.evaluate('window.seeks.length') == 1
+    assert page.evaluate('window.seeks[0].at - window.musicStarts.at(-1) >= 2000')
+    assert len(logs) == 1 and re.fullmatch(r'music sync \+\d+\.\ds', logs[0])
+    play['started_at'] += 5
+    checks.append('Half-second timestamp changes never seek; a five-second jump seeks once and the cooldown holds.')
     assert page.evaluate("(() => { const master = window.soundEdges.find(e => e[0] === window.musicSource)?.[1]; return master instanceof GainNode && window.soundEdges.some(e => e[0] === master && e[1] === window.soundContexts[0].destination) && window.soundEdges.some(e => e[0] instanceof StereoPannerNode && e[1] === master); })()")
     page.get_by_role('button', name='mute', exact=True, include_hidden=True).evaluate('(b) => b.click()')
     page.wait_for_function("window.soundEdges.find(e => e[0] === window.musicSource)[1].gain.value < 0.001")
@@ -554,8 +619,6 @@ def check_music(page, checks):
     page.wait_for_function("Math.abs(window.soundEdges.find(e => e[0] === window.musicSource)[1].gain.value - 0.2) < 0.001")
     page.locator('input[type=range]').evaluate("e => { e.value = '0.5'; e.dispatchEvent(new Event('input')); }")
     page.screenshot(path=str(STREAM_FRAME.with_name('music_frame.png')))
-    page.evaluate("document.querySelector('audio').currentTime = 1")
-    page.wait_for_function("document.querySelector('audio').currentTime > 10")
     muted = page.context.new_page()
     muted.goto(page.url + '&mute=1')
     muted.wait_for_function("document.querySelector('audio')?.src.endsWith('/music/123.ogg') && document.querySelector('audio').currentTime > 10")
@@ -568,6 +631,8 @@ def check_music(page, checks):
         assert page.locator('audio').count() == 1
     DATA['music']['book']['now_playing'] = None
     page.wait_for_function("(() => { const a = document.querySelector('audio'); return a.paused && !a.getAttribute('src'); })()")
+    page.wait_for_function(f"Math.abs({drone} - 1) < 0.001")
+    assert page.evaluate("(() => { const param = window.soundEdges.find(e => e[1] instanceof StereoPannerNode)[0].gain; const release = window.gainRamps.findLast(r => r.param === param && r.value === 1); return release && Math.abs(release.at - release.now - 1) < 0.02; })()")
     DATA['music']['book']['now_playing'] = {**play, 'started_at': time.time() - 5}
     page.wait_for_function("!document.querySelector('audio').paused")
     DATA['live'] = False

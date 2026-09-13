@@ -6,6 +6,30 @@ import pytest
 from life import Life
 
 
+def test_house_identity_and_hour(tmp_path):
+    life = Life(tmp_path)
+    state = moment(url="http://127.0.0.1:4660/hall")
+    block = life.observe(state, 100)
+    assert block["who"] == [
+        "her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.",
+        "she lives in her rooms: a betting room, a music room, more coming.",
+        "she never speaks. the numbers do.",
+        "every room is paper. no real money, no real bets.",
+        "the first fly streamer on kick."]
+    assert block["hour"]["rooms"] == 1 and block["hour"]["plays"] == 0
+    play = dict(track_id="1", title="Rain", started_at=101)
+    state = moment(url="http://127.0.0.1:4660/musicroom",
+                   rooms={"/musicroom": dict(in_room=True, book=dict(now_playing=play))})
+    block = life.observe(state, 101)
+    assert block["hour"]["rooms"] == 2 and block["hour"]["plays"] == 1
+    assert Life(tmp_path).observe(state, 102)["hour"] == block["hour"]
+    block = life.observe(state, 3700)
+    assert block["hour"]["rooms"] == 1 and block["hour"]["plays"] == 1
+    block = life.observe(state, 3701)
+    assert block["hour"]["rooms"] == block["hour"]["plays"] == 0
+    assert set("bets sold won lost pnl pages clicks scrolls sugar shock".split()) <= block["hour"].keys()
+
+
 def moment(**fields):
     return {"url": "", "visited": [], "events": [], "stats": {"clicks": 0, "scrolled": 0},
             "hz": {}, "neural": {}, **fields}
