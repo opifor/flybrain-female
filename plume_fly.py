@@ -134,10 +134,25 @@ CHOSEN, and said so (none of these is measured in this repo)
     rest, the 203 : 132 summed-drive asymmetry, 1.67 deg turn quanta, a
     control that is not direction-free) are in v1's report.
 
+Protocol v3 inherits every v2 setting above and changes only the nose.
+Its adaptation state starts at zero each trial and updates before each
+response: a += (clip(c, 0, 1) - a) * 0.05 / 0.5. The delivered response is
+clip(0.3 * clip(c, 0, 1) + max(0, clip(c, 0, 1) - a), 0, 1), times the
+existing profile and odour_hz. These kinetics and gains are CHOSEN, not
+measured. orn_adapt and orn_drive_hz record the post-update state and mean
+delivered drive; orn_hz remains the realised firing rate. The absence of
+receptor adaptation in the historical limits below applies to v1 and v2.
+
 Simulator limits that matter here and are disclosed by the experiment:
 uniform 0.275 mV synapses, no conduction delays, no receptor adaptation.
 """
 import math
+
+# V3 is fixed before data; these parameters are choices, not fitted measurements.
+ORN_ADAPT_TAU_S = 0.5
+ORN_K_TONIC = 0.3
+ORN_K_PHASIC = 1.0
+ORN_ADAPT_DT_S = 0.05
 
 import numpy as np
 
@@ -168,6 +183,8 @@ V1 = dict(sim_steps=SIM_STEPS_V1, jo_driven_re=JO_DRIVEN_RE_V1, equalise_sides=F
 V2 = dict(sim_steps=SIM_STEPS, jo_driven_re=JO_DRIVEN_RE, equalise_sides=True,
           carry_state=True, smooth_tau_s=SMOOTH_TAU_S)
 PROTOCOL_SETTINGS = {"v1": V1, "v2": V2}
+V3 = dict(V2)
+PROTOCOL_SETTINGS["v3"] = V3
 PROTOCOL_KEYS = tuple(V2)
 _DEFAULT = object()         # "not given": the protocol's value applies
 
@@ -424,6 +441,8 @@ class PlumeFly:
         self._state = None
         self._trial_seed = None
         self._shuffle_rng = None
+        if self.protocol == "v3":
+            self.orn_adapt = 0.0
 
     # ---- trial state ---------------------------------------------------------
 
@@ -438,6 +457,8 @@ class PlumeFly:
         self._trial_seed = None if seed is None else int(seed)
         self._shuffle_rng = None
         self.smoother.reset()
+        if self.protocol == "v3":
+            self.orn_adapt = 0.0
 
     begin_trial = reset_state       # the runner's name for the same thing
 
@@ -468,6 +489,11 @@ class PlumeFly:
     def odour_drive(self, c):
         """ORN drive for concentration c: profile x clip(c, 0, 1) x odour_hz."""
         cc = float(np.clip(c, 0.0, 1.0))
+        if self.protocol == "v3":
+            self.orn_adapt += (cc - self.orn_adapt) * ORN_ADAPT_DT_S / ORN_ADAPT_TAU_S
+            response = ORN_K_TONIC * cc + ORN_K_PHASIC * max(0.0, cc - self.orn_adapt)
+            return self.nose.drive({"profile": {g: v * float(np.clip(response, 0.0, 1.0))
+                                                 for g, v in self.profile.items()}})
         return self.nose.drive({"profile": {g: v * cc for g, v in self.profile.items()}})
 
     def wind_rates_sides(self, phi, wind_mode="wind"):
@@ -581,10 +607,17 @@ class PlumeFly:
             "wind_sense": mode != "none", "wind_mode": mode,
             "state_carried": bool(carried),
         })
+        if self.protocol == "v3":
+            info["orn_adapt"] = self.orn_adapt
+            total = sum(len(indices) * rate for indices, rate in drive.items()
+                        if indices and indices[0] in self.orn)
+            info["orn_drive_hz"] = total / self.orn_all.size if self.orn_all.size else 0.0
         return turn, speed, info
 
     def describe(self):
         """Every constant, setting and population size, for the experiment's JSON."""
+        if self.protocol == "v3":
+            return self.describe_v3()
         types = getattr(self.fb, "types", None)
         driven = np.concatenate([self.jo_left, self.jo_right, self.jo_unsided])
         return {
@@ -622,3 +655,22 @@ class PlumeFly:
                      if self.carry_state else
                      "FlyBrain.run restarts from rest every world step; no state is carried between steps",
         }
+
+    def describe_v3(self):
+        """The inherited coupling plus the chosen receptor response and its measured trace."""
+        from copy import copy
+        inherited = copy(self)
+        inherited.protocol = "v2"
+        description = inherited.describe()
+        description["protocol"] = "v3"
+        description["orn_adaptation"] = {
+            "status": "CHOSEN, fixed before v3 data; not fitted",
+            "tau_s": ORN_ADAPT_TAU_S, "dt_s": ORN_ADAPT_DT_S,
+            "k_tonic": ORN_K_TONIC, "k_phasic": ORN_K_PHASIC,
+            "update": "a += (clip(c, 0, 1) - a) * dt / tau; update before response",
+            "response": "clip(0.3 * clip(c, 0, 1) + max(0, clip(c, 0, 1) - a), 0, 1)",
+            "reset": "a = 0 at trial start; carried across world steps",
+            "measured": "orn_adapt: post-update state; orn_drive_hz: delivered mean over all ORNs; orn_hz: realised mean",
+            "limit": "rectified phasic-tonic approximation; no below-zero firing or fitted receptor-specific kinetics",
+        }
+        return description

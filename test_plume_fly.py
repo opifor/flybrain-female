@@ -917,7 +917,7 @@ class ProtocolArgument(unittest.TestCase):
         self.assertEqual((v2.protocol, v1.protocol, plain.protocol), ("v2", "v1", "v2"))
         self.assertEqual((v2.protocol_overrides, v1.protocol_overrides), ([], []))
         with self.assertRaises(ValueError):
-            make_fly(["DM1"], protocol="v3")
+            make_fly(["DM1"], protocol="v4")
 
     def test_the_v1_dict_without_a_name_is_recognised_as_v1(self):
         _, fly = make_fly(["DM1"], **plume_fly.V1)

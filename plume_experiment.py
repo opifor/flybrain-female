@@ -27,6 +27,17 @@ TWO PROTOCOLS, ONE RUNNER
   says, for each change, what it removes and where v1's report asked for it.
   Selected with --protocol v2; outputs go to build/plume_v2_*.
 
+PROTOCOL V3 (fixed before any v3 data)
+  V3 inherits v2 A-H, its predictions, windows, seeds and budget. Only the
+  nose changes: a rectified phasic-tonic receptor response with a 0.5 s
+  adaptation state, 0.3 tonic gain and 1.0 phasic gain (all CHOSEN).
+  The state updates before the response, once per 0.05 s world step, and
+  resets to zero at trial start. This is a chosen approximation motivated
+  by Nagel and Wilson 2011, Kim, Lazar and Slutskiy 2011, and Martelli,
+  Carlson and Emonet 2013, not a fit to their measurements. Offset gives
+  zero drive, not negative firing. Select --protocol v3; graph outputs use
+  build/plume_v3_female_* or build/plume_v3_male_*.
+
 WHAT PROTOCOL V1 COULD NOT SHOW (found in review after the first run; none of
 these changed a trial, so the first run stands, and each is disclosed in the
 JSON next to the number it qualifies)
@@ -268,6 +279,16 @@ PROTOCOLS = {
 }
 PROTOCOL_DEFAULT = "v1"
 
+PROTOCOLS["v3"] = {**PROTOCOLS["v2"], "default_out": "plume_v3"}
+PROTOCOL_V3_CHANGES = (
+    {"letter": "I",
+     "change": "olfactory receptor adaptation: update a += (clip(c, 0, 1) - a) * 0.05 / 0.5; "
+               "drive = profile x clip(0.3 x clip(c, 0, 1) + max(0, clip(c, 0, 1) - a), 0, 1) x odour_hz; "
+               "reset a to zero at trial start and carry it across world steps",
+     "removes": "the concentration-level-only ORN drive; a sustained encounter now decays to a tonic response",
+     "named_in_v2_limits": "no receptor adaptation, although adaptation matters for real plume tracking"},
+)
+
 PROTOCOL_V2_CHANGES = (   # each change, what it removes, and where v1's report asked for it (build/plume_report.md)
     {"letter": "A", "change": "continuous brain: membrane potentials, refractory counters and the random stream are carried "
                               "across the world steps of a trial and reset at each trial start; 120 LIF steps (24 ms) of "
@@ -349,6 +370,15 @@ DESIGN_LIMITS_V2 = (
     "24 ms of brain per 50 ms of world is still not real time; no receptor adaptation, no delays, uniform "
     "synapses, the roamer's motor mapping and 450 Hz scale, calibration.CHOSEN gains and the DoOR odour "
     "drive are kept from v1 unchanged",
+)
+
+SIMULATOR_LIMITS_V3 = tuple(s for s in SIMULATOR_LIMITS_V2 if not s.startswith("no receptor adaptation")) + (
+    "receptor adaptation is a CHOSEN rectified phasic-tonic approximation, not fitted receptor-specific kinetics; "
+    "offset gives zero drive, not negative firing",
+)
+DESIGN_LIMITS_V3 = DESIGN_LIMITS_V2[:-1] + (
+    "24 ms of brain per 50 ms of world is still not real time; delays, synapses, motor mapping, calibration gains "
+    "and DoOR profile are inherited from v2; only the receptor response changes",
 )
 
 CONSTANTS = {
@@ -1023,6 +1053,8 @@ def summarise(trials_by_condition, jo_cells=None, protocol=PROTOCOL_DEFAULT):
         return d
 
     v2 = protocol == "v2"
+    if protocol == "v3":
+        v2 = True
     p1_statement = ("upwind velocity rises in the 1 s after an encounter (odour), > 2 SE" if not v2 else
                     "upwind velocity rises in the 1 s after an encounter (odour), > 2 SE; only encounters with a full 1 s window on both sides count")
     p2_statement = ("crosswind speed and heading-change spread both larger in the 2 s after a loss than the last 2 s inside, > 2 SE" if not v2 else
@@ -1478,6 +1510,13 @@ def save_trajectories(trials_by_condition, path, protocol=None):
                 v = np.asarray(t.get(k, []), float)
                 a[i, :v.size] = v
             extra[k] = a
+    if protocol == "v3":
+        for name in ("orn_adapt", "orn_drive_hz", "orn_hz"):
+            a = np.full((n, max(m, 1)), np.nan)
+            for i, (_, trial) in enumerate(trials):
+                values = np.asarray(trial.get("rates", {}).get(name, []), float)
+                a[i, :values.size] = values
+            extra[name] = a
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, length=lengths,
                         seed=np.array([t["seed"] for _, t in trials], dtype=np.int64),
@@ -1555,6 +1594,8 @@ def write_outputs(trials_by_condition, run_info, out_prefix, plume=None, partial
     protocol = protocol or run_info.get("protocol") or PROTOCOL_DEFAULT
     spec = protocol_spec(protocol)
     v2 = protocol == "v2"
+    if protocol == "v3":
+        v2 = True
     summary = summarise(trials_by_condition, jo_cells=jo_cells_of(run_info), protocol=protocol)
     payload = {
         "experiment": EXPERIMENT_TITLE,
@@ -1588,6 +1629,20 @@ def write_outputs(trials_by_condition, run_info, out_prefix, plume=None, partial
     if v2:
         payload["protocol_changes"] = [dict(c) for c in PROTOCOL_V2_CHANGES]
         payload["v1_comparison"] = v1_comparison(v1_json or V1_JSON, summary, payload["run"])
+    if protocol == "v3":
+        assert_v3_output(out_prefix)
+        payload["protocol_changes"] = [dict(c) for c in PROTOCOL_V3_CHANGES]
+        payload["inherited_protocol_changes"] = [dict(c) for c in PROTOCOL_V2_CHANGES]
+        payload["simulator_limits"] = list(SIMULATOR_LIMITS_V3)
+        payload["design_limits"] = list(DESIGN_LIMITS_V3)
+        comparison = payload["v1_comparison"]
+        for row in comparison.get("rows", []):
+            row["v3"] = row.pop("v2")
+        if "v2_control" in comparison:
+            comparison["v3_control"] = comparison.pop("v2_control")
+        comparison["inherited_comparison_rules"] = "v2; compared values are v3"
+        payload["conventions"]["orn_adapt"] = "post-update adaptation state, dimensionless, one sample per world step"
+        payload["conventions"]["orn_drive_hz"] = "delivered mean input Hz over all ORNs; orn_hz is realised firing"
     json_path, npz_path, png_path = output_paths(out_prefix)
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(json.dumps(_clean(payload), indent=1), encoding="utf-8")
@@ -1641,6 +1696,9 @@ def load_trials(npz_path, json_path=None):
                     tr[k] = np.asarray(z[k][i, :max(L - 1, 0)], float)
                     carried.pop(CARRIED_MEAN_OF.get(k, ""), None)     # recomputed from the array instead
             tr["mean_rates"] = carried
+            if "orn_adapt" in have:
+                for name in ("orn_adapt", "orn_drive_hz", "orn_hz"):
+                    tr["rates"][name] = np.asarray(z[name][i, :max(L - 1, 0)], float)
             trials_by_condition.setdefault(cond, []).append(tr)
     return trials_by_condition
 
@@ -1655,6 +1713,8 @@ PREREGISTERED_KEYS_CONTROL = {   # the second pair's keys, by protocol
     "v1": (("P3_upwind_progress", "odour-nowind", "mean"), ("P3_upwind_progress", "odour-nowind", "se")),
     "v2": (("P3_upwind_progress", "odour-shuffled", "mean"), ("P3_upwind_progress", "odour-shuffled", "se")),
 }
+
+PREREGISTERED_KEYS_CONTROL["v3"] = PREREGISTERED_KEYS_CONTROL["v2"]
 
 
 def _dig(d, keys):
@@ -1722,6 +1782,8 @@ def make_world(plume_mod, seed, odour, protocol=PROTOCOL_DEFAULT):
     argument and refuses a World without it, because the start rule is the
     protocol.
     """
+    if protocol == "v3":
+        return make_world(plume_mod, seed, odour, "v2")
     World = plume_mod.World
     world_protocol = protocol_spec(protocol)["world_protocol"]
     if _accepts(World, "protocol"):
@@ -1737,6 +1799,13 @@ def make_fly(plume_fly_mod, fb, gains, protocol=PROTOCOL_DEFAULT, **fly_kw):
     equalised drive and the state carry live in the fly) and refuses a fly
     that does not accept it or has no trial-start method.
     """
+    if protocol == "v3":
+        if not _accepts(plume_fly_mod.PlumeFly, "protocol"):
+            raise TypeError("protocol v3 needs a fly with an explicit protocol argument")
+        fly = plume_fly_mod.PlumeFly(fb, gains, protocol="v3", **fly_kw)
+        if begin_trial_name(fly) is None:
+            raise TypeError("protocol v3 needs a trial-start reset")
+        return fly
     PlumeFly = plume_fly_mod.PlumeFly
     if protocol == "v2":
         if not _accepts(PlumeFly, "protocol"):
@@ -1842,6 +1911,23 @@ def out_prefix_from(path, quick=False):
     return p.with_name(name)
 
 
+def assert_v3_output(path, log=False):
+    """V3 owns only its namespace, including when an existing file has another spelling."""
+    path = Path(path)
+    if not path.name.startswith("plume_v3_") and path.name != "plume_v3":
+        raise ValueError("v3 outputs require a plume_v3 prefix")
+    if not path.parent.exists() or not path.parent.samefile(BUILD):
+        raise ValueError("v3 outputs must be directly under build")
+    targets = (path,) if log else output_paths(path) + (path.with_name(path.name + "_experiment.log"),)
+    for target in targets:
+        if target.is_symlink():
+            raise ValueError("v3 output cannot be a symbolic link")
+        if target.exists():
+            for existing in BUILD.iterdir():
+                if not existing.name.startswith("plume_v3_") and existing.is_file() and target.samefile(existing):
+                    raise ValueError("v3 output aliases a file outside its namespace")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--protocol", default=PROTOCOL_DEFAULT, choices=sorted(PROTOCOLS),
@@ -1887,6 +1973,12 @@ def main(argv=None):
         default_out += "_" + protocol
     out_prefix = (out_prefix_from(args.out, quick=bool(args.quick)) if args.out is not None
                   else BUILD / default_out)
+    if protocol == "v3":
+        if args.out is None:
+            out_prefix = BUILD / ("plume_v3_" + graph_name + ("_quick" if args.quick else ""))
+        assert_v3_output(out_prefix)
+        if args.log is not None:
+            assert_v3_output(Path(args.log), log=True)
     try:
         assert_not_published(out_prefix)          # before anything is written or loaded
     except ValueError as e:
@@ -1959,6 +2051,14 @@ def main(argv=None):
                 f"threshold at t = 0 (seeds {constants['world_start_rule_v2']['seeds_above_threshold']}); kept as fixed, reported")
         except Exception as e:
             log(f"start rule disclosure skipped: {e!r}")
+    if protocol == "v3" and callable(getattr(plume, "start_rule_v2_check", None)):
+        constants["world_start_rule_v2"] = _clean(plume.start_rule_v2_check(50))
+        log(f"inherited start rule v2: {constants['world_start_rule_v2']}")
+    if protocol != "v3":
+        for name in ("V3", "ORN_ADAPT_TAU_S", "ORN_ADAPT_DT_S", "ORN_K_TONIC", "ORN_K_PHASIC"):
+            constants["fly"].pop(name, None)
+        if "PROTOCOL_SETTINGS" in constants["fly"]:
+            constants["fly"]["PROTOCOL_SETTINGS"].pop("v3", None)
     render_kw = {
         "arena": (float(getattr(plume, "ARENA_X", ARENA[0])), float(getattr(plume, "ARENA_Y", ARENA[1]))),
         "source": tuple(float(v) for v in getattr(plume, "SOURCE", SOURCE)),
@@ -2000,6 +2100,9 @@ def main(argv=None):
     if protocol == "v2":
         run_info["protocol_changes"] = [dict(c) for c in PROTOCOL_V2_CHANGES]
 
+    if protocol == "v3":
+        run_info["protocol_changes"] = [dict(c) for c in PROTOCOL_V3_CHANGES]
+        run_info["inherited_protocol"] = "v2"
     plume_pic = None
     try:
         plume_pic = plume_snapshot(make_world(plume, 0, True, protocol))
@@ -2022,6 +2125,10 @@ def main(argv=None):
             tr = run_trial(world, fly, steps, seed, wind_sense, condition=cond, shuffled=shuffled,
                            smooth_tau_s=spec["smooth_tau_s"], state_carry=spec["state_carry"])
             trials_by_condition[cond].append(tr)
+            if protocol == "v3" and seed == 0 and cond == "odour":
+                for k in range(tr["steps_run"]):
+                    log(f"nose step={k} c={tr['c'][k]:.8f} orn_adapt={tr['rates']['orn_adapt'][k]:.8f} "
+                        f"orn_drive_hz={tr['rates']['orn_drive_hz'][k]:.8f} orn_hz={tr['rates']['orn_hz'][k]:.8f}")
             done += 1
             m = metrics(tr, protocol)
             above = m["starts_above_threshold_field"]
