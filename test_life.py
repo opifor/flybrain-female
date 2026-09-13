@@ -312,7 +312,7 @@ def test_label_reads_the_question():
     assert label({"question": "Bitcoin Up or Down - September 13, 12:00AM-12:15AM ET"}, []) == "btc 15m"
     assert label({"question": "Ethereum Up or Down - September 12, 11:55PM-12:00AM ET"}, []) == "eth 5m"
     assert label({"question": "Will the price of Bitcoin be above $82,000 on September 13?"}, []) == "btc above $82,000"
-    assert label({"market_id": "1"}, [{"market_id": "1", "question": "Who wins the game tonight?"}]) == "who wins the game tonigh"
+    assert label({"market_id": "1"}, [{"market_id": "1", "question": "Who wins the game tonight?"}]) == "who wins the game tonight?"
 
 
 def test_record_times_cold_start_and_hour(tmp_path):
@@ -377,6 +377,23 @@ def test_long_market_preserves_outcome_and_amount(tmp_path):
     assert texts(block, "bet.placed")[0].endswith("at 0.40 · 4.00 paper")
     assert texts(block, "bet.lost")[0].endswith("resolved · lost -4.00 · shock")
     assert all(len(row["text"]) <= 48 for row in block["feed"])
+
+
+def test_long_variable_words_and_full_fields(tmp_path):
+    title = "Small extraordinary melodies drifting across the evening sky"
+    question = "Will extraordinary rainfall arrive before the end of September?"
+    life = Life(tmp_path)
+    life.music_tracks = {"1": {"artist": "River"}}
+    state = paper([{**position(), "question": question}])
+    state["rooms"] = {"/musicroom": {"book": {"now_playing": {
+        "track_id": "1", "title": title, "started_at": 100}}}}
+    block = life.observe(state, 100)
+    play = next(r for r in block["feed"] if r["kind"] == "music.play")
+    bet = next(r for r in block["feed"] if r["kind"] == "bet.placed")
+    assert play["text"] == "she put on Small extraordinary\u2026 by River"
+    assert bet["text"] == "she bet yes on will\u2026 at 0.40 \u00b7 4.00 paper"
+    assert play["title"] == title and bet["question"] == question
+    assert len(play["text"]) <= 48 and len(bet["text"]) <= 48
 
 
 def test_old_lessons_are_absorbed_on_a_fresh_start(tmp_path):

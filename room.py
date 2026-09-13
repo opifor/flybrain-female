@@ -78,6 +78,9 @@ class Room:
     def intent_body(self, token, drive, at, look_id):
         raise NotImplementedError("a room needs a commit meaning")
 
+    def allows_intent(self, token, drive):
+        return True
+
     dwell_min = DWELL_MIN
     max_looks = 2000
 
@@ -122,6 +125,8 @@ class Room:
                               "the fly has looked at no other card in this visit")
             return
         if drive == 0:
+            return
+        if not self.allows_intent(token, drive):
             return
         if token == "/hall":
             self.destination = "/hall"
@@ -168,7 +173,7 @@ class Room:
                 self._apply_event(ev)
                 self.last_seq = ev["seq"]
                 self._save_room()
-        if not self._events_busy and self._now() - self._events_at >= 2:
+        if not self._events_busy and self._now() - self._events_at >= self._events_delay:
             self._events_busy, self._events_at = True, self._now()
             self.spawn(self._events_worker, self.last_seq)
 
@@ -177,6 +182,8 @@ class Room:
             health_code, health = self.http.get_json(self.executor_url + "/health")
             self.bookie_status = {"at": self._now(), "ok": health_code == 200 and
                                   health.get("ok") is True and not health.get("publish_error")}
+            if not self.bookie_status["ok"]:
+                raise OSError(f"executor health unavailable (HTTP {health_code})")
             book = self.book_id
             if health.get("book") is not None and health["book"] != book:
                 after = 0
@@ -188,10 +195,18 @@ class Room:
             if code == 200:
                 self._events_result = result
                 self.public_events = (self.public_events + result.get("events", []))[-100:]
+            else:
+                raise OSError(f"events unavailable (HTTP {code})")
+            if self._events_delay != 2:
+                self._say("events recovered")
+            self._events_delay = 2
         except (OSError, ValueError) as exc:
             self.bookie_status = {"at": self._now(), "ok": False}
-            self._say(f"events unavailable: {exc}")
+            if self._events_delay == 2:
+                self._say(f"events unavailable: {exc}")
+            self._events_delay = 30 if self._events_delay == 2 else min(120, self._events_delay * 2)
         finally:
+            self._events_at = self._now()
             self._events_busy = False
 
     def _apply_event(self, ev):
@@ -319,6 +334,7 @@ class Room:
         self._events_result = None
         self._events_busy = False
         self._events_at = 0
+        self._events_delay = 2
         self.bookie_status = {"at": 0, "ok": False}
         self.public_events = []
         self._lock = threading.Lock()

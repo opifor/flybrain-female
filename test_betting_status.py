@@ -11,7 +11,7 @@ def test_bookie_health_failure_clears_the_live_claim():
                     (200, {"events": []})])
     room = SimpleNamespace(http=SimpleNamespace(get_json=lambda *a, **k: next(replies)),
                            executor_url="http://127.0.0.1:4672", intent_token="fixture", book_id=None,
-                           _now=lambda: 100, public_events=[], _say=lambda text: None)
+                           _now=lambda: 100, public_events=[], _say=lambda text: None, _events_delay=2)
     betroom.Room._events_worker(room, 0)
     assert room.bookie_status == {"at": 100, "ok": True}
     assert room.public_events == [{"seq": 1}]

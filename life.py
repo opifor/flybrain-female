@@ -21,8 +21,21 @@ def stake_value(pos):
     return float(stake) if isinstance(stake, (int, float)) else int(pos.get("stake_cents", stake or 0)) / 100
 
 
+def shorten(text, limit):
+    if len(text) <= limit:
+        return text
+    words = text.split()
+    kept = []
+    for word in words:
+        if len(" ".join(kept + [word])) > limit - 1:
+            break
+        kept.append(word)
+    return " ".join(kept) + "\u2026" if limit > 0 else ""
+
+
 def market_line(prefix, market, suffix):
-    return prefix + market[:max(0, FEED_LIMIT - len(prefix + suffix))] + suffix
+    suffix = shorten(suffix, max(0, FEED_LIMIT - len(prefix) - 1))
+    return prefix + shorten(market, max(0, FEED_LIMIT - len(prefix + suffix))) + suffix
 
 
 def stamp(now, fmt="%Y-%m-%dT%H:%M:%SZ"):
@@ -61,7 +74,12 @@ def label(record, cards):
     m = ABOVE.search(q)
     if m:
         return f"{COINS.get(m.group(1), m.group(1)[:4])} {m.group(2)} ${m.group(3)}"
-    return q[:24].rstrip(" ,-?!")
+    return q
+
+
+def question(record, cards):
+    card = next((c for c in cards if c.get("market_id") == record.get("market_id")), {})
+    return record.get("question") or card.get("question") or record.get("name") or "the board"
 
 
 class Life:
@@ -113,7 +131,7 @@ class Life:
         self.serial += 1
         key = key or f"{now}:{self.serial}"
         row = dict(id=key, serial=self.serial, ts=now, at=stamp(now, "%H:%M:%S"),
-                   kind=kind, text=text.replace("!", "")[:FEED_LIMIT], counts=counts or {}, **extra)
+                   kind=kind, text=shorten(text.replace("!", ""), FEED_LIMIT), counts=counts or {}, **extra)
         self.rows[key] = row
         if self.path.exists() and self.path.stat().st_size > 5 * 1024 * 1024:
             self.path.replace(self.dir / "feed.1.jsonl")
@@ -151,11 +169,13 @@ class Life:
             key = f"music:{play.get('track_id')}:{start}"
             if self._fresh("music.play", identity) and key not in self.rows:
                 self._line("music.play", market_line("she put on ", title, f" by {artist}"), start, key=key,
+                           title=title, artist=artist,
                            hidden=self.first and start < now - 600)
             end = play.get("ended_at")
             if end is not None and end <= now and self._fresh("music.end", identity) and key + ":end" not in self.rows:
                 self._line("music.end", market_line("", title, f" ended · she stayed {max(0, round(end - start))} s"), end,
                            key=key + ":end",
+                           title=title,
                            hidden=self.first and end < now - 600)
         reactions = music_book.get("reactions", {}).get("tracks", {})
         for track_id, counts in reactions.items():
@@ -166,7 +186,8 @@ class Life:
                 total = counts.get(kind, 0)
                 added = max(0, total - previous.get(kind, 0))
                 if added and not self.first:
-                    self._line("music.react", f"a listener sent {kind} for {title}", now, {kind: added})
+                    self._line("music.react", market_line(f"a listener sent {kind} for ", title, ""),
+                               now, {kind: added}, title=title)
             self.music_reactions[str(track_id)] = dict(counts)
         entries = state.get("rooms", {}).get("/hall", {}).get("events", [])
         for path, visiting in state.get("rooms", {}).items():
@@ -246,7 +267,8 @@ class Life:
                 suffix = f" at {price:.2f} · {stake:.2f} paper"
                 prefix = f"she bet {side} on "
                 self._line("bet.placed", market_line(prefix, market, suffix),
-                           at, {"bets": 1}, key=key, hidden=self.first and at < now - 600)
+                           at, {"bets": 1}, key=key, question=question(pos, self.cards),
+                           hidden=self.first and at < now - 600)
         streak_at = None
         for pos in sorted(book.get("settled_bets", []), key=lambda p: (p.get("at", now), p.get("seq", 0))):
             key = f"settled:{pos.get('id')}:{pos.get('seq')}"
@@ -266,7 +288,8 @@ class Life:
                 for row in list(self.rows.values()):
                     if row["kind"] == ("sugar" if won else "shock") and abs(at-row["ts"]) <= 5:
                         self._line(row["kind"], row["text"], row["ts"], key=row["id"], hidden=True)
-            self._line("bet." + kind, text, at, counts, key=key, hidden=hidden)
+            self._line("bet." + kind, text, at, counts, key=key, hidden=hidden,
+                       question=question(pos, self.cards))
             self.wins = self.wins + 1 if won else 0
             streak_at = None if hidden else at
         if self.wins >= 3 and streak_at is not None:
@@ -348,4 +371,6 @@ class Life:
         return dict(since=self.since, who=list(WHO), now=dict(room=room, doing=doing[:48], spikes=spikes,
                     turn="left" if turn > 20 else "right" if turn < -20 else "straight",
                     sugar_10m=recent["sugar"], shock_10m=recent["shock"], balance=balance, today_delta=delta),
-                    hour=hour, feed=[dict(at=r["at"], kind=r["kind"], text=r["text"][:FEED_LIMIT]) for r in feed])
+                    hour=hour, feed=[dict(at=r["at"], kind=r["kind"], text=shorten(r["text"], FEED_LIMIT),
+                                         **{k: r[k] for k in ("title", "artist", "question") if k in r})
+                                     for r in feed])

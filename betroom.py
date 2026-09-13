@@ -14,6 +14,7 @@ DECLARATION = Declaration(
          "the card's question is turned into a smell, word by word, and fed to her olfactory neurons.",
          "her mushroom body remembers whether that smell brought sugar or shock before.",
          "while she stays, the drive it produces is summed; positive means YES, negative means NO, zero means she walks away.",
+         "a held market records a look without another same-side bet; the opposite side still sells the position.",
          "the bookie takes the bet; a resolved win brings sugar and a loss brings shock, and she learns.",
          "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."),
     measured=["Stops and relative drive come from the female brain; this does not establish predictive skill.",
@@ -64,3 +65,9 @@ class Room(RoomWalk):
         body = {"market_id": token, "token_id": m["token_ids"][0 if drive > 0 else 1],
                 "side": side, "drive": float(drive), "seen_at": at, "look_id": look_id}
         return body
+
+    def allows_intent(self, token, drive):
+        side = "YES" if drive > 0 else "NO"
+        return token == "/hall" or not any(
+            p["market_id"] == token and p["side"] == side
+            for p in self.read_book().get("open_bets", []))

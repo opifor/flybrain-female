@@ -148,6 +148,8 @@ class FakeHttp:
 
     def get_json(self, url, headers=None, timeout=None):
         self.gets.append(url)
+        if url.endswith("/health"):
+            return 200, {"ok": True}
         return 200, json.loads(json.dumps(self.events))
 
     def intents(self):
