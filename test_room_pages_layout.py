@@ -24,12 +24,16 @@ def room_origin():
         thread.join()
 
 
-@pytest.mark.parametrize("room", ["betroom", "musicroom", "tiproom", "hall"])
+@pytest.mark.parametrize("room", ["betroom", "musicroom", "tiproom", "hall", "paintroom"])
 def test_room_screen_bands(room_origin, room, tmp_path):
     cards = [dict(token=f"card-{i}", name=f"Track {i}", artist="River", license="CC BY 3.0",
                   path="/musicroom", preview=f"Preview {i}", duration=60, market_id=f"card-{i}", slot=i, shelf="fast", question=f"Question {i}?",
                   end_at=time.time() + 900, yes_price=0.5, category="other",
-                  room={"commit_means": "enter the room"}) for i in range(12 if room in ("hall", "musicroom") else 6)]
+                  room={"commit_means": "enter the room"}) for i in range(12 if room in ("hall", "musicroom", "paintroom") else 6)]
+    if room == "paintroom":
+        import paintroom
+        cards = [dict(token=name, name=name, colour=paintroom.COLOURS.get(name), room=paintroom.DECLARATION.public())
+                 for name in list(paintroom.COLOURS) + list(paintroom.BRUSHES)]
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 800})
@@ -45,6 +49,12 @@ def test_room_screen_bands(room_origin, room, tmp_path):
         assert all(box["x"] >= 56 and box["x"] + box["w"] <= 1224 and box["y"] >= 48 for box in boxes)
         if room == "betroom":
             assert boxes == [dict(x=56 + i % 3 * 400, y=48 + i // 3 * 328, w=368, h=320) for i in range(6)]
+        if room == "paintroom":
+            assert boxes == [dict(x=56 + i % 4 * 296, y=48 + i // 4 * 216, w=280, h=200) for i in range(12)]
+            assert page.locator('#paint-canvas').bounding_box() == dict(x=0, y=0, width=1280, height=620)
+            expect(page.locator('.swatch')).to_have_count(8)
+            expect(page.locator('.name')).to_have_text([c['name'] for c in cards])
+            assert page.locator('.card').evaluate_all('nodes => nodes.every(n => n.scrollHeight <= n.clientHeight)')
         if room != "hall":
             expected = [dict(x=0, y=0, w=1280, h=40), dict(x=0, y=760, w=1280, h=40),
                         dict(x=0, y=0, w=48, h=800), dict(x=1232, y=0, w=48, h=800)]

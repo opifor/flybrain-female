@@ -21,6 +21,10 @@ function drawCards(cards) {
     const node = document.createElement('div');
     node.className = 'card'; node.dataset.token = card.token;
     if (roomData.path === '/gameroom') node.classList.toggle('resting', !!card.resting);
+    if (roomData.path === '/paintroom' && card.colour) {
+      const swatch = document.createElement('div'); swatch.className = 'swatch';
+      swatch.style.setProperty('--paint', card.colour); node.append(swatch);
+    }
     if (card.area_scale != null) {
       const scale = Math.sqrt(card.area_scale);
       node.style.width = (268 * scale) + 'px';
@@ -44,6 +48,12 @@ async function loadCards() {
   } catch (error) { drawCards([]); }
 }
 loadCards(); setInterval(loadCards, 2000);
+
+if (roomData.path === '/paintroom') {
+  const canvas = document.getElementById('paint-canvas');
+  setInterval(() => { canvas.src = '/paintroom/canvas.png?t=' + Date.now(); }, 2000);
+  document.getElementById('status').textContent = 'one mark where she stands; every canvas stays in the gallery';
+}
 
 if (roomData.path === '/musicroom') {
   const line = document.createElement('p'); line.textContent = 'now playing: nothing';

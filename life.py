@@ -160,6 +160,20 @@ class Life:
                            {"sugar" if taste["taste"] == "sweet" else "shock": 1}, key=key,
                            hidden=self.first and taste["at"] < now - 600)
         music = state.get("rooms", {}).get("/musicroom") or {}
+        paint = state.get("rooms", {}).get("/paintroom") or {}
+        paint_book = paint.get("book") or {}
+        opened = paint_book.get("opened_at")
+        if opened is not None and self._fresh("paint.canvas", opened):
+            key = f"paint.canvas:{opened}"
+            if key not in self.rows:
+                self._line("paint.canvas", "a new canvas opened", opened, key=key,
+                           hidden=self.first and opened < now - 600)
+        for mark in paint_book.get("strokes", []):
+            identity = [mark.get("look_id"), mark.get("at")]
+            key = "paint.mark:" + json.dumps(identity)
+            if mark.get("brush") != "rest" and self._fresh("paint.mark", identity) and key not in self.rows:
+                self._line("paint.mark", f"she painted {mark['colour']} {mark['brush']}", mark["at"], key=key,
+                           hidden=self.first and mark["at"] < now - 600)
         music_book = music.get("book") or {}
         playing = music_book.get("now_playing")
         if music_book and not self.music_tracks:
@@ -216,6 +230,8 @@ class Life:
         room = "paper room" if betting.get("in_room") else "the web"
         if music.get("in_room"):
             room = "music room"
+        if paint.get("in_room"):
+            room = "the paint room"
         parts = urlsplit(url) if url else None
         if room == "the web" and parts and parts.hostname in ("127.0.0.1", "localhost"):
             # Her own house answers on loopback; the path names the room she stands in.
@@ -359,6 +375,7 @@ class Life:
         recent = {k: sum(r["counts"].get(k, 0) for r in self.rows.values() if r["ts"] > now-600)
                   for k in ("sugar", "shock")}
         doing = {"hall": "walking the hall", "tip room": "visiting the tip room",
+                 "the paint room": "painting where she stands",
                  "music room": f"listening to {playing['title']}" if playing else "looking at the music shelf",
                  "the web": f"reading {host}"}.get(room, "looking at the board")
         if room == "paper room":

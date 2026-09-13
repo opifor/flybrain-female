@@ -295,7 +295,7 @@ def test_registration_connects_the_ear_and_music_door(tmp_path, now, monkeypatch
     assert attached == [betting.fb] and isinstance(music.ear, Ear)
     assert music.executor_url == "http://127.0.0.1:4674"
     doors = roam.STATE["hall"].registry.healthy(Health())
-    assert [d["path"] for d in doors] == ["/betroom", "/tiproom", "/musicroom", "/gameroom"]
+    assert [d["path"] for d in doors] == ["/betroom", "/tiproom", "/musicroom", "/paintroom", "/gameroom"]
     assert len(music.board_source()()) == 3
 
 

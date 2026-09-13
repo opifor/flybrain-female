@@ -7,6 +7,7 @@ import hall
 import tiproom
 import musicroom
 import gameroom
+import paintroom
 
 WEB = Path(__file__).parent / "web"
 
@@ -44,6 +45,12 @@ body.gameroom .card{width:100%;height:100%;padding:14px;display:flex;align-items
 body.gameroom .name{font-size:28px}
 body.gameroom .detail{display:none}
 body.gameroom .card.resting{background:#303030;color:#777;border-color:#444}
+body.paintroom .grid{grid-template-columns:repeat(4,280px);grid-auto-rows:200px;gap:16px}
+body.paintroom .card{width:100%;height:100%;padding:14px;background:#181b2099}
+body.paintroom .swatch{width:120px;height:120px;margin:0 auto 8px;background:var(--paint)}
+body.paintroom .name{text-align:center;font-size:20px}
+body.paintroom .detail{display:none}
+#paint-canvas{position:absolute;top:0;left:0;width:1280px;height:620px;pointer-events:none}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
 body.hall .grid{grid-template-columns:repeat(4,268px);grid-auto-rows:200px;column-gap:32px;row-gap:16px}
 body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:16px}
@@ -52,6 +59,8 @@ body.hall .detail{font-size:18px;line-height:1.3;margin-top:12px}
 body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 """
     return {"betroom": betting,
+            "paintroom": page(paintroom.DECLARATION,
+                '<img id="paint-canvas" src="/paintroom/canvas.png" alt="Her current canvas"><div id="cards" class="grid"></div>', style, script),
             **{name: page(declaration, '<div id="cards" class="grid"></div>', style, script)
                for name, declaration in (("hall", hall.DECLARATION), ("tiproom", tiproom.DECLARATION),
                                          ("musicroom", musicroom.DECLARATION),

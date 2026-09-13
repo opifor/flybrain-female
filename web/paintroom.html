@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1280">
-<title>the hall</title>
+<title>the paint room</title>
 <style>
 :root{--ground:#0b0c0e;--card:#181b20;--ink:#e9edf3;--dim:#818a97}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:var(--ink);font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif}
@@ -54,15 +54,15 @@ body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 </head>
 <body>
 <main id="room">
-<div id="cards" class="grid"></div>
+<img id="paint-canvas" src="/paintroom/canvas.png" alt="Her current canvas"><div id="cards" class="grid"></div>
 <div id="status" role="status"></div>
-<div id="door-top" class="door top">the hall</div>
-<div id="door-bottom" class="door bottom">the hall</div>
-<div id="door-left" class="door left"></div>
-<div id="door-right" class="door right"></div>
+<div id="door-top" class="door top" data-token="/hall">the hall</div>
+<div id="door-bottom" class="door bottom" data-token="/hall">the hall</div>
+<div id="door-left" class="door left" data-token="/hall"></div>
+<div id="door-right" class="door right" data-token="/hall"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "the hall", "path": "/hall", "cards": {"source": "rooms whose doors are ready to open", "refresh_seconds": 2}, "commit_means": "she enters that room", "reward_source": "The hall brings no sugar or shock; each room says where its own sugar and shock come from.", "chosen": ["The doors are the rooms people built. Which one she walks into is her stop.", "twelve doors, shuffled every visit, six per room when two rooms are healthy", "The rooms are paper for now; the plan is to take them on-chain."], "measured": ["She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.", "The page counts how often it pushes her out of an empty margin."], "how": ["twelve doors, shuffled every visit, six per room when two rooms are healthy.", "she needs readings from another door before a stop can open this one.", "entering a room brings her to that room's cards.", "every room leads back here, by her door or by the clock."]}</script>
+<script id="room-declaration" type="application/json">{"name": "the paint room", "path": "/paintroom", "cards": {"source": "eight colours and four brushes", "refresh_seconds": 60}, "commit_means": "she paints one mark on the canvas with the card she settled on", "reward_source": "Painting brings no sugar or shock of its own. Listener reactions to a mark or to a canvas will teach her through the stream chat later; the room is paper for now.", "chosen": ["People choose eight colours, four brushes, a twelve-card board and a two-hour canvas.", "Mark size grows from 6 to 40 pixels with dwell; rose and dot are the first colour and brush."], "measured": ["marks", "colour distribution", "canvas coverage percent", "rests", "time in room", "nudges"], "how": ["She takes two readings before choosing a card.", "The card's name becomes a smell.", "One mark lands where she stands, using the last chosen colour and brush.", "The canvas keeps every mark for two hours, then goes to the gallery.", "Nothing is ever erased; rest paints nothing.", "She can take the door on any edge, and the room clock closes her visit after six minutes."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);

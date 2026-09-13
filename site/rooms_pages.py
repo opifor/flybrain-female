@@ -10,11 +10,13 @@ import betroom
 import musicroom
 import tiproom
 import gameroom
+import paintroom
 
 ROOMS = [('hall', hall.DECLARATION), ('betting', betroom.DECLARATION),
          ('music', musicroom.DECLARATION), ('tips', tiproom.DECLARATION)]
 ROOMS.append(('game', gameroom.DECLARATION))
 WEB = ROOT / 'site' / 'web'
+ROOMS.append(('paint', paintroom.DECLARATION))
 LEDE = ('A real female fruit fly brain, 139,255 neurons, simulated live. '
         'She lives in a house of rooms and chooses where to go. '
         "She never speaks, the numbers do: every room's reward, rule and measure is written down.")
@@ -76,6 +78,8 @@ def generate(destination=WEB / 'rooms'):
 <p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
 <div data-live="book">Book unavailable.</div></section></div>'''
         arena = slug in ('betting', 'music', 'hall', 'game')
+        if slug == 'paint':
+            body += '<section><h2>current canvas and gallery</h2><p>Each canvas stays here after its two hours.</p></section>'
         if arena:
             body += ('<section><h2>her screen right now</h2>'
                      "<p>whatever room she is in appears here; the record above is this room's</p>"

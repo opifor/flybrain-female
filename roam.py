@@ -393,6 +393,10 @@ def live_state(stats, neural, hz, url, cx, cy):
 def relay_post(state, jpg):
     """One multipart POST to the relay: the state as json, the frame as bytes."""
     import urllib.request
+    from paint_publish import publish as publish_paint
+    painting = STATE.get("rooms", {}).get("/paintroom")
+    if painting:
+        publish_paint(painting.dir, RELAY_URL, RELAY_TOKEN)
     b = b"----flybrain" + str(int(time.time() * 1000)).encode()
     body = (b"--" + b + b"\r\n"
             b'Content-Disposition: form-data; name="state"\r\n'
@@ -608,6 +612,12 @@ def register_rooms(betting):
                      f"http://127.0.0.1:{int(settings.get('FLY_MUSICROOM_PORT', '4674'))}",
                      betting.intent_token, ear=ear, catalogue_path=catalogue_path)
     registry.register(music.declaration, music.executor_url)
+    from paintroom import Room as PaintRoom
+    painting = PaintRoom(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
+                         Path(settings.get("FLY_STATE_DIR") or OUT),
+                         f"http://127.0.0.1:{int(settings.get('FLY_PAINTROOM_PORT', '4676'))}",
+                         betting.intent_token)
+    registry.register(painting.declaration, painting.executor_url)
     hall = Hall(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
                 Path(settings.get("FLY_STATE_DIR") or OUT), betting.executor_url,
                 betting.intent_token, registry=registry)
@@ -620,6 +630,7 @@ def register_rooms(betting):
     registry.register(game.declaration, game.executor_url)
     STATE["rooms"]["/gameroom"] = game
     STATE["hall"] = hall
+    STATE["rooms"]["/paintroom"] = painting
 
 
 def room_at(url):
@@ -669,6 +680,37 @@ def hall_public():
 def tiproom_public():
     room = STATE.get("rooms", {}).get("/tiproom")
     return room.read_book() if room else None
+
+
+@app.get("/paintroom")
+def paintroom_page():
+    return FileResponse(str(ROOT / "web" / "paintroom.html"))
+
+
+@app.get("/paintroom/board.json")
+def paintroom_board():
+    room = STATE.get("rooms", {}).get("/paintroom")
+    if room:
+        room.refresh_board()
+    return room.board() if room else {"cards": []}
+
+
+@app.get("/paintroom/public.json")
+def paintroom_public():
+    room = STATE.get("rooms", {}).get("/paintroom")
+    return room.read_book() if room else None
+
+
+@app.get("/paintroom/canvas.png")
+@app.get("/paintroom/gallery/{filename}")
+def paintroom_canvas(filename: str = "canvas.png"):
+    import re
+    room = STATE.get("rooms", {}).get("/paintroom")
+    if room and (filename == "canvas.png" or re.fullmatch(r"\d{4}-\d{2}-\d{2}-\d{4}\.png", filename)):
+        path = room.dir / filename if filename == "canvas.png" else room.dir / "gallery" / filename
+        if path.is_file():
+            return FileResponse(str(path), media_type="image/png", headers={"Cache-Control": "no-store"})
+    return Response(status_code=404)
 
 
 @app.get("/musicroom")

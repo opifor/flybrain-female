@@ -12,7 +12,7 @@ spec.loader.exec_module(pages)
 
 def test_rooms_pages(tmp_path):
     pages.generate(tmp_path)
-    assert sorted(p.name for p in tmp_path.iterdir()) == ['betting.html', 'game.html', 'hall.html', 'index.html', 'music.html', 'tips.html']
+    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(['index.html'] + [slug + '.html' for slug, _ in pages.ROOMS])
     index = (tmp_path / 'index.html').read_text(encoding='utf-8')
     positions = []
     for slug, declaration in pages.ROOMS:

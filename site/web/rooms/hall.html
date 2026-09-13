@@ -113,6 +113,18 @@
       const history = document.createElement('ul');
       for (const row of b.history || []) history.append(node('li', time(row.hour * 3600) + ': ' + score(row)));
       out.append(history);
+    } else if (path === '/paintroom') {
+      const canvas = node('img', ''); canvas.alt = 'Her current canvas';
+      canvas.src = origin + '/paintroom/canvas.png?v=' + b.last_seq + '-' + b.opened_at;
+      canvas.style.width = '100%'; out.append(canvas);
+      out.append(node('p', `${number(b.marks)} marks, ${number(b.rests)} rests, ${number(b.coverage_percent)}% covered`));
+      out.append(node('p', Object.entries(b.colour_distribution || {}).map(([name, count]) => `${name}: ${count}`).join(', ')));
+      out.append(node('h3', 'Gallery'));
+      for (const item of [...(b.gallery || [])].reverse()) {
+        const link = node('a', `${item.file}: ${item.marks} marks, ${item.dominant_colour || 'no colour'}`);
+        link.href = origin + '/paintroom/gallery/' + encodeURIComponent(item.file);
+        const row = node('p', ''); row.append(link); out.append(row);
+      }
     } else if (path === '/musicroom') {
       const rows = [];
       if (b.now_playing) rows.push(['now playing', b.now_playing.title, ...credits(b.now_playing)]);

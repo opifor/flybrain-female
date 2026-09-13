@@ -23,10 +23,29 @@ export class Latest {
     this.frame = null;
     this.updated = 0;
     this.seq = 0;
+    this.storage = state.storage;
   }
 
   async fetch(request) {
     const url = new URL(request.url);
+    if (/^\/paintroom\/(canvas\.png|gallery\/\d{4}-\d{2}-\d{2}-\d{4}\.png)$/.test(url.pathname)) {
+      const key = url.pathname;
+      if (request.method === 'POST') {
+        const data = new Uint8Array(await request.arrayBuffer());
+        if (data.length > 4 * 1024 * 1024) return text('too large', 413);
+        const count = Math.ceil(data.length / 100000);
+        await this.storage.transaction(async txn => {
+          for (let i = 0; i < count; i++) await txn.put(key + ':' + i, data.slice(i * 100000, (i + 1) * 100000));
+          await txn.put(key, count);
+        });
+        return text('saved');
+      }
+      const count = await this.storage.get(key);
+      if (!count) return text('canvas unavailable', 404);
+      const chunks = [];
+      for (let i = 0; i < count; i++) chunks.push(await this.storage.get(key + ':' + i));
+      return new Response(new Blob(chunks), {headers: {'Content-Type': 'image/png', ...CACHE}});
+    }
     if (request.method === 'POST' && url.pathname === '/publish') {
       const form = await request.formData();
       const raw = form.get('state');
@@ -74,13 +93,14 @@ export default {
     const stub = env.LATEST.get(env.LATEST.idFromName('live'));
 
     if (request.method === 'POST') {
-      if (url.pathname !== '/publish') return text('not found', 404);
+      const paint = /^\/paintroom\/(canvas\.png|gallery\/\d{4}-\d{2}-\d{2}-\d{4}\.png)$/.test(url.pathname);
+      if (url.pathname !== '/publish' && !paint) return text('not found', 404);
       const auth = request.headers.get('Authorization') || '';
       if (!env.PUBLISH_TOKEN || auth !== 'Bearer ' + env.PUBLISH_TOKEN) {
         return text('unauthorized', 401);
       }
       const len = Number(request.headers.get('Content-Length') || 0);
-      if (len > MAX_BODY) return text('too large', 413);
+      if (len > (paint ? 4 * 1024 * 1024 : MAX_BODY)) return text('too large', 413);
       return stub.fetch(request);
     }
 

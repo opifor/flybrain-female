@@ -78,11 +78,21 @@ function start-dealer {
 
 $dealer = start-dealer
 $b = start-bookie
+function start-painter {
+  note "starting painter.py"
+  return Start-Process -FilePath $py -ArgumentList "painter.py" -WorkingDirectory $root -PassThru -WindowStyle Hidden `
+       -RedirectStandardOutput (Join-Path $root 'build\painter.out.log') `
+       -RedirectStandardError (Join-Path $root 'build\painter.err.log')
+}
+$painter = start-painter
 $dj = start-dj
 while ($true) {
   if ($dealer.HasExited) {
     note ("dealer.py exited with " + $dealer.ExitCode)
     $dealer = start-dealer
+  if ($painter.HasExited) {
+    note ("painter.py exited with " + $painter.ExitCode)
+    $painter = start-painter
   }
   if ($b.HasExited) {
     note ("bookie.py exited with " + $b.ExitCode)

@@ -509,7 +509,7 @@ def test_hall_reset_and_exact_destinations(tmp_path):
         assert roam.allowed_host(url.replace("/hall", "/tiproom"))
         assert not roam.allowed_host(url + "/public.json")
         assert not roam.allowed_host(url + "?x=1")
-        assert set(roam.rooms_status()) == {"/hall", "/betroom", "/tiproom", "/musicroom", "/gameroom"}
+        assert set(roam.rooms_status()) == {"/hall", "/betroom", "/tiproom", "/musicroom", "/gameroom", "/paintroom"}
 
 
 def test_pages_carry_the_declarations_and_share_the_skeleton():
