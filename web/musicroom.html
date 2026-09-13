@@ -62,7 +62,7 @@ body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 <div id="door-right" class="door right" data-token="/hall"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "music room", "path": "/musicroom", "cards": {"source": "a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license", "refresh_seconds": 60}, "commit_means": "she plays the track on the card she settled on", "reward_source": "Listener reactions supply sugar and shock in her record; they will reach her through the stream chat later. The rooms are paper for now; the plan is to take them on-chain.", "chosen": ["People choose the catalogue search terms, the ninety-second minimum and the twelve-card board.", "a six-minute room clock and a door in every room", "beta \u00b7 v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming."], "measured": ["The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.", "nudges: how often the page had to push her out of an empty margin"], "how": ["her eye settles on a music card for at least two rounds before she can choose it.", "the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.", "when she stops, the room plays that track if her drive is above or below zero; either sign can play it.", "she stays with a track for at least ninety seconds and cannot restart it while it is playing.", "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.", "a listener's sugar or shock teaches the cells recorded when she chose that play.", "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."]}</script>
+<script id="room-declaration" type="application/json">{"name": "music room", "path": "/musicroom", "cards": {"source": "a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license", "refresh_seconds": 60}, "commit_means": "she plays the track on the card she settled on", "reward_source": "Listener reactions supply sugar and shock in her record; they will reach her through the stream chat later. The rooms are paper for now; the plan is to take them on-chain.", "chosen": ["People choose the catalogue search terms, the ninety-second minimum and the twelve-card board.", "a four-minute room clock and a door in every room", "beta \u00b7 v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming."], "measured": ["The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.", "nudges: how often the page had to push her out of an empty margin"], "how": ["her eye settles on a music card for at least two rounds before she can choose it.", "the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.", "when she stops, the room plays that track if her drive is above or below zero; either sign can play it.", "she stays with a track for at least ninety seconds and cannot restart it while it is playing.", "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.", "a listener's sugar or shock teaches the cells recorded when she chose that play.", "she may leave by the door on any edge of the room; the house closes a room after four minutes either way."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);
@@ -114,6 +114,21 @@ async function loadCards() {
   } catch (error) { drawCards([]); }
 }
 loadCards(); setInterval(loadCards, 2000);
+
+if (roomData.path === '/gameroom') {
+  async function loadScore() {
+    try {
+      const response = await fetch('/gameroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
+      if (!response.ok) return;
+      const score = (await response.json()).this_hour;
+      if (!score) return;
+      document.getElementById('status').textContent = score.picks ?
+        `this rule: ${score.picks} picks · ${score.sweet} sweet · hit rate ${Math.round(score.hit_rate * 100)}%` :
+        'this rule: no picks yet';
+    } catch (error) { /* The next reading brings the score back. */ }
+  }
+  loadScore(); setInterval(loadScore, 1000);
+}
 
 if (roomData.path === '/paintroom') {
   const canvas = document.getElementById('paint-canvas');

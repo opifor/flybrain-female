@@ -151,16 +151,16 @@ def test_room_door_uses_the_same_dwell_and_never_calls_executor(tmp_path, kind):
     assert room.entered_at == 1700000010
 
 
-def test_room_clock_closes_at_six_minutes_only_while_visiting(tmp_path):
+def test_room_clock_closes_at_four_minutes_only_while_visiting(tmp_path):
     room = make_room(tiproom.Room, tmp_path, fetch_board=lambda: [])
     assert roam.room_clock(room, 1700000600) is None
     asyncio.run(room.enter(FakePage([])))
-    assert roam.ROOM_STAY_MAX_S == 360
-    assert roam.room_clock(room, room.entered_at + 359.999) is None
+    assert roam.ROOM_STAY_MAX_S == 240
+    assert roam.room_clock(room, room.entered_at + 239.999) is None
     assert room.destination is None and room.last_exit is None
-    assert roam.room_clock(room, room.entered_at + 360) == "clock"
+    assert roam.room_clock(room, room.entered_at + 240) == "clock"
     assert room.destination == "/hall"
-    assert room.state()["last_exit"] == {"by": "clock", "at": 1700000360}
+    assert room.state()["last_exit"] == {"by": "clock", "at": 1700000240}
     room.leave()
     assert roam.room_clock(room, 1700000700) is None
     hallway = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())

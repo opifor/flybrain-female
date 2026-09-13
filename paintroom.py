@@ -14,14 +14,14 @@ DECLARATION = Declaration(
     commit_means="she paints one mark on the canvas with the card she settled on",
     reward_source="Painting brings no sugar or shock of its own. Listener reactions to a mark or to a canvas will teach her through the stream chat later; the room is paper for now.",
     chosen=["People choose eight colours, four brushes, a twelve-card board and a two-hour canvas.",
-            "Mark size grows from 6 to 40 pixels with dwell; rose and dot are the first colour and brush."],
+            "Mark size grows from 12 to 40 pixels with dwell; rose and dot are the first colour and brush."],
     measured=["marks", "colour distribution", "canvas coverage percent", "rests", "time in room", "nudges"],
     how=("She takes two readings before choosing a card.",
          "The card's name becomes a smell.",
          "One mark lands where she stands, using the last chosen colour and brush.",
          "The canvas keeps every mark for two hours, then goes to the gallery.",
          "Nothing is ever erased; rest paints nothing.",
-         "She can take the door on any edge, and the room clock closes her visit after six minutes."))
+         "She can take the door on any edge, and the room clock closes her visit after four minutes."))
 
 
 class Room(RoomWalk):
@@ -50,7 +50,7 @@ class Room(RoomWalk):
         return True
 
     def _commit(self, img, cx, cy, seed, card, dwell, drive, smell):
-        self.mark_position = (float(cx), float(cy), min(40, 6 + 2 * max(0, dwell["steps"] - 2)))
+        self.mark_position = (float(cx), float(cy), min(40, 12 + 2 * max(0, dwell["steps"] - 2)))
         return super()._commit(img, cx, cy, seed, card, dwell, drive, smell)
 
     def intent_body(self, token, drive, at, look_id):

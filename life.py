@@ -223,7 +223,7 @@ class Life:
                 name = {"/betroom": "paper room", "/tiproom": "tip room",
                         "/musicroom": "music room"}.get(path, path.strip("/"))
                 text = (f"she chose the door and left the {name}" if by == "door" else
-                        f"the {name} closed after six minutes")
+                        f"the {name} closed after four minutes")
                 self._line("room.exit." + by, text, at, key=f"room-exit:{path}:{at}",
                            hidden=self.first and at < now - 600)
         entered = [e for e in entries if e.get("kind") == "entered"]

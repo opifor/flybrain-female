@@ -13,7 +13,7 @@ DECLARATION = Declaration(
     reward_source="What people say about her is the sugar and the shock of this room, through a line we have not wired yet. In rehearsal, a recorded practice thank-you brings sugar to the cells from her look; silence brings nothing. Every tip here is paper for now; the plan is to take the rooms on-chain.",
     chosen=["People will decide which posts and comments put a card in the room, and the limits that keep her wallet safe; none of that is chosen yet.",
             "In rehearsal, people supply eight practice wallets and no smells.",
-            "People set a six-minute room clock and put a door in every room."],
+            "People set a four-minute room clock and put a door in every room."],
     measured=["Her brain supplies the stop and the drive compared with her other looks; the practice thanks is no human response.",
               "The page counts how often it pushes her out of an empty margin."],
     how=("in rehearsal, her eye settles on a wallet card for at least two rounds; this room adds no smell.",
@@ -21,7 +21,7 @@ DECLARATION = Declaration(
          "when she stops, her drive sets a paper tip to that wallet; either sign tips, zero does not.",
          "a recorded practice thank-you brings sugar to the cells from that look; silence brings nothing.",
          "when the room opens, the cards will be wallets people shared by posting about her; their words, her sugar and shock.",
-         "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."))
+         "she may leave by the door on any edge of the room; the house closes a room after four minutes either way."))
 
 
 def wallets():

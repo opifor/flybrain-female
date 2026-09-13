@@ -26,7 +26,7 @@ def check_body(body):
         return why
     if not isinstance(body["card_id"], str) or body["card_id"] not in (*COLOURS, *BRUSHES):
         return "unknown card"
-    for key, low, high in (("x", 0, WIDTH - 1), ("y", 0, HEIGHT - 1), ("size", 6, 40)):
+    for key, low, high in (("x", 0, WIDTH - 1), ("y", 0, HEIGHT - 1), ("size", 12, 40)):
         value = body[key]
         try:
             valid = type(value) in (int, float) and math.isfinite(value) and low <= value <= high

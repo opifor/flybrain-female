@@ -49,6 +49,21 @@ async function loadCards() {
 }
 loadCards(); setInterval(loadCards, 2000);
 
+if (roomData.path === '/gameroom') {
+  async function loadScore() {
+    try {
+      const response = await fetch('/gameroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
+      if (!response.ok) return;
+      const score = (await response.json()).this_hour;
+      if (!score) return;
+      document.getElementById('status').textContent = score.picks ?
+        `this rule: ${score.picks} picks · ${score.sweet} sweet · hit rate ${Math.round(score.hit_rate * 100)}%` :
+        'this rule: no picks yet';
+    } catch (error) { /* The next reading brings the score back. */ }
+  }
+  loadScore(); setInterval(loadScore, 1000);
+}
+
 if (roomData.path === '/paintroom') {
   const canvas = document.getElementById('paint-canvas');
   setInterval(() => { canvas.src = '/paintroom/canvas.png?t=' + Date.now(); }, 2000);

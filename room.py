@@ -367,7 +367,14 @@ class Room:
 
     def read_book(self):
         try:
-            book = json.loads(self.public.read_text(encoding="utf-8"))
+            for attempt in range(4):
+                try:
+                    book = json.loads(self.public.read_text(encoding="utf-8"))
+                    break
+                except PermissionError:
+                    if attempt == 3:
+                        raise
+                    time.sleep(0.05)
         except FileNotFoundError:
             if not self._said_no_book:
                 self._said_no_book = True
@@ -375,8 +382,9 @@ class Room:
                           "until it exists the room holds nothing")
             return {}
         except (OSError, ValueError) as exc:
-            if not self._said_no_book:
-                self._said_no_book = True
+            now = time.monotonic()
+            if now - getattr(self, "_book_error_at", float("-inf")) >= 60:
+                self._book_error_at = now
                 self._say(f"the paper book at {self.public} cannot be read: {str(exc)[:90]}")
             return {}
         self._said_no_book = False

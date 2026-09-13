@@ -13,7 +13,7 @@ DECLARATION = Declaration(
     reward_source="The game itself: a sweet card is sugar and a sour card is shock, on the room's own rule. The rule is drawn every two hours and written on this page; she is never told it. Paper for now.",
     chosen=["The sweet card game: twelve words, four sweet for two hours, shuffled every minute.",
             "One pick per ten seconds; a picked card rests sixty seconds.",
-            "a six-minute room clock and a door in every room"],
+            "a four-minute room clock and a door in every room"],
     measured=["picks, sweet, sour and hit rate per two-hour rule", "time in room", "nudges"],
     how=("she stays on a card for two readings before choosing.",
          "the word becomes a smell through her olfactory neurons.",
@@ -21,7 +21,7 @@ DECLARATION = Declaration(
          "sweet is sugar, sour is shock, and her mushroom body keeps the taste.",
          "four of twelve are sweet for two hours, and the draw is written here for people to see.",
          "a picked card rests a minute; she can pick at most once every ten seconds.",
-         "she may leave by the door; the room closes after the six-minute clock."))
+         "she may leave by the door; the room closes after the four-minute clock."))
 
 
 def sweet_words(hour):

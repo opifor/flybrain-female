@@ -62,7 +62,7 @@ body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 <div id="door-right" class="door right" data-token="/hall"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "the paint room", "path": "/paintroom", "cards": {"source": "eight colours and four brushes", "refresh_seconds": 60}, "commit_means": "she paints one mark on the canvas with the card she settled on", "reward_source": "Painting brings no sugar or shock of its own. Listener reactions to a mark or to a canvas will teach her through the stream chat later; the room is paper for now.", "chosen": ["People choose eight colours, four brushes, a twelve-card board and a two-hour canvas.", "Mark size grows from 6 to 40 pixels with dwell; rose and dot are the first colour and brush."], "measured": ["marks", "colour distribution", "canvas coverage percent", "rests", "time in room", "nudges"], "how": ["She takes two readings before choosing a card.", "The card's name becomes a smell.", "One mark lands where she stands, using the last chosen colour and brush.", "The canvas keeps every mark for two hours, then goes to the gallery.", "Nothing is ever erased; rest paints nothing.", "She can take the door on any edge, and the room clock closes her visit after six minutes."]}</script>
+<script id="room-declaration" type="application/json">{"name": "the paint room", "path": "/paintroom", "cards": {"source": "eight colours and four brushes", "refresh_seconds": 60}, "commit_means": "she paints one mark on the canvas with the card she settled on", "reward_source": "Painting brings no sugar or shock of its own. Listener reactions to a mark or to a canvas will teach her through the stream chat later; the room is paper for now.", "chosen": ["People choose eight colours, four brushes, a twelve-card board and a two-hour canvas.", "Mark size grows from 12 to 40 pixels with dwell; rose and dot are the first colour and brush."], "measured": ["marks", "colour distribution", "canvas coverage percent", "rests", "time in room", "nudges"], "how": ["She takes two readings before choosing a card.", "The card's name becomes a smell.", "One mark lands where she stands, using the last chosen colour and brush.", "The canvas keeps every mark for two hours, then goes to the gallery.", "Nothing is ever erased; rest paints nothing.", "She can take the door on any edge, and the room clock closes her visit after four minutes."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);
@@ -114,6 +114,21 @@ async function loadCards() {
   } catch (error) { drawCards([]); }
 }
 loadCards(); setInterval(loadCards, 2000);
+
+if (roomData.path === '/gameroom') {
+  async function loadScore() {
+    try {
+      const response = await fetch('/gameroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
+      if (!response.ok) return;
+      const score = (await response.json()).this_hour;
+      if (!score) return;
+      document.getElementById('status').textContent = score.picks ?
+        `this rule: ${score.picks} picks · ${score.sweet} sweet · hit rate ${Math.round(score.hit_rate * 100)}%` :
+        'this rule: no picks yet';
+    } catch (error) { /* The next reading brings the score back. */ }
+  }
+  loadScore(); setInterval(loadScore, 1000);
+}
 
 if (roomData.path === '/paintroom') {
   const canvas = document.getElementById('paint-canvas');

@@ -52,7 +52,11 @@ def test_board_shuffle_position_and_rects(tmp_path):
     with patch.object(room.Room, "_commit"):
         walk._commit(None, 411, 312, 0, {"token": "rose", "x": 56, "y": 48}, {"steps": 9}, .2, None)
     assert walk.intent_body("rose", .2, now[0], "position") == dict(
-        card_id="rose", drive=.2, seen_at=now[0], look_id="position", x=411, y=312, size=20)
+        card_id="rose", drive=.2, seen_at=now[0], look_id="position", x=411, y=312, size=26)
+    for steps, size in ((2, 12), (3, 14), (16, 40), (30, 40)):
+        with patch.object(room.Room, "_commit"):
+            walk._commit(None, 411, 312, 0, {}, {"steps": steps}, .2, None)
+        assert walk.mark_position[2] == size
 
 
 def test_marks_rest_refusals_and_replay(tmp_path):
@@ -73,7 +77,7 @@ def test_marks_rest_refusals_and_replay(tmp_path):
     assert public["marks"] == 3 and public["rests"] == 1
     assert public["colour_distribution"] == {"rose": 2, "white": 1}
     for field, value, status in (("card_id", "bad", 400), ("x", -1, 400), ("y", 620, 400),
-                                 ("size", 41, 400), ("size", float("nan"), 400), ("x", True, 400)):
+                                 ("size", 11, 400), ("size", 41, 400), ("size", float("nan"), 400), ("x", True, 400)):
         ask = body(now, look="invalid")
         ask[field] = value
         assert ex.intent(ask)[0] == status
@@ -112,8 +116,8 @@ def test_rotation_and_gallery_survive_restart(tmp_path):
 
 
 def test_minimal_png_and_coverage():
-    pixels, coverage = painter.raster([dict(colour="rose", brush="dot", x=10, y=10, size=6)])
-    assert coverage == 29 * 100 / (1280 * 620)
+    pixels, coverage = painter.raster([dict(colour="rose", brush="dot", x=10, y=10, size=12)])
+    assert coverage == 113 * 100 / (1280 * 620)
     original = builtins.__import__
     def without_pillow(name, *args, **kwargs):
         if name == "PIL":

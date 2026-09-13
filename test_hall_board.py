@@ -8,19 +8,23 @@ from dataclasses import replace
 import pytest
 import hall
 import musicroom
+import paintroom
 from test_rooms import Health, make_room, registry
 from test_betroom import FakePage, IMG
 
 
-@pytest.mark.parametrize('count', [0, 1, 2, 3])
+@pytest.mark.parametrize('count', [0, 1, 2, 3, 4])
 def test_spread_previews_and_shuffle(tmp_path, count):
     rooms = registry()
     rooms.register(musicroom.DECLARATION, 'http://127.0.0.1:4674')
+    rooms.register(paintroom.DECLARATION, 'http://127.0.0.1:4676')
     rooms.rooms = dict(list(rooms.rooms.items())[:count])
     for path in rooms.rooms:
         directory = tmp_path / path.strip('/')
         directory.mkdir()
         cards = [dict(question=f'Question {i}?', title=f'Track {i}', artist=f'Artist {i}') for i in range(12)]
+        if path == '/paintroom':
+            cards = [dict(name=name) for name in list(paintroom.COLOURS) + list(paintroom.BRUSHES)]
         (directory / 'room.json').write_text(json.dumps({'cards': cards}), encoding='utf-8')
     room = make_room(hall.Hall, tmp_path, registry=rooms, http=Health())
     asyncio.run(room.enter(FakePage([])))
@@ -32,7 +36,9 @@ def test_spread_previews_and_shuffle(tmp_path, count):
     for path in rooms.rooms:
         previews = [c['preview'] for c in board['cards'] if c['path'] == path]
         assert len(set(previews)) == len(previews)
-        assert set(previews) == {f'Track {i} / Artist {i}' if path == '/musicroom' else f'Question {i}?' for i in range(12 // count)}
+        assert set(previews) == {f'Track {i} / Artist {i}' if path == '/musicroom' else
+                                 list(paintroom.COLOURS)[i] if path == '/paintroom' else
+                                 f'Question {i}?' for i in range(12 // count)}
     expected = list(room._board['cards'])
     random.Random(0).shuffle(expected)
     assert board['cards'] == expected

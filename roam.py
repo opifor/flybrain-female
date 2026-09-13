@@ -41,6 +41,7 @@ import os
 import shutil
 import random
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -839,7 +840,27 @@ async def screenshot(page):
     return raw
 
 
-ROOM_STAY_MAX_S = 360
+ROOM_STAY_MAX_S = 240
+
+
+def quiet_windows_pipe_resets(loop):
+    if sys.platform != "win32":
+        return
+    from asyncio.proactor_events import _ProactorBasePipeTransport
+    previous = loop.get_exception_handler()
+
+    def handle(loop, context):
+        error = context.get("exception")
+        callback = getattr(context.get("handle"), "_callback", None)
+        if (isinstance(error, ConnectionResetError) and getattr(error, "winerror", None) == 10054
+                and getattr(callback, "__func__", None) is _ProactorBasePipeTransport._call_connection_lost):
+            return
+        if previous is not None:
+            previous(loop, context)
+        else:
+            loop.default_exception_handler(context)
+
+    loop.set_exception_handler(handle)
 
 
 def room_clock(room, now):
@@ -1310,6 +1331,7 @@ async def begin():
     a browser falls over - it waits a few seconds and starts a new life rather
     than sitting there waiting to be told.
     """
+    quiet_windows_pipe_resets(asyncio.get_running_loop())
     if load_env().get("FLY_TIPROOM_LIVE") == "1":
         raise SystemExit("live tipping is not built; this build is paper only")
     if load_env().get("FLY_BETROOM_LIVE") == "1":

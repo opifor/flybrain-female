@@ -48,7 +48,8 @@ class Hall(RoomWalk):
                         if item.get("end_at", float("inf")) <= self._now():
                             continue
                         preview = (" / ".join(str(item[k]) for k in ("title", "artist") if item.get(k))
-                                   if door["path"] == "/musicroom" else item.get("question", ""))
+                                   if door["path"] == "/musicroom" else
+                                   item.get("name", "") if door["path"] == "/paintroom" else item.get("question", ""))
                         if isinstance(preview, str) and preview and preview not in previews:
                             previews.append(preview)
                 except (OSError, ValueError, KeyError, TypeError):

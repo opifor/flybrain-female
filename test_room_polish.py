@@ -4,8 +4,72 @@ import json
 import pytest
 
 import betroom
+import room as room_module
+import roam
+from types import SimpleNamespace
+from unittest.mock import Mock
 from test_rooms import make_room, registry
 from test_betroom import IMG, RECTS
+
+
+def test_public_book_retries_and_limits_failure_logs(tmp_path, monkeypatch):
+    room = make_room(betroom.Room, tmp_path, fetch_board=lambda: [])
+    reader = Mock(side_effect=[PermissionError('locked'), '{"book": "ready"}'])
+    room.public = SimpleNamespace(read_text=reader)
+    sleep = Mock()
+    monkeypatch.setattr(room_module.time, 'sleep', sleep)
+    now = [0.0]
+    monkeypatch.setattr(room_module.time, 'monotonic', lambda: now[0])
+    room._say = Mock()
+    assert room.read_book() == {'book': 'ready'}
+    assert reader.call_count == 2
+    sleep.assert_called_once_with(.05)
+    room._say.assert_not_called()
+    reader.side_effect = PermissionError('locked')
+    sleep.reset_mock()
+    assert room.read_book() == {}
+    assert sleep.call_count == 3
+    assert room._say.call_count == 1
+    reader.side_effect = None
+    reader.return_value = '{}'
+    assert room.read_book() == {}
+    reader.side_effect = PermissionError('locked')
+    now[0] = 59.999
+    assert room.read_book() == {}
+    assert room._say.call_count == 1
+    now[0] = 60
+    assert room.read_book() == {}
+    assert room._say.call_count == 2
+
+
+@pytest.mark.parametrize('custom', [False, True])
+def test_only_windows_proactor_connection_reset_is_quiet(monkeypatch, custom):
+    from asyncio.proactor_events import _ProactorBasePipeTransport
+    monkeypatch.setattr(roam.sys, 'platform', 'win32')
+    previous = Mock() if custom else None
+    loop = Mock()
+    loop.get_exception_handler.return_value = previous
+    roam.quiet_windows_pipe_resets(loop)
+    handler = loop.set_exception_handler.call_args.args[0]
+    error = ConnectionResetError('viewer gone')
+    error.winerror = 10054
+    callback = SimpleNamespace(__func__=_ProactorBasePipeTransport._call_connection_lost)
+    context = dict(exception=error, handle=SimpleNamespace(_callback=callback))
+    handler(loop, context)
+    target = previous if custom else loop.default_exception_handler
+    target.assert_not_called()
+    for other in (dict(exception=error), {**context, 'exception': RuntimeError('broken')},
+                  {**context, 'exception': ConnectionResetError('different reset')}):
+        handler(loop, other)
+        if custom:
+            target.assert_called_with(loop, other)
+        else:
+            target.assert_called_with(other)
+    assert target.call_count == 3
+    monkeypatch.setattr(roam.sys, 'platform', 'linux')
+    loop.reset_mock()
+    roam.quiet_windows_pipe_resets(loop)
+    loop.set_exception_handler.assert_not_called()
 
 
 @pytest.mark.parametrize("failure", [OSError("connection refused"), (503, {}), (200, {"ok": False})])

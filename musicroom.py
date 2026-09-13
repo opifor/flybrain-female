@@ -14,7 +14,7 @@ DECLARATION = Declaration(
     commit_means="she plays the track on the card she settled on",
     reward_source="Listener reactions supply sugar and shock in her record; they will reach her through the stream chat later. The rooms are paper for now; the plan is to take them on-chain.",
     chosen=["People choose the catalogue search terms, the ninety-second minimum and the twelve-card board.",
-            "a six-minute room clock and a door in every room",
+            "a four-minute room clock and a door in every room",
             "beta · v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming."],
     measured=["The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.",
               "nudges: how often the page had to push her out of an empty margin"],
@@ -24,7 +24,7 @@ DECLARATION = Declaration(
          "she stays with a track for at least ninety seconds and cannot restart it while it is playing.",
          "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.",
          "a listener's sugar or shock teaches the cells recorded when she chose that play.",
-         "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."))
+         "she may leave by the door on any edge of the room; the house closes a room after four minutes either way."))
 
 
 def catalogue(path=CATALOGUE):

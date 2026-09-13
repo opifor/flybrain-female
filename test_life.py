@@ -419,7 +419,7 @@ def test_a_removed_directory_comes_back(tmp_path):
 
 @pytest.mark.parametrize("by,sentence", [
     ("door", "she chose the door and left the music room"),
-    ("clock", "the music room closed after six minutes"),
+    ("clock", "the music room closed after four minutes"),
 ])
 def test_room_exit_sentences_and_repeated_observations(tmp_path, by, sentence):
     life = Life(tmp_path)
