@@ -4,7 +4,7 @@
   const number = n => typeof n === 'string' && n.includes('/') ? n.split('/').map(Number).reduce((a, b) => a / b) : Number(n);
   const money = n => number(n).toFixed(2);
   const signed = n => (n >= 0 ? '+' : '') + money(n);
-  let sequence = -1;
+  const show = window.paperShow || (el('bet-stage') ? mountShow(el('bet-stage'), {audio:false}) : null);
   function events(book, status) {
     const rows = [], seen = new Set(), refused = new Map();
     const records = [...(book.open_bets || []), ...(book.settled_bets || []),
@@ -59,17 +59,6 @@
       li.textContent = `${new Date(e.at * 1000).toISOString().slice(11, 19)} UTC / ${e.line}`;
       return li;
     }));
-    el('bet-off').hidden = live;
-    el('bet-off').textContent = 'The relay is offline.';
-    if (live && d.seq !== sequence) {
-      sequence = d.seq;
-      el('bet-frame').src = origin + '/frame.jpg?s=' + d.seq;
-    }
-    el('bet-cursor').hidden = !live || !d.cursor;
-    if (d.cursor) {
-      el('bet-cursor').style.left = (d.cursor.x * 100) + '%';
-      el('bet-cursor').style.top = (d.cursor.y * 100) + '%';
-    }
   }
   async function tick() {
     try {
@@ -79,5 +68,6 @@
     } catch (e) { render(null); }
     setTimeout(tick, 1000);
   }
-  tick();
+  if (show) show.onState(render);
+  else tick();
 })();

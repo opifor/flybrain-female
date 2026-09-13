@@ -1,0 +1,248 @@
+(() => {
+  'use strict';
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const number = v => typeof v === 'string' && v.includes('/') ? v.split('/').map(Number).reduce((a, b) => a / b) : Number(v ?? 0);
+  const price = v => v == null ? '?' : number(v).toFixed(2);
+  const signed = v => (v >= 0 ? '+' : '') + v.toFixed(2);
+  const key = e => `${e.kind}:${e.seq ?? e.id ?? `${e.at}:${e.market_id}:${e.action || ''}`}`;
+
+  function makeSound() {
+    let ctx, master, pan, tone, filt, lfo, on = false, volume = 0.5;
+    function init() {
+      if (ctx) return;
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain(); master.gain.value = 0;
+      pan = ctx.createStereoPanner(); tone = ctx.createGain(); tone.gain.value = 0;
+      const trem = ctx.createGain(); trem.gain.value = 0.7;
+      filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 200; filt.Q.value = 2;
+      lfo = ctx.createOscillator(); lfo.frequency.value = 0.5;
+      const lfoG = ctx.createGain(); lfoG.gain.value = 0.3;
+      lfo.connect(lfoG).connect(trem.gain); lfo.start();
+      for (const [type, detune] of [['sine', -6], ['triangle', 6]]) {
+        const o = ctx.createOscillator(); o.type = type; o.frequency.value = 110; o.detune.value = detune;
+        o.connect(filt); o.start();
+      }
+      filt.connect(trem).connect(tone).connect(pan).connect(master).connect(ctx.destination);
+    }
+    function ping(freq, dur, level, delay = 0, hard = false) {
+      if (!on || ctx?.state !== 'running') return;
+      const t = ctx.currentTime + delay, o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = hard ? 'triangle' : 'sine'; o.frequency.setValueAtTime(freq, t);
+      if (hard) o.frequency.exponentialRampToValueAtTime(freq / 2, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(level, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.02);
+      o.onended = () => { o.disconnect(); g.disconnect(); };
+    }
+    return {
+      async start() { init(); on = true; await ctx.resume(); master.gain.setTargetAtTime(volume * 0.25, ctx.currentTime, 0.15); return ctx.state === 'running'; },
+      mute(value) { on = !value; if (ctx) master.gain.setTargetAtTime(on ? volume * 0.25 : 0, ctx.currentTime, 0.08); },
+      volume(value) { volume = clamp(value); if (ctx && on) master.gain.setTargetAtTime(volume * 0.25, ctx.currentTime, 0.08); },
+      state(d, live) {
+        if (!ctx) return;
+        const t = ctx.currentTime, n = d?.neural || {}, hz = d?.hz || n.dn || {}, f = clamp(number(n.firing) / 8000);
+        filt.frequency.setTargetAtTime(200 + 2200 * f, t, 0.4);
+        lfo.frequency.setTargetAtTime(0.5 + 5.5 * f, t, 0.4);
+        pan.pan.setTargetAtTime(clamp((number(hz.steer_R) - number(hz.steer_L)) / 300, -0.8, 0.8), t, 0.4);
+        tone.gain.setTargetAtTime(live ? 1 : 0, t, 0.3);
+      },
+      moment(kind, win, settled) {
+        if (kind === 'buy') ping(146.83, 0.28, 0.22);
+        else if (kind === 'sell') { ping(win ? 261.63 : 392, 0.22, 0.15); ping(win ? 392 : 261.63, 0.3, 0.15, 0.14); }
+        else if (win) for (const f of [261.63, 329.63, 392]) ping(f, settled ? 0.9 : 0.45, 0.09);
+        else ping(90, settled ? 0.65 : 0.23, 0.3, 0, true);
+      },
+      get running() { return on && ctx?.state === 'running'; },
+      destroy() { if (ctx) ctx.close(); }
+    };
+  }
+
+  window.mountShow = function mountShow(container, {audio = false, size} = {}) {
+    const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
+    const forcedMute = new URLSearchParams(location.search).get('mute') === '1';
+    const sound = audio && !forcedMute ? makeSound() : null;
+    container.style.position = 'relative'; container.style.overflow = 'hidden';
+    if (size) container.style.aspectRatio = `${size.width} / ${size.height}`;
+    let img = container.querySelector('img');
+    if (!img) { img = document.createElement('img'); container.append(img); }
+    img.alt = 'The page she is looking at'; img.crossOrigin = 'anonymous';
+    Object.assign(img.style, {position:'absolute', inset:'0', width:'100%', height:'100%', objectFit:'contain'});
+    const canvas = document.createElement('canvas'), g = canvas.getContext('2d');
+    canvas.setAttribute('aria-label', 'Her brain, path and paper bets');
+    Object.assign(canvas.style, {position:'absolute', inset:'0', width:'100%', height:'100%', pointerEvents:'none'});
+    container.append(canvas);
+    const controls = document.createElement('div');
+    Object.assign(controls.style, {position:'absolute', right:'8px', bottom:'8px', display:'flex', alignItems:'center', gap:'8px', maxWidth:'calc(100% - 16px)', zIndex:'3'});
+    container.append(controls);
+    function button(label) {
+      const b = document.createElement('button'); b.textContent = label; b.type = 'button';
+      Object.assign(b.style, {font:'11px ui-monospace,monospace', color:'#c9c4cc', background:'#101116dd', border:'1px solid #4a3a44', borderRadius:'3px', padding:'5px 8px', cursor:'pointer'});
+      controls.append(b); return b;
+    }
+    const retinaButton = button('what she sees');
+    let retina = false; retinaButton.setAttribute('aria-pressed', 'false');
+    retinaButton.onclick = () => { retina = !retina; retinaButton.setAttribute('aria-pressed', String(retina)); };
+    let hint, muteButton, muted = forcedMute;
+    function unlock() {
+      if (!sound || muted) return;
+      sound.start().then(ok => { if (ok && hint) hint.hidden = true; }).catch(() => {});
+    }
+    if (sound) {
+      muteButton = button('mute'); muteButton.setAttribute('aria-pressed', 'false');
+      muteButton.onclick = () => { muted = !muted; sound.mute(muted); muteButton.textContent = muted ? 'unmute' : 'mute'; muteButton.setAttribute('aria-pressed', String(muted)); if (!muted) unlock(); };
+      const volume = document.createElement('input'); volume.type = 'range'; volume.min = 0; volume.max = 1; volume.step = 0.01; volume.value = 0.5;
+      volume.setAttribute('aria-label', 'Master volume'); volume.style.cssText = 'width:64px;accent-color:#ff79b0';
+      volume.oninput = () => sound.volume(Number(volume.value)); controls.append(volume);
+      hint = document.createElement('span'); hint.textContent = 'click for sound'; hint.style.cssText = 'font:11px ui-monospace,monospace;color:#d9c7cf'; controls.append(hint);
+      document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock); unlock();
+    }
+    const sample = document.createElement('canvas'), sg = sample.getContext('2d', {willReadFrequently:true});
+    let pixels = null, state = null, live = false, sequence = null, trail = [], moments = [], cursor = null, target = null;
+    let timer, raf, destroyed = false, lastTime = performance.now(), lastPoll = 0, imageReady = false;
+    const seen = new Set(), cards = new Map(), records = new Map(), listeners = new Set();
+    img.onload = () => {
+      imageReady = true; sample.width = img.naturalWidth; sample.height = img.naturalHeight;
+      try { sg.drawImage(img, 0, 0); pixels = sg.getImageData(0, 0, sample.width, sample.height).data; } catch (_) { pixels = null; }
+    };
+    img.onerror = () => { imageReady = false; pixels = null; };
+    const observer = new ResizeObserver(() => {
+      const r = container.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+      canvas.width = Math.max(1, Math.round(r.width * d)); canvas.height = Math.max(1, Math.round(r.height * d));
+    }); observer.observe(container);
+    function rect(e) {
+      const card = cards.get(String(e.market_id));
+      if (!card || card.shelf !== 'fast' || !Number.isInteger(card.slot) || card.slot < 0 || card.slot > 5) return null;
+      // Old settlements must not illuminate a different market that inherited the slot.
+      if (!(state?.betting?.cards || []).some(c => c.market_id === card.market_id && c.slot === card.slot)) return null;
+      return {x:56 + card.slot % 3 * 400, y:48 + Math.floor(card.slot / 3) * 368, w:368, h:336};
+    }
+    function accept(d) {
+      const now = performance.now(); state = d; lastPoll = now;
+      live = d?.live === true && number(d.age) < 15;
+      sound?.state(d, live);
+      for (const f of listeners) f(d);
+      if (!live) { trail = []; moments = []; return; }
+      if (d.cursor) { target = {x:clamp(number(d.cursor.x)) * 1280, y:clamp(number(d.cursor.y)) * 800}; if (!cursor) cursor = {...target}; }
+      for (const c of d.betting?.cards || []) cards.set(String(c.market_id), c);
+      for (const e of [...(d.betroom?.open_bets || []), ...(d.betroom?.settled_bets || [])]) records.set(String(e.id ?? e.look_id), e);
+      if (d.seq !== sequence || !imageReady) { sequence = d.seq; img.src = origin + '/frame.jpg?s=' + encodeURIComponent(d.seq); }
+      const events = [...(d.betting?.events || []), ...(d.betting?.learning?.last || []).filter(e => e.status === 'delivered' && e.sign !== 0).map(e => ({...e, kind:e.sign > 0 ? 'sugar' : 'shock'}))];
+      events.sort((a, b) => number(a.at) - number(b.at));
+      for (const raw of events) {
+        const id = key(raw); if (seen.has(id)) continue; seen.add(id);
+        if (raw.seq != null && ['sugar','shock'].includes(raw.kind) && events.some(e => e.kind === 'settled' && e.seq === raw.seq)) continue;
+        // Joining a stream does not perform the entire ledger again.
+        if (Math.abs(Date.now() / 1000 - number(raw.at)) > 12) continue;
+        const record = records.get(String(raw.position_id ?? raw.id ?? raw.look_id)) || [...records.values()].find(e => e.look_id === (raw.buy_look_id ?? raw.look_id)) || {};
+        const e = {...record, ...raw}, settled = e.kind === 'settled';
+        const kind = e.kind === 'fill' ? (e.action === 'sell' ? 'sell' : 'buy') : e.kind === 'sold' ? 'sell' : e.kind;
+        if (!['buy','sell','sugar','shock','settled'].includes(kind)) continue;
+        const pnl = e.pnl_cents != null ? number(e.pnl_cents) / 100 : (number(e.payout_cents) - number(e.stake_cents)) / 100;
+        const win = kind === 'sugar' || (kind !== 'shock' && (settled ? (e.won ?? e.side === e.outcome) : pnl >= 0));
+        moments.push({e, kind, win, pnl, settled, at:now, from:{...(cursor || {x:640,y:400})}});
+        sound?.moment(kind, win, settled);
+      }
+      if (seen.size > 4096) { const keep = [...seen].slice(-2048); seen.clear(); keep.forEach(k => seen.add(k)); }
+      if (records.size > 2048) for (const k of [...records.keys()].slice(0, 1024)) records.delete(k);
+      if (cards.size > 2048) for (const k of [...cards.keys()].slice(0, 1024)) cards.delete(k);
+    }
+    async function poll() {
+      try {
+        const r = await fetch(origin + '/state', {cache:'no-store', signal:AbortSignal.timeout(8000)});
+        if (!r.ok) throw Error('relay unavailable');
+        const d = await r.json(); if (!destroyed) accept(d);
+      } catch (_) { if (!destroyed) accept(null); }
+      if (!destroyed) timer = setTimeout(poll, document.hidden ? 5000 : 1000);
+    }
+    function ellipse(x, y, rx, ry, angle = 0) { g.beginPath(); g.ellipse(x, y, rx, ry, angle, 0, Math.PI * 2); g.fill(); }
+    function chip(x, y, alpha = 1) {
+      g.save(); g.globalAlpha *= alpha; g.fillStyle = '#e9c987'; g.strokeStyle = '#5d4027'; g.lineWidth = 2;
+      g.beginPath(); g.arc(x, y, 10, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.strokeStyle = '#fff1c3'; g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2); g.stroke(); g.restore();
+    }
+    function hex(x, y, r, light) {
+      g.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; i ? g.lineTo(px,py) : g.moveTo(px,py); }
+      g.closePath(); g.fillStyle = `rgb(${light},${light},${light})`; g.fill(); g.strokeStyle = '#16171b'; g.lineWidth = 0.7; g.stroke();
+    }
+    function drawRetina() {
+      const x = 958, y = 540;
+      g.fillStyle = '#090a0ef2'; g.fillRect(x - 12, y - 30, 322, 256);
+      g.fillStyle = '#e3c8d3'; g.font = '13px ui-monospace,monospace'; g.fillText('what she sees', x, y - 10);
+      if (!pixels) { g.fillStyle = '#9a929d'; g.fillText('frame sampling unavailable', x, y + 100); return; }
+      const cx = target.x / 1280 * sample.width, cy = target.y / 800 * sample.height;
+      for (let col = 0; col < 33; col++) for (let row = 0; row < 21; row++) {
+        const u = col * 9 / 300, v = (row * 10 + (col % 2) * 5) / 210;
+        const px = clamp(Math.floor(cx - 150 + u * 300), 0, sample.width - 1), py = clamp(Math.floor(cy - 105 + v * 210), 0, sample.height - 1);
+        const i = (py * sample.width + px) * 4, light = Math.round(0.299 * pixels[i] + 0.587 * pixels[i+1] + 0.114 * pixels[i+2]);
+        hex(x + u * 300, y + v * 210, 6, light);
+      }
+    }
+    function draw(now) {
+      if (destroyed) return;
+      const dt = Math.min(0.1, (now - lastTime) / 1000); lastTime = now;
+      g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,canvas.width,canvas.height);
+      const w = img.naturalWidth || 1280, h = img.naturalHeight || 800, scale = Math.min(canvas.width / w, canvas.height / h);
+      const fw = w * scale, fh = h * scale, ox = (canvas.width-fw)/2, oy = (canvas.height-fh)/2;
+      g.setTransform(fw/1280,0,0,fh/800,ox,oy);
+      const healthy = live && now - lastPoll < 15000;
+      if (!healthy || !imageReady) {
+        g.fillStyle = '#090a0ccc'; g.fillRect(0,0,1280,800); g.fillStyle = '#c4b9c0'; g.font = '17px ui-monospace,monospace';
+        g.textAlign = 'center'; g.fillText(!healthy ? 'Waiting for the relay.' : 'Waiting for a live frame.',640,400); g.textAlign = 'left';
+        if (!healthy) sound?.state(null,false);
+      } else if (cursor && target) {
+        const n = state.neural || {}, hz = state.hz || n.dn || {}, firing = clamp(number(n.firing)/16000), spike = clamp(number(n.spikes_per_sec)/2000000);
+        moments = moments.filter(m => now - m.at < 2200);
+        const pause = moments.some(m => (m.kind === 'sugar' || (m.settled && m.win)) && now-m.at < 1000);
+        if (!pause) { const a = 1 - Math.exp(-dt * 9); cursor.x += (target.x-cursor.x)*a; cursor.y += (target.y-cursor.y)*a; }
+        const hue = 330 + clamp((number(hz.steer_L)-number(hz.steer_R))/300,-1,1)*65;
+        trail.push({x:cursor.x,y:cursor.y,at:now,hue,light:40+firing*35}); trail = trail.filter(p => now-p.at < 2600);
+        g.lineWidth = 3; g.lineCap = 'round';
+        for (let i=1;i<trail.length;i++) { const p = trail[i]; g.strokeStyle = `hsla(${p.hue},85%,${p.light}%,${(1-(now-p.at)/2600)*0.65})`; g.beginPath(); g.moveTo(trail[i-1].x,trail[i-1].y); g.lineTo(p.x,p.y); g.stroke(); }
+        if (state.betting?.in_room) for (const e of state.betroom?.open_bets || []) { const r = rect(e); if (r) chip(r.x+r.w-22,r.y+22); }
+        for (const m of moments) {
+          const age = (now-m.at)/1000, p = clamp(age/0.8), r = state.betting?.in_room ? rect(m.e) : null;
+          const tx = r ? r.x+r.w-22 : m.from.x, ty = r ? r.y+22 : m.from.y;
+          g.save(); g.globalAlpha = clamp((2.2-age)/0.6);
+          if (m.kind === 'buy' && r && age < 1) {
+            g.fillStyle = `rgba(255,205,137,${0.28*Math.sin(Math.PI*clamp(age))})`; g.fillRect(r.x,r.y,r.w,r.h);
+            g.strokeStyle = '#f6b5c9'; g.lineWidth = 2; g.beginPath(); g.moveTo(cursor.x+18,cursor.y);
+            g.lineTo(cursor.x+18+(tx-cursor.x-18)*Math.sin(Math.PI*p),cursor.y+(ty-cursor.y)*Math.sin(Math.PI*p)); g.stroke();
+            chip(tx,ty-90*(1-p));
+          } else if (m.kind === 'sell') chip(tx+(cursor.x-tx)*p,ty+(cursor.y-ty)*p,1-p);
+          if (['sugar','shock','settled'].includes(m.kind) && age < 1.15) {
+            const fade = Math.sin(Math.PI*clamp(age/1.15));
+            if (r) { g.fillStyle = m.win ? `rgba(255,195,91,${fade*0.42})` : `rgba(0,0,0,${fade*0.65})`; g.fillRect(r.x,r.y,r.w,r.h); }
+            if (m.win && r) for (let j=0;j<5;j++) chip(tx+Math.cos(j*1.26)*age*42,ty+Math.sin(j*1.26)*age*42,1-age/1.15);
+            if (!m.win && age < 0.65) { g.strokeStyle = `rgba(255,65,83,${(1-age/0.65)*(0.5+0.5*Math.cos(age*35))})`; g.lineWidth = 15; g.strokeRect(7,7,1266,786); }
+          }
+          if (m.kind === 'sell' || m.settled) {
+            const line = `${m.settled ? 'settled / ' : ''}${price(m.e.entry_price ?? m.e.price)} to ${price(m.e.exit_price ?? (m.settled ? (m.win ? 1 : 0) : m.e.price))} / ${signed(m.pnl)}`;
+            g.font = 'bold 17px ui-monospace,monospace'; const width = g.measureText(line).width;
+            const x = clamp(tx-width/2,12,1268-width), y = Math.max(35,ty-25-age*25);
+            g.fillStyle = '#0b0c10ee'; g.fillRect(x-8,y-21,width+16,30); g.fillStyle = m.win ? '#f8d694' : '#ff9cb1'; g.fillText(line,x,y);
+          }
+          g.restore();
+        }
+        const shock = moments.find(m => (m.kind === 'shock' || (m.settled && !m.win)) && now-m.at < 650);
+        const hop = shock ? Math.sin(Math.PI*(now-shock.at)/650)*24 : 0;
+        g.save(); g.translate(cursor.x-hop,cursor.y-hop*0.5);
+        const glow = g.createRadialGradient(0,0,2,0,0,22+spike*35); glow.addColorStop(0,'#ff79b02b'); glow.addColorStop(1,'#ff79b000'); g.fillStyle = glow; ellipse(0,0,22+spike*35,22+spike*35);
+        const forward = number(hz.fwd_L)+number(hz.fwd_R), stop = pause || forward <= 0 || n.out?.forward === 0 || number(hz.stop) >= forward;
+        const beat = stop ? 0 : Math.abs(Math.sin(now/1000*Math.PI*2*clamp(forward/60,0,12)));
+        g.fillStyle = '#ff79b059'; for (const side of [-1,1]) ellipse(-5,side*(stop ? 5 : 10+beat*9),17,stop ? 3 : 5,side*(stop ? 0.1 : 0.5+beat*0.3));
+        g.fillStyle = '#ff79b0'; ellipse(0,0,15,10); ellipse(15,-1,7,7);
+        const orn = n.orn_hz ?? state.betting?.orn_hz, twitch = orn == null ? 0 : Math.sin(now/65)*clamp(number(orn)/100)*7;
+        g.strokeStyle = '#fcb2ce'; g.lineWidth = 1.5; for (const side of [-1,1]) { g.beginPath(); g.moveTo(19,side*3); g.lineTo(29+twitch,side*(9+twitch)); g.stroke(); }
+        g.restore();
+        if (retina) drawRetina();
+      }
+      raf = requestAnimationFrame(draw);
+    }
+    poll(); raf = requestAnimationFrame(draw);
+    return {
+      onState(fn) { listeners.add(fn); if (state) fn(state); return () => listeners.delete(fn); },
+      destroy() { destroyed = true; clearTimeout(timer); cancelAnimationFrame(raf); observer.disconnect(); sound?.destroy(); document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); canvas.remove(); controls.remove(); img.onload = img.onerror = null; },
+    };
+  };
+})();

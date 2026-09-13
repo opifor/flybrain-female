@@ -507,7 +507,6 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 #betting .bet-summary{font-family:var(--mono);font-size:12px;margin-bottom:16px}
 #betting .bet-feed{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto;font-size:13px}
 #betting .bet-feed li{padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
-#betting .bet-cursor{position:absolute;width:12px;height:12px;border:1px solid var(--cyan);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
 #betting details{margin-top:20px;color:var(--ink-dim)}
 #betting summary{cursor:pointer;font-family:var(--mono);font-size:12px}
 #betting details p{font-size:15px}
@@ -672,7 +671,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <h2>Her betting room</h2>
     <p id="bet-status" role="status">Waiting for the relay.</p>
     <div class="bet-grid">
-      <div class="lstage"><img id="bet-frame" alt="The page she is looking at"><span id="bet-cursor" class="bet-cursor" hidden></span><div id="bet-off" class="loff">Waiting for a live frame.</div></div>
+      <div class="lstage" id="bet-stage"><img id="bet-frame" alt="The page she is looking at"></div>
       <div><div id="bet-summary" class="bet-summary">Paper book unavailable.</div><ol id="bet-feed" class="bet-feed" aria-label="Recent paper activity"></ol></div>
     </div>
     <p class="lsay" style="margin-top:22px">Her eye meets six market cards. Stops and relative readings can buy a paper bet or leave one early. Booked profit and loss teach the Kenyon cells recorded during that look.</p>
@@ -685,6 +684,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     </details>
   </div>
 </section>
+<script src="show.js" defer></script>
 <script src="betting.js" defer></script>
 
 <section id="matches">
