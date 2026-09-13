@@ -154,8 +154,12 @@ def betroom_share():
         return 0.0
 
 
+def hall_on():
+    return not PIN and load_env().get("FLY_HALL") == "1"
+
+
 def betroom_on():
-    return not PIN and betroom_share() > 0
+    return not PIN and (betroom_share() > 0 or hall_on())
 
 
 def betroom_url():
@@ -179,6 +183,8 @@ def this_machine(host):
 
 
 def next_place(rng, room_open=True):
+    if hall_on():
+        return betroom_url().replace("/betroom", "/hall"), "the hall"
     if betroom_on() and room_open and rng.random() < betroom_share():
         return betroom_url(), "the betting room"
     return rng.choice(SEEDS), "a seed"
@@ -194,7 +200,9 @@ def allowed_host(url):
     if betroom_on():
         from urllib.parse import urlparse
         if this_machine(urlparse(url).hostname):
-            return is_betroom(url)
+            hall_url = betroom_url().replace("/betroom", "/hall")
+            return is_betroom(url) or (hall_on() and (
+                str(url) in (hall_url, hall_url + "/") or room_at(url) is not None))
     if OPEN:
         return True
     try:
@@ -499,6 +507,8 @@ def load_brain():
 
 
 def load_room():
+    if load_env().get("FLY_TIPROOM_LIVE") == "1":
+        raise SystemExit("live tipping is not built; this build is paper only")
     if load_env().get("FLY_BETROOM_LIVE") == "1":
         raise SystemExit("live betting is not built; this build is paper only")
     if not betroom_on():
@@ -560,6 +570,74 @@ def betroom_board():
 @app.get("/betroom/public.json")
 def betroom_public():
     return betroom_state()
+
+
+def register_rooms(betting):
+    from hall import Hall
+    from tiproom import Room as TipRoom
+    from roomkit import Registry
+    settings = load_env()
+    registry = Registry()
+    registry.register(betting.declaration, betting.executor_url)
+    tipping = TipRoom(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
+                      Path(settings.get("FLY_STATE_DIR") or OUT),
+                      f"http://127.0.0.1:{int(settings.get('FLY_TIPROOM_PORT', '4673'))}",
+                      betting.intent_token)
+    registry.register(tipping.declaration, tipping.executor_url)
+    hall = Hall(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
+                Path(settings.get("FLY_STATE_DIR") or OUT), betting.executor_url,
+                betting.intent_token, registry=registry)
+    STATE["rooms"] = {"/betroom": betting, "/tiproom": tipping, "/hall": hall}
+    STATE["hall"] = hall
+
+
+def room_at(url):
+    for path, room in STATE.get("rooms", {}).items():
+        exact = betroom_url().replace("/betroom", path)
+        if str(url) in (exact, exact + "/"):
+            return room
+    return None
+
+
+def rooms_status():
+    return {path: {**room.state(), "book": room.read_book() if path != "/hall" else None}
+            for path, room in STATE.get("rooms", {}).items()}
+
+
+@app.get("/hall")
+def hall_page():
+    return FileResponse(str(ROOT / "web" / "hall.html"))
+
+
+@app.get("/tiproom")
+def tiproom_page():
+    return FileResponse(str(ROOT / "web" / "tiproom.html"))
+
+
+@app.get("/hall/board.json")
+def hall_board():
+    room = STATE.get("hall")
+    if room:
+        room.refresh_board()
+    return room.board() if room else {"cards": []}
+
+
+@app.get("/tiproom/board.json")
+def tiproom_board():
+    room = STATE.get("rooms", {}).get("/tiproom")
+    return room.board() if room else {"cards": []}
+
+
+@app.get("/hall/public.json")
+def hall_public():
+    room = STATE.get("hall")
+    return room.state() if room else {"events": []}
+
+
+@app.get("/tiproom/public.json")
+def tiproom_public():
+    room = STATE.get("rooms", {}).get("/tiproom")
+    return room.read_book() if room else None
 
 
 def soma_xy(fb):
@@ -713,9 +791,11 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                 return False
 
         room = open_room()
+        if hall_on() and room is not None:
+            register_rooms(room)
 
         async def reset(why):
-            url, where = next_place(rng, room is not None)
+            url, where = next_place(rng, bool(STATE.get("rooms")) if hall_on() else room is not None)
             return await goto(url, f"{why}: {where}")
 
         await reset("seed")
@@ -775,7 +855,13 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             raw = latest["jpg"]
             img = to_gray(raw)
 
-            in_room = room is not None and is_betroom(page.url)
+            if hall_on():
+                current = room_at(page.url)
+                if current is not room:
+                    if room is not None and room.in_room:
+                        room.leave()
+                    room = current
+            in_room = room is not None and (hall_on() or is_betroom(page.url))
             if room is not None and in_room != room.in_room:
                 if in_room:
                     await room.enter(page)
@@ -784,6 +870,15 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             seed_ = rng.randrange(1 << 30)
             if in_room:
                 dx, dy, click, hz, info = await room.step(page, img, cx, cy, seed_)
+                if hall_on() and room is STATE.get("hall") and room.destination:
+                    destination = room.destination
+                    room.destination = None
+                    if await goto(betroom_url().replace("/betroom", destination), "a door stop"):
+                        room.record_entry(destination)
+                        await log(room.entered[-1]["text"])
+                        room.leave()
+                        on_page = 0
+                        cx, cy = 640.0, 400.0
             else:
                 dx, dy, click, hz, info = pilot.step(
                     img, cx, cy, gains=STATE["gains"], seed=seed_, detail=True)
@@ -870,6 +965,8 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             if betroom_on():
                 moment["betroom"] = betroom_state()
                 moment["betting"] = betting_status()
+            if hall_on():
+                moment["rooms"] = rooms_status()
             RELAY["state"], RELAY["state_n"] = moment, RELAY["state_n"] + 1
             await send(moment)
 
@@ -945,8 +1042,8 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                         room.leave()
                     await reset("hop budget spent")
 
-            if room is not None:
-                room.poll_events()
+            for listening in STATE.get("rooms", {}).values() if hall_on() else ([room] if room else []):
+                listening.poll_events()
             publish(stats, raw, page.url, hz, neural)
             if mb is not None and stats["steps"] % 40 == 0:
                 mb.save()
@@ -982,6 +1079,7 @@ def publish(stats, jpg, url, hz, neural=None):
             "stream": TUNNEL["url"],
             **({"betroom": betroom_state()} if betroom_on() else {}),
             **({"betting": betting_status()} if betroom_on() else {}),
+            **({"rooms": rooms_status()} if hall_on() else {}),
             "updated": int(time.time()),
         }, indent=1)
         (OUT / "roam_state.json").write_text(payload)
@@ -1063,6 +1161,8 @@ async def begin():
     a browser falls over - it waits a few seconds and starts a new life rather
     than sitting there waiting to be told.
     """
+    if load_env().get("FLY_TIPROOM_LIVE") == "1":
+        raise SystemExit("live tipping is not built; this build is paper only")
     if load_env().get("FLY_BETROOM_LIVE") == "1":
         raise SystemExit("live betting is not built; this build is paper only")
     if load_env().get("FLY_ALLOW_BROWSER") != "1":
@@ -1090,6 +1190,8 @@ async def begin():
 
 
 if __name__ == "__main__":
+    if load_env().get("FLY_TIPROOM_LIVE") == "1":
+        raise SystemExit("live tipping is not built; this build is paper only")
     if load_env().get("FLY_BETROOM_LIVE") == "1":
         raise SystemExit("live betting is not built; this build is paper only")
     ap = argparse.ArgumentParser()

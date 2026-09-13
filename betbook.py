@@ -4,7 +4,6 @@ Stakes are whole cents. Shares are exact fractions, written as strings; a
 winning payout rounds down to cents and records the remainder. Nothing is
 booked until its entry has been flushed and fsynced.
 """
-import copy
 import json
 import math
 import os
@@ -13,6 +12,7 @@ from fractions import Fraction
 from pathlib import Path
 
 from polymarket import DISCLOSURE
+from roomkit import WriteAhead, LedgerError, atomic_write
 
 CHOSEN = {"size": "floor(abs(drive) * free USDC cents)",
           "pacing": "one open bet per market",
@@ -23,22 +23,15 @@ CHOSEN = {"size": "floor(abs(drive) * free USDC cents)",
           "paper_omissions": ["fees", "spread", "liquidity", "orderMinSize"]}
 
 
-class LedgerError(ValueError):
-    pass
+def room_declaration():
+    from betroom import DECLARATION
+    return DECLARATION.public()
 
 
 def paths(state_dir):
     room = Path(state_dir) / "betroom"
     return {"room": room, "ledger": room / "ledger.paper.jsonl",
             "book": room / "book.paper.json", "public": room / "public" / "public.json"}
-
-
-def atomic_write(path, data):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_bytes(data)
-    os.replace(tmp, path)
 
 
 class Book:
@@ -190,10 +183,11 @@ class Book:
                 "win_count": self.counts["wins"], "loss_count": self.counts["losses"],
                 "counts": dict(self.counts), "last_seq": self.seq,
                 "disclosure": DISCLOSURE, "chosen": CHOSEN,
+                "room": room_declaration(),
                 "updated": time.time() if at is None else at}
 
 
-class Ledger:
+class Ledger(WriteAhead):
     def __init__(self, path, start_cents=10000, clock=time.time):
         self.path = Path(path)
         if self.path.name != "ledger.paper.jsonl":
@@ -219,23 +213,6 @@ class Ledger:
                 self.teach_sell(ev)
         self.write_book()
 
-    def append(self, kind, **fields):
-        if not self.ok:
-            raise LedgerError(self.error or "ledger unreadable")
-        entry = {"kind": kind, "mode": "paper", "at": self.clock(), **fields}
-        candidate = copy.deepcopy(self.book)
-        candidate.apply(entry)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with self.path.open("a", encoding="utf-8", newline="\n") as fh:
-                fh.write(json.dumps(entry, separators=(",", ":"), allow_nan=False) + "\n")
-                fh.flush()
-                os.fsync(fh.fileno())
-        except OSError as exc:
-            self.ok, self.error = False, str(exc)
-            raise
-        self.book = candidate
-        return entry
 
     def intent(self, fields):
         return self.append("intent", id=self.book.intents + 1, **fields)["id"]

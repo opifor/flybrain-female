@@ -235,6 +235,12 @@
         const orn = n.orn_hz ?? state.betting?.orn_hz, twitch = orn == null ? 0 : Math.sin(now/65)*clamp(number(orn)/100)*7;
         g.strokeStyle = '#fcb2ce'; g.lineWidth = 1.5; for (const side of [-1,1]) { g.beginPath(); g.moveTo(19,side*3); g.lineTo(29+twitch,side*(9+twitch)); g.stroke(); }
         g.restore();
+        const entry = state.rooms?.['/hall']?.events?.at(-1);
+        if (entry && Math.abs(Date.now() / 1000 - number(entry.at)) < 12) {
+          g.fillStyle = '#0b0c10ee'; g.fillRect(24, 20, 680, 46);
+          g.fillStyle = '#e9edf3'; g.font = '20px ui-monospace,monospace';
+          g.fillText(entry.text, 40, 50);
+        }
         if (retina) drawRetina();
       }
       raf = requestAnimationFrame(draw);

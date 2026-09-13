@@ -10,6 +10,7 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans
 #room{width:1280px;margin:auto;padding:48px 56px;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
+
 .question{font-size:24px;line-height:32px;height:168px;overflow:hidden;margin-left:30px}
 .category{position:absolute;top:16px;left:14px;width:18px;height:50px;border-radius:4px}
 .bar{height:16px;background:#2b3038;border-radius:8px;overflow:hidden;margin-top:14px}
@@ -17,12 +18,15 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans
 .price{font-size:12px;color:var(--dim);margin-top:8px}
 .empty{visibility:hidden}
 .card.held{opacity:0.55}
+
 </style>
 </head>
 <body>
 <main id="room">
 <div id="fast" class="grid"></div>
+<section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
+<script id="room-declaration" type="application/json">{"name": "the betting room", "path": "/betroom", "cards": {"source": "Polymarket current binary markets", "refresh_seconds": 30}, "commit_means": "a bet", "reward_source": "Resolved wins deliver sugar and losses shock; a sale teaches the sign of its paper profit.", "chosen": ["CHOSEN by people: a person chose current BTC and ETH 5-minute markets and BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, so her learning signal arrives while she is still in the room; refreshed every 30 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings."], "measured": ["Stops and relative drive come from the female brain; this does not establish predictive skill."]}</script>
 <script>
 const slots = {fast: []};
 for (const [shelf, count] of [['fast', 6]]) {
@@ -80,6 +84,12 @@ loadBoard(); loadBook();
 setInterval(loadBoard, 2000);
 setInterval(loadBook, 2000);
 setInterval(draw, 1000);
+
+const declaration = JSON.parse(document.getElementById("room-declaration").textContent);
+const disclosure = document.getElementById("disclosure");
+for (const sentence of [declaration.commit_means, declaration.reward_source, ...declaration.chosen, ...declaration.measured]) {
+  const p = document.createElement("p"); p.textContent = sentence; disclosure.appendChild(p);
+}
 </script>
 </body>
 </html>

@@ -9,7 +9,6 @@ FLY_BETROOM_PORT defaults to 4672. FLY_STATE_DIR holds betroom/.
 FLY_INTENT_TOKEN is minted by the parent per boot and shared with roam.py.
 FLY_BETROOM_LIVE=1 exits before the ledger is opened.
 """
-import hmac
 import json
 import math
 import os
@@ -18,11 +17,10 @@ import sys
 import threading
 import time
 from fractions import Fraction
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 
 import betbook
+from roomkit import Handler, make_server, Executor, exact_body, stale_look
 from envcfg import load_env
 from polymarket import Markets, binary, timestamp, winner
 
@@ -37,98 +35,66 @@ def setting(name, default=None):
 
 
 def check_body(body):
-    if not isinstance(body, dict) or set(body) != FIELDS:
-        return "the body must be exactly " + str(sorted(FIELDS))
+    why = exact_body(body, FIELDS)
+    if why:
+        return why
     for key in ("market_id", "token_id"):
         if not isinstance(body[key], str) or not re.fullmatch(r"[0-9]{1,100}", body[key]):
             return f"invalid {key}"
     if body["side"] not in ("YES", "NO"):
         return "side must be YES or NO"
-    for key in ("drive", "seen_at"):
-        try:
-            valid = type(body[key]) in (int, float) and math.isfinite(body[key])
-        except OverflowError:
-            valid = False
-        if not valid:
-            return f"invalid {key}"
-    if not isinstance(body["look_id"], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", body["look_id"]):
-        return "invalid look_id"
     return None
 
 
-class Bookie:
+class Bookie(Executor):
     def __init__(self, markets, ledger, intent_token, clock=time.time):
         self.markets, self.ledger, self.intent_token = markets, ledger, intent_token
         self.clock = clock
         self.lock = threading.Lock()
         self.resolver_error = None
 
-    def health(self):
-        return {"ok": self.ledger.ok, "mode": "paper",
-                "balance": self.ledger.book.balance_cents / 100 if self.ledger.ok else None,
-                "error": self.ledger.error, "publish_error": self.ledger.publish_error,
-                "resolver_error": self.resolver_error}
-
-    def events(self, after=0):
-        with self.lock:
-            if not self.ledger.ok:
-                return 503, {"error": self.ledger.error, "last": None, "events": []}
-            return 200, {"last": self.ledger.book.seq,
-                         "events": [e for e in self.ledger.book.events if e["seq"] > after]}
-
     def intent(self, body):
-        why = check_body(body)
-        if why:
-            return 400, {"status": "error", "reason": why}
-        if not self.lock.acquire(blocking=False):
-            return 409, {"status": "busy"}
+        return self.guarded_intent(body, check_body, self._execute)
+
+    def _execute(self, body):
+        led = self.ledger
+        pos = next((p for p in led.book.positions.values() if p["market_id"] == body["market_id"]), None)
+        selling = pos is not None and pos["side"] != body["side"]
+        i = led.intent({**body, "action": "sell" if selling else "buy"})
+
+        def refuse(reason):
+            return self.refuse(i, reason)
+
+        if pos is not None and not selling:
+            return refuse("open position")
+        drive = body["drive"]
+        if not 0 < abs(drive) <= 1 or (drive > 0) != (body["side"] == "YES"):
+            return refuse("side disagrees with drive")
+        if stale_look(body, self.clock()):
+            return refuse("stale or future look")
+        stake = math.floor(Fraction(abs(drive)) * led.book.balance_cents)
+        if stake <= 0 and not selling:
+            return refuse("nothing to spend")
         try:
-            led = self.ledger
-            if not led.ok:
-                return 503, {"status": "error", "reason": led.error}
-            if body["look_id"] in led.book.look_ids:
-                return 409, {"status": "duplicate", "reason": "look already recorded"}
-            pos = next((p for p in led.book.positions.values() if p["market_id"] == body["market_id"]), None)
-            selling = pos is not None and pos["side"] != body["side"]
-            i = led.intent({**body, "action": "sell" if selling else "buy"})
-
-            def refuse(reason):
-                return 200, {"status": "refused", "event": led.terminal("refused", i, reason=reason),
-                             "reason": reason}
-
-            if pos is not None and not selling:
-                return refuse("open position")
-            drive = body["drive"]
-            if not 0 < abs(drive) <= 1 or (drive > 0) != (body["side"] == "YES"):
-                return refuse("side disagrees with drive")
-            age = self.clock() - body["seen_at"]
-            if age < 0 or age > 20:
-                return refuse("stale or future look")
-            stake = math.floor(Fraction(abs(drive)) * led.book.balance_cents)
-            if stake <= 0 and not selling:
-                return refuse("nothing to spend")
-            try:
-                raw = self.markets.market(body["market_id"])
-                _, tokens, _ = binary(raw, fast=True)
-                if tokens[0 if body["side"] == "YES" else 1] != body["token_id"]:
-                    return refuse("outcome token does not match market")
-                if raw.get("closed") is not False or raw.get("active") is not True or timestamp(raw["endDate"]) <= self.clock():
-                    return refuse("market is not open")
-                if selling and tokens[0 if pos["side"] == "YES" else 1] != pos["token_id"]:
-                    return refuse("held token does not match market")
-                price = self.markets.midpoint(pos["token_id"] if selling else body["token_id"])
-            except (OSError, ValueError, KeyError, TypeError) as exc:
-                return refuse(f"unquotable: {exc}")
-            if selling:
-                ev = led.sell(i, pos["id"], price, self.clock())
-                return 200, {"status": "booked", "event": ev}
-            ev = led.terminal("fill", i, question=raw["question"], stake_cents=str(stake),
-                              price=str(price), shares=str(Fraction(stake, 100) / price),
-                              quote_source="CLOB midpoint", quoted_at=self.clock(),
-                              outcomes=raw["outcomes"])
+            raw = self.markets.market(body["market_id"])
+            _, tokens, _ = binary(raw, fast=True)
+            if tokens[0 if body["side"] == "YES" else 1] != body["token_id"]:
+                return refuse("outcome token does not match market")
+            if raw.get("closed") is not False or raw.get("active") is not True or timestamp(raw["endDate"]) <= self.clock():
+                return refuse("market is not open")
+            if selling and tokens[0 if pos["side"] == "YES" else 1] != pos["token_id"]:
+                return refuse("held token does not match market")
+            price = self.markets.midpoint(pos["token_id"] if selling else body["token_id"])
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            return refuse(f"unquotable: {exc}")
+        if selling:
+            ev = led.sell(i, pos["id"], price, self.clock())
             return 200, {"status": "booked", "event": ev}
-        finally:
-            self.lock.release()
+        ev = led.terminal("fill", i, question=raw["question"], stake_cents=str(stake),
+                          price=str(price), shares=str(Fraction(stake, 100) / price),
+                          quote_source="CLOB midpoint", quoted_at=self.clock(),
+                          outcomes=raw["outcomes"])
+        return 200, {"status": "booked", "event": ev}
 
     def resolve_once(self):
         with self.lock:
@@ -160,62 +126,6 @@ class Bookie:
         while not stop.is_set():
             self.resolve_once()
             stop.wait(15)
-
-
-class Handler(BaseHTTPRequestHandler):
-    def log_message(self, fmt, *args):
-        pass
-
-    def reply(self, code, payload):
-        data = json.dumps(payload).encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
-        self.wfile.write(data)
-
-    def authed(self):
-        secret = self.server.bookie.intent_token
-        return bool(secret) and hmac.compare_digest(
-            (self.headers.get("X-Fly-Intent") or "").encode(), secret.encode())
-
-    def do_GET(self):
-        route = urlparse(self.path)
-        if route.path == "/health":
-            return self.reply(200, self.server.bookie.health())
-        if not self.authed():
-            return self.reply(403, {"status": "forbidden"})
-        if route.path == "/events":
-            try:
-                after = int(parse_qs(route.query).get("after", ["0"])[0])
-            except ValueError:
-                return self.reply(400, {"status": "error"})
-            return self.reply(*self.server.bookie.events(after))
-        return self.reply(404, {"status": "error"})
-
-    def do_POST(self):
-        if not self.authed():
-            return self.reply(403, {"status": "forbidden"})
-        if self.path != "/intent":
-            return self.reply(404, {"status": "error"})
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            if not 0 < length <= 65536 or self.headers.get("Transfer-Encoding"):
-                return self.reply(400, {"status": "error", "reason": "invalid body length"})
-            body = json.loads(self.rfile.read(length))
-        except (ValueError, UnicodeError):
-            return self.reply(400, {"status": "error", "reason": "invalid JSON"})
-        try:
-            return self.reply(*self.server.bookie.intent(body))
-        except (OSError, ValueError) as exc:
-            return self.reply(500, {"status": "error", "reason": str(exc)})
-
-
-def make_server(bookie, port):
-    server = ThreadingHTTPServer((HOST, int(port)), Handler)
-    server.daemon_threads = True
-    server.bookie = bookie
-    return server
 
 
 def main():
