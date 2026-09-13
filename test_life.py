@@ -46,7 +46,7 @@ def test_open_bet_and_cursor(tmp_path):
     life = Life(tmp_path)
     state = paper([position()])
     block = life.observe(state, 100)
-    assert texts(block, "bet.placed") == ["she bet yes on eth 15m at 0.40 · 4.00 paper usdc"]
+    assert texts(block, "bet.placed") == ["she bet yes on eth 15m at 0.40 · 4.00 paper"]
     assert block["now"]["doing"] == "holding yes on eth 15m"
     state["betroom"]["open_bets"] = []
     state.update(cx=100, cy=100)
@@ -114,8 +114,8 @@ def test_sales_refusals_streak_and_balance(tmp_path):
     state["betroom"].update(balance=106, settled_bets=[{**position(), "kind": "sold", "pnl": 6, "won": True}])
     state["betting"]["events"] = [{"seq": 2, "kind": "refused"}, {"seq": 3, "kind": "refused"}]
     block = life.observe(state, 86391)
-    assert texts(block, "bet.sold") == ["she left eth 15m early · +6.00 paper usdc"]
-    assert texts(block, "bet.refused") == ["the bookie said no 2 times this minute"]
+    assert texts(block, "bet.sold") == ["she left eth 15m early · +6.00 paper"]
+    assert texts(block, "bet.refused") == ["the bookie said no 2× this minute"]
     assert block["hour"]["sold"] == 1 and block["hour"]["won"] == 0
     assert block["now"]["today_delta"] == 6
     restored = Life(tmp_path)
@@ -145,16 +145,16 @@ def test_rotation_and_text_limits(tmp_path):
     state = paper([position()])
     state["betting"]["cards"][0].update(symbol="x"*80)
     block = life.observe(state, 100)
-    assert texts(block, "bet.placed")[0].endswith("4.00 paper usdc")
+    assert texts(block, "bet.placed")[0].endswith("4.00 paper")
     with life.path.open("a", encoding="utf-8") as stream:
         stream.write(" " * (5*1024*1024) + "\n")
     state["betroom"]["balance"] = 101
     block = life.observe(state, 101)
     assert (tmp_path / "feed.1.jsonl").exists()
     assert Life(tmp_path).observe(state, 102)["hour"] == block["hour"]
-    assert all(len(r["text"]) <= 64 for r in block["feed"])
+    assert all(len(r["text"]) <= 48 for r in block["feed"])
     assert not life.path.read_bytes().startswith(b"\xef\xbb\xbf")
-    assert json.loads((tmp_path / "day.json").read_text())["balance"] == 100
+    assert json.loads((tmp_path / "day.json").read_text())["balance"] == 104
 
 
 def test_clicks_lessons_and_feed_limit(tmp_path):
@@ -166,7 +166,7 @@ def test_clicks_lessons_and_feed_limit(tmp_path):
     state["betting"]["learning"]["last"] = [dict(seq=1, status="delivered", sign=1, eligible=[1, 2, 3])]
     block = life.observe(state, 101)
     assert texts(block, "sugar") == ["sugar · 3 kenyon cells"]
-    assert texts(block, "page.noclick") == ["she looked at a link on example.org and did not click"]
+    assert texts(block, "page.noclick") == ["she skipped a link on example.org"]
     assert block["hour"]["clicks"] == 2 and block["now"]["sugar_10m"] == 1
     assert Life(tmp_path).observe(state, 102)["feed"] == block["feed"]
     for n in range(50):
@@ -202,3 +202,79 @@ def test_label_reads_the_question():
     assert label({"question": "Ethereum Up or Down - September 12, 11:55PM-12:00AM ET"}, []) == "eth 5m"
     assert label({"question": "Will the price of Bitcoin be above $82,000 on September 13?"}, []) == "btc above $82,000"
     assert label({"market_id": "1"}, [{"market_id": "1", "question": "Who wins the game tonight?"}]) == "who wins the game tonigh"
+
+
+def test_record_times_cold_start_and_hour(tmp_path):
+    state = paper([position(at=4400)], [
+        {**position(), "id": n, "seq": n, "at": at, "won": True, "pnl": 2}
+        for n, at in enumerate([1400, 1401, 4399, 4400, 4900], 2)
+    ])
+    life = Life(tmp_path)
+    block = life.observe(state, 5000)
+    assert block["hour"]["won"] == 4
+    assert block["hour"]["pnl"] == 8
+    assert len(texts(block, "bet.won")) == 2
+    assert texts(block, "streak") == ["5 wins in a row"]
+    assert [r["at"] for r in block["feed"] if r["kind"] == "bet.won"] == ["01:21:40", "01:13:20"]
+    assert life.rows["buy:1:1"]["ts"] == 4400
+    assert Life(tmp_path).observe(state, 5001)["hour"]["won"] == 3
+    state["betroom"]["settled_bets"].append({**position(), "id": 20, "seq": 20, "at": 4402, "kind": "sold", "pnl": 1})
+    block = life.observe(state, 5100)
+    assert next(r["at"] for r in block["feed"] if r["kind"] == "bet.sold") == "01:13:22"
+
+
+def test_old_streak_is_silent_and_final_loss_breaks_streak(tmp_path):
+    state = paper(settled=[{**position(), "id": n, "seq": n, "at": 100 + n, "won": True} for n in range(5)])
+    life = Life(tmp_path)
+    assert not texts(life.observe(state, 1000), "streak")
+    state["betroom"]["settled_bets"].extend([
+        {**position(), "id": 10, "seq": 10, "at": 1001, "won": True},
+        {**position(), "id": 11, "seq": 11, "at": 1002, "won": False},
+    ])
+    assert not texts(life.observe(state, 1003), "streak")
+
+
+@pytest.mark.parametrize("stake", [14.43, "1443"])
+def test_equity_baseline_current_restart_and_day(tmp_path, stake):
+    state = paper([{**position(), "stake": stake, "stake_cents": "1443"}])
+    state["betroom"]["balance"] = 85.57
+    life = Life(tmp_path)
+    assert life.observe(state, 100)["now"]["today_delta"] == 0
+    state["betroom"].update(open_bets=[], balance=103)
+    assert Life(tmp_path).observe(state, 101)["now"]["today_delta"] == 3
+    state["betroom"].update(open_bets=[{**position(), "stake": stake, "stake_cents": "1443"}], balance=88.57)
+    assert life.observe(state, 102)["now"]["today_delta"] == 3
+    assert life.observe(state, 86400)["now"]["today_delta"] == 0
+
+
+def test_refusals_wait_five_minutes_and_keep_pending_across_restart(tmp_path):
+    state = paper()
+    state["betting"]["events"] = [{"kind": "refused", "seq": 1}]
+    life = Life(tmp_path)
+    assert texts(life.observe(state, 100), "bet.refused") == ["the bookie said no 1× this minute"]
+    state["betting"]["events"] += [{"kind": "refused", "seq": n} for n in range(2, 42)]
+    assert len(texts(life.observe(state, 200), "bet.refused")) == 1
+    life = Life(tmp_path)
+    assert len(texts(life.observe(state, 399), "bet.refused")) == 1
+    assert texts(life.observe(state, 400), "bet.refused") == ["the bookie said no 40× this minute", "the bookie said no 1× this minute"]
+    assert len(texts(life.observe(state, 700), "bet.refused")) == 2
+
+
+def test_long_market_preserves_outcome_and_amount(tmp_path):
+    state = paper([{**position(), "question": "a" * 200}], [{**position(), "seq": 2, "question": "b" * 200, "won": False, "pnl": -4}])
+    block = Life(tmp_path).observe(state, 100)
+    assert texts(block, "bet.placed")[0].endswith("at 0.40 · 4.00 paper")
+    assert texts(block, "bet.lost")[0].endswith("resolved · lost -4.00 · shock")
+    assert all(len(row["text"]) <= 48 for row in block["feed"])
+
+
+def test_old_lessons_are_absorbed_on_a_fresh_start(tmp_path):
+    life = Life(tmp_path)
+    state = paper()
+    state["betting"]["learning"]["last"] = [
+        dict(seq=1, status="delivered", sign=1, eligible=[1, 2], at=100.0),
+        dict(seq=2, status="delivered", sign=-1, eligible=[3], at=3500.0)]
+    block = life.observe(state, 3600.0)
+    assert [r["kind"] for r in block["feed"] if r["kind"] in ("sugar", "shock")] == ["shock"]
+    assert next(r for r in block["feed"] if r["kind"] == "shock")["at"] == "00:58:20"
+    assert block["hour"]["sugar"] == 1 and block["hour"]["shock"] == 1

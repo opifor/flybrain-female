@@ -12,6 +12,16 @@ WHO = ["her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.",
        "she never speaks. the numbers do.", "paper money only. no real bets.",
        "the first fly streamer on kick.", "he launched a coin, she got a house."]
 COUNTS = "bets sold won lost pnl pages clicks scrolls sugar shock".split()
+FEED_LIMIT = 48  # Longer lines disappear beyond the stream column.
+
+
+def stake_value(pos):
+    stake = pos.get("stake")
+    return float(stake) if isinstance(stake, (int, float)) else int(pos.get("stake_cents", stake or 0)) / 100
+
+
+def market_line(prefix, market, suffix):
+    return prefix + market[:max(0, FEED_LIMIT - len(prefix + suffix))] + suffix
 
 
 def stamp(now, fmt="%Y-%m-%dT%H:%M:%SZ"):
@@ -84,6 +94,7 @@ class Life:
         self.room, self.high = saved.get("room", "the web"), saved.get("high")
         self.wins, self.cooldown = saved.get("wins", 0), saved.get("cooldown", {})
         self.cards = saved.get("cards", [])
+        self.first = not self.day and not self.rows
 
     def _fresh(self, family, value):
         key = (family, json.dumps(value, sort_keys=True))
@@ -97,7 +108,7 @@ class Life:
         self.serial += 1
         key = key or f"{now}:{self.serial}"
         row = dict(id=key, serial=self.serial, ts=now, at=stamp(now, "%H:%M:%S"),
-                   kind=kind, text=text.replace("!", "")[:64], counts=counts or {}, **extra)
+                   kind=kind, text=text.replace("!", "")[:FEED_LIMIT], counts=counts or {}, **extra)
         self.rows[key] = row
         if self.path.exists() and self.path.stat().st_size > 5 * 1024 * 1024:
             self.path.replace(self.dir / "feed.1.jsonl")
@@ -161,7 +172,7 @@ class Life:
         self.stats = dict(stats)
         for event in events:
             if event.get("m", "").startswith("did not click") and host:
-                self._line("page.noclick", f"she looked at a link on {host} and did not click", now)
+                self._line("page.noclick", f"she skipped a link on {host}", now)
         fills = [e for e in betting.get("events", []) if e.get("kind") == "fill"
                  and e.get("action") != "sell" and "price" in e]
         for pos in book.get("open_bets", []) + fills:
@@ -169,36 +180,45 @@ class Life:
             if self._fresh("buy", key) and key not in self.rows:
                 market, side = label(pos, self.cards), str(pos.get("side", "yes")).lower()
                 price = float(Fraction(str(pos.get("price", 0))))
-                stake = pos.get("stake", int(pos.get("stake_cents", 0))/100)
-                suffix = f" at {price:.2f} · {stake:.2f} paper usdc"
+                stake = stake_value(pos)
+                at = pos.get("at", now)
+                suffix = f" at {price:.2f} · {stake:.2f} paper"
                 prefix = f"she bet {side} on "
-                self._line("bet.placed", prefix + market[:max(0, 64-len(prefix+suffix))] + suffix,
-                           now, {"bets": 1}, key=key)
-        for pos in book.get("settled_bets", []):
+                self._line("bet.placed", market_line(prefix, market, suffix),
+                           at, {"bets": 1}, key=key, hidden=self.first and at < now - 600)
+        streak_at = None
+        for pos in sorted(book.get("settled_bets", []), key=lambda p: (p.get("at", now), p.get("seq", 0))):
             key = f"settled:{pos.get('id')}:{pos.get('seq')}"
             if not self._fresh("settled", key) or key in self.rows:
                 continue
             market = label(pos, self.cards)
+            at = pos.get("at", now)
+            hidden = self.first and at < now - 600
             pnl = float(pos.get("pnl", (int(pos.get("payout_cents", 0)) - int(pos.get("stake_cents", 0))) / 100))
             sold, won = pos.get("kind") == "sold", pos.get("won", False)
             kind = "sold" if sold else "won" if won else "lost"
-            text = (f"she left {market} early · {pnl:+.2f} paper usdc" if sold else
-                    f"{market} resolved · she {'won' if won else 'lost'} {pnl:+.2f} · {'sugar' if won else 'shock'}")
+            text = (market_line("she left ", market, f" early · {pnl:+.2f} paper") if sold else
+                    market_line("", market, f" resolved · {'won' if won else 'lost'} {pnl:+.2f} · {'sugar' if won else 'shock'}"))
             counts = {kind: 1, "pnl": pnl}
             if not sold:
                 counts["sugar" if won else "shock"] = 1
                 for row in list(self.rows.values()):
-                    if row["kind"] == ("sugar" if won else "shock") and abs(now-row["ts"]) <= 5:
+                    if row["kind"] == ("sugar" if won else "shock") and abs(at-row["ts"]) <= 5:
                         self._line(row["kind"], row["text"], row["ts"], key=row["id"], hidden=True)
-            self._line("bet." + kind, text, now, counts, key=key)
+            self._line("bet." + kind, text, at, counts, key=key, hidden=hidden)
             self.wins = self.wins + 1 if won else 0
-            if self.wins >= 3:
-                self._line("streak", f"{self.wins} wins in a row", now)
+            streak_at = None if hidden else at
+        if self.wins >= 3 and streak_at is not None:
+            self._line("streak", f"{self.wins} wins in a row", streak_at)
+        refused = self.cooldown.get("refused_pending", 0)
         for event in betting.get("events", []):
             if event.get("kind") == "refused" and self._fresh("refused", event.get("seq")):
-                key = f"refused:{int(now // 60)}"
-                n = self.rows.get(key, {}).get("n", 0) + 1
-                self._line("bet.refused", f"the bookie said no {n} times this minute", now, key=key, n=n)
+                refused += 1
+        if refused and now - self.cooldown.get("refused", -float("inf")) >= 300:
+            self._line("bet.refused", f"the bookie said no {refused}× this minute", now, n=refused)
+            self.cooldown["refused"] = now
+            refused = 0
+        self.cooldown["refused_pending"] = refused
         for lesson in betting.get("learning", {}).get("last", []):
             if lesson.get("status") != "delivered" or not lesson.get("sign"):
                 continue
@@ -206,15 +226,18 @@ class Life:
                 continue
             kind = "sugar" if lesson["sign"] > 0 else "shock"
             implied = "bet.won" if kind == "sugar" else "bet.lost"
-            if not any(r["kind"] == implied and abs(now-r["ts"]) <= 5 for r in self.rows.values()):
-                self._line(kind, f"{kind} · {len(lesson.get('eligible', []))} kenyon cells", now, {kind: 1})
+            at = float(lesson.get("at", now))
+            if not any(r["kind"] == implied and abs(at-r["ts"]) <= 5 for r in self.rows.values()):
+                self._line(kind, f"{kind} · {len(lesson.get('eligible', []))} kenyon cells", at, {kind: 1},
+                           hidden=self.first and at < now - 600)
         balance = book.get("balance")
         delta = None
         if balance is not None:
+            equity = balance + sum(stake_value(pos) for pos in book.get("open_bets", []))
             date = stamp(now, "%Y-%m-%d")
             if self.day.get("date") != date:
-                self.day.update(date=date, balance=balance)
-            delta = round(balance - self.day["balance"], 2)
+                self.day.update(date=date, balance=equity)
+            delta = round(equity - self.day["balance"], 2)
             if self.high is not None and balance > self.high:
                 self._line("balance.high", f"new paper high · {balance:.2f} usdc", now)
             self.high = max(balance, self.high if self.high is not None else balance)
@@ -229,6 +252,8 @@ class Life:
         if self.quiet is not None and now - self.quiet >= 60 and now - self.cooldown.get("quiet", -float("inf")) >= 600:
             self._line("brain.quiet", f"quiet brain · {int((now-self.quiet)//60)} min under 1 spikes/s", now)
             self.cooldown["quiet"] = now
+        self.first = False
+        self.rows = {k: r for k, r in self.rows.items() if now - 3600 < r["ts"] <= now}
         hour = {k: round(sum(r["counts"].get(k, 0) for r in self.rows.values()), 2) for k in COUNTS}
         recent = {k: sum(r["counts"].get(k, 0) for r in self.rows.values() if r["ts"] > now-600)
                   for k in ("sugar", "shock")}
@@ -258,4 +283,4 @@ class Life:
         return dict(since=self.since, who=list(WHO), now=dict(room=room, doing=doing[:48], spikes=spikes,
                     turn="left" if turn > 20 else "right" if turn < -20 else "straight",
                     sugar_10m=recent["sugar"], shock_10m=recent["shock"], balance=balance, today_delta=delta),
-                    hour=hour, feed=[{k: r[k] for k in ("at", "kind", "text")} for r in feed])
+                    hour=hour, feed=[dict(at=r["at"], kind=r["kind"], text=r["text"][:FEED_LIMIT]) for r in feed])
