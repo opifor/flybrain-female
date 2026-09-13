@@ -33,8 +33,10 @@ def pages():
 .card{align-self:center;justify-self:center;padding:22px;border-color:#aaaaaa}
 .name{font-size:22px;line-height:1.4;overflow-wrap:anywhere}
 body.tiproom .name{font-size:18px}
-body.musicroom .grid{grid-template-columns:repeat(3,368px);grid-auto-rows:300px}
-body.musicroom .card{width:100%;height:100%}
+body.musicroom .grid{grid-template-columns:repeat(4,280px);grid-auto-rows:200px;gap:16px}
+body.musicroom .card{width:100%;height:100%;padding:14px}
+body.musicroom .name{font-size:20px;line-height:1.3}
+body.musicroom .detail{margin-top:12px;line-height:1.3;overflow-wrap:anywhere}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
 body.hall .grid{grid-template-columns:repeat(2,568px);grid-auto-rows:600px}
 body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:42px}

@@ -29,7 +29,7 @@ def test_room_screen_bands(room_origin, room, tmp_path):
     cards = [dict(token=f"card-{i}", name=f"Track {i}", artist="River", license="CC BY 3.0",
                   duration=60, market_id=f"card-{i}", slot=i, shelf="fast", question=f"Question {i}?",
                   end_at=time.time() + 900, yes_price=0.5, category="other",
-                  room={"commit_means": "enter the room"}) for i in range(2 if room == "hall" else 6)]
+                  room={"commit_means": "enter the room"}) for i in range(2 if room == "hall" else 12 if room == "musicroom" else 6)]
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 800})
@@ -60,6 +60,18 @@ def test_room_screen_bands(room_origin, room, tmp_path):
         else:
             expect(page.locator(".door")).to_have_count(0)
         if room == "musicroom":
+            expected_cards = [dict(x=56 + i % 4 * 296, y=48 + i // 4 * 216, w=280, h=200) for i in range(12)]
+            assert boxes == expected_cards
+            from test_musicroom import room_at
+            music = room_at(tmp_path, [1700000000.0])
+            music._last_rects = page.evaluate(RECTS_JS)
+            assert {token: rect for token, rect in music.state()["rects"].items() if token != "/hall"} == {
+                card["token"]: box for card, box in zip(cards, expected_cards)}
+            for i, card in enumerate(cards):
+                node = page.locator(".card").nth(i)
+                expect(node.locator(".name")).to_have_text(card["name"])
+                expect(node.locator(".detail")).to_have_text("River / CC BY 3.0 / 60 seconds")
+                assert node.evaluate("n => n.scrollHeight <= n.clientHeight && n.scrollWidth <= n.clientWidth")
             expect(page.locator("#status")).to_have_text("now playing: nothing")
             expect(page.locator("#status audio")).to_be_hidden()
             assert page.locator("audio").evaluate("a => !a.controls")

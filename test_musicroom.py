@@ -47,19 +47,34 @@ def reactions(ex, now, *rows):
             stream.write(json.dumps({"at": now[0], "track_id": "111", "kind": "sugar", "who": "listener", **row}) + "\n")
 
 
-def test_declaration_and_hourly_six_card_board(tmp_path, now):
+def test_declaration_and_hourly_board(tmp_path, now):
     registry = Registry()
     registry.register(musicroom.DECLARATION, "http://127.0.0.1:4674")
     room = room_at(tmp_path, now)
     room.refresh_board(force=True)
     first = room.board()["cards"]
-    assert len(first) == 6 and [c["slot"] for c in first] == list(range(6))
+    assert len(first) == 3 and [c["slot"] for c in first] == list(range(3))
     assert all(c["license"].startswith("CC") and c["room"]["path"] == "/musicroom" for c in first)
     assert room.board_source()() == first
     now[0] += 3600
     second = room.board_source()()
     assert [c["token"] for c in second] == [c["token"] for c in first[1:] + first[:1]]
     assert set(registry.rooms) == {"/musicroom"}
+
+
+@pytest.mark.parametrize("count", [0, 1, 2, 6, 8, 11, 12, 13, 25])
+def test_twelve_slots_rotate_without_repeating_tracks(tmp_path, now, count):
+    rows = [{**musicroom.catalogue(CATALOGUE)[0], "id": str(i)} for i in range(count)]
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps(rows), encoding="utf-8")
+    room = room_at(tmp_path, now)
+    room.catalogue_path = path
+    for hour in (0, 1, max(0, count - 1), count, count + 1):
+        now[0] = hour * 3600
+        cards = room.board_source()()
+        assert [c["slot"] for c in cards] == list(range(min(12, count)))
+        assert [c["token"] for c in cards] == [str((hour + i) % count) for i in range(min(12, count))]
+        assert len({c["token"] for c in cards}) == len(cards)
 
 
 def test_room_reads_the_public_playback_clock(tmp_path, now):
@@ -254,7 +269,7 @@ def test_registered_routes_use_the_room_catalogue(tmp_path, now, monkeypatch):
     ex = executor(tmp_path, now)
     room = room_at(tmp_path, now)
     monkeypatch.setitem(roam.STATE, "rooms", {"/musicroom": room})
-    assert len(roam.musicroom_board()["cards"]) == 6
+    assert len(roam.musicroom_board()["cards"]) == 3
     assert roam.musicroom_public()["now_playing"] is None
     ex.intent(body(now))
     assert roam.musicroom_public()["now_playing"]["track_id"] == "111"
@@ -281,7 +296,7 @@ def test_registration_connects_the_ear_and_music_door(tmp_path, now, monkeypatch
     assert music.executor_url == "http://127.0.0.1:4674"
     doors = roam.STATE["hall"].registry.healthy(Health())
     assert [d["path"] for d in doors] == ["/betroom", "/tiproom", "/musicroom"]
-    assert len(music.board_source()()) == 6
+    assert len(music.board_source()()) == 3
 
 
 def test_public_history_keeps_forty_plays_and_natural_end_times(tmp_path, now):

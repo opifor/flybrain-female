@@ -13,7 +13,7 @@ DECLARATION = Declaration(
            "refresh_seconds": 60},
     commit_means="she plays the track on the card she settled on",
     reward_source="Listener reactions supply sugar and shock in her record; they will reach her through the stream chat later. The rooms are paper for now; the plan is to take them on-chain.",
-    chosen=["People choose the catalogue search terms, the ninety-second minimum and the six-card board.",
+    chosen=["People choose the catalogue search terms, the ninety-second minimum and the twelve-card board.",
             "a six-minute room clock and a door in every room",
             "beta · v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming."],
     measured=["The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.",
@@ -57,7 +57,7 @@ class Room(RoomWalk):
             return [{**rows[(start + slot) % len(rows)],
                      "token": rows[(start + slot) % len(rows)]["id"],
                      "name": rows[(start + slot) % len(rows)]["title"],
-                     "slot": slot, "room": DECLARATION.public()} for slot in range(6)]
+                     "slot": slot, "room": DECLARATION.public()} for slot in range(12) if slot < len(rows)]
         return fetch
 
     def refresh_board(self, force=False):
