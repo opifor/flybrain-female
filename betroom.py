@@ -15,7 +15,7 @@ DECLARATION = Declaration(
          "her mushroom body remembers whether that smell brought sugar or shock before.",
          "while she stays, the drive it produces is summed; positive means YES, negative means NO, zero means she walks away.",
          "the bookie takes the bet; a resolved win brings sugar and a loss brings shock, and she learns.",
-         "she may leave by the door at the bottom of the room; the house closes a room after six minutes either way."),
+         "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."),
     measured=["Stops and relative drive come from the female brain; this does not establish predictive skill.",
               "nudges: how often the page had to push her out of an empty margin"])
 

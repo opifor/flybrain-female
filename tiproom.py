@@ -22,7 +22,7 @@ DECLARATION = Declaration(
          "her stop and drive set the share of free money she tips; either sign tips, zero does not.",
          "the room rounds her tip down to whole cents and refuses tips above its daily or wallet limit.",
          "a recorded practice thank-you brings sugar to the cells from that look; silence brings nothing.",
-         "she may leave by the door at the bottom of the room; the house closes a room after six minutes either way."))
+         "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."))
 
 
 def wallets():

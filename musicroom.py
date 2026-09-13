@@ -24,7 +24,7 @@ DECLARATION = Declaration(
          "she stays with a track for at least ninety seconds and cannot restart it while it is playing.",
          "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.",
          "a listener's sugar or shock teaches the cells recorded when she chose that play.",
-         "she may leave by the door at the bottom of the room; the house closes a room after six minutes either way."))
+         "she may leave by the door on any edge of the room; the house closes a room after six minutes either way."))
 
 
 def catalogue(path=CATALOGUE):
