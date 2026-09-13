@@ -556,7 +556,7 @@ def check_entry(browser, origin, checks, errors):
         assert page.locator('.entry-down').get_attribute('href') == '#live'
         assert page.locator('.film, #story, .step').count() == 0
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
-            'rooms/', 'brain.html', 'story.html', '#ca-text', 'https://kick.com/femalefly']
+            '/rooms/', '/brain.html', '/story.html', '/#ca-text', '/watch.html']
         page.locator('.entry-down').click()
         page.wait_for_function("location.hash === '#live' && Math.abs(document.querySelector('#live').getBoundingClientRect().top) < 2")
         page.evaluate('window.scrollTo(0, 0)')
@@ -614,7 +614,7 @@ def check_story(browser, origin, checks, errors):
         page.goto(origin + '/story.html')
         expect(page.locator('.site-nav')).to_be_visible()
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
-            'rooms/', 'brain.html', 'story.html', 'index.html#ca-text', 'https://kick.com/femalefly']
+            '/rooms/', '/brain.html', '/story.html', '/#ca-text', '/watch.html']
         expect(page.locator('.story-intro h1')).to_have_text('Her Story')
         expect(page.locator('#story .step .no')).to_have_text([f'{i:02}' for i in range(1, 9)])
         expect(page.locator('#launch time')).to_have_text('2026-09-11 17:19 UTC')

@@ -36,8 +36,8 @@ def generate(destination=WEB / 'rooms'):
 <link rel="icon" href="/fly.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Archivo:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
 <style>{css}</style></head><body>
-<header><a href="./">Female Flybrain · Her Rooms</a><nav aria-label="Main">
-<a href="rooms/">rooms</a><a href="./#live">brain</a><a href="./#story">story</a><a href="./#ca-text">$HER</a><a href="https://kick.com/femalefly">watch</a></nav></header>
+<header><a href="/">Female Flybrain · Her Rooms</a><nav aria-label="Main">
+<a href="/rooms/">rooms</a><a href="/brain.html">brain</a><a href="/story.html">story</a><a href="/#ca-text">$HER</a><a href="/watch.html">watch</a></nav></header>
 <main><span class="paper">paper</span><h1>{escape(title)}</h1><p class="lede">{LEDE}</p>{body}</main>
 {'<script src="show.js"></script>' if arena else ''}<script>{script}</script></body></html>
 '''
