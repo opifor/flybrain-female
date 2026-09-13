@@ -27,9 +27,9 @@ def room_origin():
 @pytest.mark.parametrize("room", ["betroom", "musicroom", "tiproom", "hall"])
 def test_room_screen_bands(room_origin, room, tmp_path):
     cards = [dict(token=f"card-{i}", name=f"Track {i}", artist="River", license="CC BY 3.0",
-                  duration=60, market_id=f"card-{i}", slot=i, shelf="fast", question=f"Question {i}?",
+                  path="/musicroom", preview=f"Preview {i}", duration=60, market_id=f"card-{i}", slot=i, shelf="fast", question=f"Question {i}?",
                   end_at=time.time() + 900, yes_price=0.5, category="other",
-                  room={"commit_means": "enter the room"}) for i in range(2 if room == "hall" else 12 if room == "musicroom" else 6)]
+                  room={"commit_means": "enter the room"}) for i in range(12 if room in ("hall", "musicroom") else 6)]
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 800})
@@ -58,7 +58,9 @@ def test_room_screen_bands(room_origin, room, tmp_path):
                     assert (box["x"] + box["w"] <= door["x"] or door["x"] + door["w"] <= box["x"] or
                             box["y"] + box["h"] <= door["y"] or door["y"] + door["h"] <= box["y"])
         else:
-            expect(page.locator(".door")).to_have_count(0)
+            expect(page.locator(".door")).to_have_count(4)
+            assert boxes == [dict(x=56 + i % 4 * 300, y=48 + i // 4 * 216, w=268, h=200) for i in range(12)]
+            expect(page.locator(".detail")).to_have_text([f"Preview {i}" for i in range(12)])
         if room == "musicroom":
             expected_cards = [dict(x=56 + i % 4 * 296, y=48 + i // 4 * 216, w=280, h=200) for i in range(12)]
             assert boxes == expected_cards
@@ -81,6 +83,13 @@ def test_room_screen_bands(room_origin, room, tmp_path):
             expect(page.locator("#status")).to_have_text("now playing: <b>Rain</b> · River · CC BY 3.0")
             assert page.locator("#status b").count() == 0
         if room == "hall":
-            expect(page.locator("#status")).to_have_text("door order: Track 0 · Track 1")
+            expect(page.locator("#status")).to_have_text("door order: " + " · ".join(f"Track {i}" for i in range(12)))
+            from test_rooms import make_room, registry, Health
+            import hall
+            hallway = make_room(hall.Hall, tmp_path, registry=registry(), http=Health(), fetch_board=lambda: cards)
+            hallway.refresh_board(force=True)
+            hallway._last_rects = page.evaluate(RECTS_JS)
+            assert hallway.state()['rects'] == {card['token']: box for card, box in zip(cards, boxes)}
+            assert page.locator('.door').evaluate_all("nodes => nodes.map(n => {const r=n.getBoundingClientRect(); return [r.x,r.y,r.width,r.height];})") == [[0, 0, 1280, 40], [0, 760, 1280, 40], [0, 0, 48, 800], [1232, 0, 48, 800]]
         page.screenshot(path=str(tmp_path / f"{room}.png"))
         browser.close()

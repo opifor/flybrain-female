@@ -14,8 +14,9 @@ def page(declaration, cards, style, script):
     text = (WEB / "room.html").read_text(encoding="utf-8")
     values = {"title": declaration.name, "declaration": json.dumps(declaration.public()).replace("<", "\\u003c"),
               "cards": cards, "style": style, "script": script,
-              "door": '' if declaration.path == "/hall" else
-                      '\n'.join(f'<div id="door-{edge}" class="door {edge}" data-token="/hall">'
+              "door":
+                      '\n'.join(f'<div id="door-{edge}" class="door {edge}"'
+                                + ('' if declaration.path == '/hall' else ' data-token="/hall"') + '>'
                                 f'{"the hall" if edge in ("top", "bottom") else ""}</div>'
                                 for edge in ("top", "bottom", "left", "right"))}
     for key, value in values.items():
@@ -38,9 +39,10 @@ body.musicroom .card{width:100%;height:100%;padding:14px}
 body.musicroom .name{font-size:20px;line-height:1.3}
 body.musicroom .detail{margin-top:12px;line-height:1.3;overflow-wrap:anywhere}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
-body.hall .grid{grid-template-columns:repeat(2,568px);grid-auto-rows:600px}
-body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:42px}
-body.hall .name{font-size:42px;margin-top:120px}
+body.hall .grid{grid-template-columns:repeat(4,268px);grid-auto-rows:200px;column-gap:32px;row-gap:16px}
+body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:16px}
+body.hall .name{font-size:20px;margin-top:0}
+body.hall .detail{font-size:18px;line-height:1.3;margin-top:12px}
 body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 """
     return {"betroom": betting,

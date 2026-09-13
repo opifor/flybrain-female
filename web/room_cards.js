@@ -29,7 +29,7 @@ function drawCards(cards) {
     name.textContent = card.address ? card.address.slice(0, 4) + '...' + card.address.slice(-4) : card.name;
     if (card.address) node.title = card.address;
     const detail = document.createElement('div'); detail.className = 'detail';
-    detail.textContent = roomData.path === '/musicroom' ?
+    detail.textContent = roomData.path === '/hall' ? (card.preview || '') : roomData.path === '/musicroom' ?
       card.artist + ' / ' + card.license + ' / ' + Math.round(card.duration) + ' seconds' :
       card.holding_days != null ? card.holding_days + ' days held / fixture' : card.room.commit_means;
     node.append(name, detail); return node;

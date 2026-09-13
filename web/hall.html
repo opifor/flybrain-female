@@ -33,9 +33,10 @@ body.musicroom .card{width:100%;height:100%;padding:14px}
 body.musicroom .name{font-size:20px;line-height:1.3}
 body.musicroom .detail{margin-top:12px;line-height:1.3;overflow-wrap:anywhere}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
-body.hall .grid{grid-template-columns:repeat(2,568px);grid-auto-rows:600px}
-body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:42px}
-body.hall .name{font-size:42px;margin-top:120px}
+body.hall .grid{grid-template-columns:repeat(4,268px);grid-auto-rows:200px;column-gap:32px;row-gap:16px}
+body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:16px}
+body.hall .name{font-size:20px;margin-top:0}
+body.hall .detail{font-size:18px;line-height:1.3;margin-top:12px}
 body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 
 </style>
@@ -44,10 +45,13 @@ body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 <main id="room">
 <div id="cards" class="grid"></div>
 <div id="status" role="status"></div>
-
+<div id="door-top" class="door top">the hall</div>
+<div id="door-bottom" class="door bottom">the hall</div>
+<div id="door-left" class="door left"></div>
+<div id="door-right" class="door right"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "the hall", "path": "/hall", "cards": {"source": "rooms whose doors are ready to open", "refresh_seconds": 2}, "commit_means": "she enters that room", "reward_source": "The hall brings no sugar or shock; each room says where its own sugar and shock come from.", "chosen": ["The doors are the rooms people built. Which one she walks into is her stop.", "door order rotates every visit so no door owns the left", "The rooms are paper for now; the plan is to take them on-chain."], "measured": ["She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.", "The page counts how often it pushes her out of an empty margin."], "how": ["door order rotates every visit so no door owns the left.", "she needs readings from another door before a stop can open this one.", "entering a room brings her to that room's cards.", "every room leads back here, by her door or by the clock."]}</script>
+<script id="room-declaration" type="application/json">{"name": "the hall", "path": "/hall", "cards": {"source": "rooms whose doors are ready to open", "refresh_seconds": 2}, "commit_means": "she enters that room", "reward_source": "The hall brings no sugar or shock; each room says where its own sugar and shock come from.", "chosen": ["The doors are the rooms people built. Which one she walks into is her stop.", "twelve doors, shuffled every visit, six per room when two rooms are healthy", "The rooms are paper for now; the plan is to take them on-chain."], "measured": ["She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.", "The page counts how often it pushes her out of an empty margin."], "how": ["twelve doors, shuffled every visit, six per room when two rooms are healthy.", "she needs readings from another door before a stop can open this one.", "entering a room brings her to that room's cards.", "every room leads back here, by her door or by the clock."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);
@@ -80,7 +84,7 @@ function drawCards(cards) {
     name.textContent = card.address ? card.address.slice(0, 4) + '...' + card.address.slice(-4) : card.name;
     if (card.address) node.title = card.address;
     const detail = document.createElement('div'); detail.className = 'detail';
-    detail.textContent = roomData.path === '/musicroom' ?
+    detail.textContent = roomData.path === '/hall' ? (card.preview || '') : roomData.path === '/musicroom' ?
       card.artist + ' / ' + card.license + ' / ' + Math.round(card.duration) + ' seconds' :
       card.holding_days != null ? card.holding_days + ' days held / fixture' : card.room.commit_means;
     node.append(name, detail); return node;

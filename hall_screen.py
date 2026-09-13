@@ -94,13 +94,15 @@ async def session(args):
                 page = await browser.new_page(viewport={"width": 1280, "height": 800})
                 origin = f"http://127.0.0.1:{web.server_address[1]}"
                 await page.goto(origin + "/hall")
-                await page.wait_for_function("document.querySelectorAll('[data-token]').length === 2")
+                await page.wait_for_function("document.querySelectorAll('[data-token]').length === 12")
                 await room.enter(page)
                 rects = await room._rects(page)
-                assert len(rects) == 2
+                assert len(rects) == 12
                 raw = await page.screenshot(path=str(args.screenshot_prefix) + "-hall.png")
                 img = np.asarray(Image.open(io.BytesIO(raw)).convert("L"), dtype=np.float32) / 255
-                for seed, rect in enumerate((rects[1], rects[0], rects[0]), 1):
+                target = next(r for r in rects if r["token"].startswith("/betroom#"))
+                other = next(r for r in rects if r["token"] != target["token"])
+                for seed, rect in enumerate((other, target, target), 1):
                     await room.step(page, img, rect["x"] + rect["w"] / 2, rect["y"] + rect["h"] / 2, seed)
                     if seed < 3:
                         assert room.destination is None

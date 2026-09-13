@@ -2,6 +2,7 @@
 import asyncio
 from dataclasses import replace
 import json
+import random
 import os
 from pathlib import Path
 import subprocess
@@ -179,26 +180,27 @@ def test_hall_hides_an_executor_that_does_not_answer(tmp_path):
     http = Health()
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=http)
     room.refresh_board(force=True)
-    assert [c["path"] for c in room.board()["cards"]] == ["/betroom", "/tiproom"]
+    assert {c["path"] for c in room.board()["cards"]} == {"/betroom", "/tiproom"}
     http.bad.add("http://127.0.0.1:4673/health")
     room.refresh_board(force=True)
-    assert [c["path"] for c in room.board()["cards"]] == ["/betroom"]
-    assert room.state()["doors"] == [{"name": "the betting room", "path": "/betroom"}]
+    assert [c["path"] for c in room.board()["cards"]] == ["/betroom"] * 12
+    assert room.state()["doors"] == [{"name": "the betting room", "path": "/betroom", "preview": ""}] * 12
     room.clock = lambda: 1700000005
     assert room.state()["doors"] == []
 
 
-def test_hall_order_rotates_with_visits_and_survives_restart(tmp_path):
+def test_hall_order_shuffles_with_visits_and_survives_restart(tmp_path):
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
     for visit in range(1, 5):
         asyncio.run(room.enter(FakePage([])))
         board = room.board()
-        expected = ["/betroom", "/tiproom"] if visit % 2 else ["/tiproom", "/betroom"]
+        expected = [f"{path}#{i}" for path in ("/betroom", "/tiproom") for i in range(6)]
+        random.Random(visit - 1).shuffle(expected)
         assert board["order_seed"] == visit - 1
         state = room.state()
         assert state["order_seed"] == visit - 1
         names = {"/betroom": "the betting room", "/tiproom": "the tipping room"}
-        assert state["doors"] == [{"name": names[path], "path": path} for path in expected]
+        assert state["doors"] == [{"name": names[token.split("#")[0]], "path": token.split("#")[0], "preview": ""} for token in expected]
         assert [c["token"] for c in board["cards"]] == expected
         assert [c["token"] for c in room.registry.healthy(room.http)] == ["/betroom", "/tiproom"]
         assert [c["token"] for c in room.board()["cards"]] == expected
@@ -209,8 +211,8 @@ def test_hall_order_rotates_with_visits_and_survives_restart(tmp_path):
 def test_margin_escape_replaces_only_the_sixth_motor_output(tmp_path):
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
     room.refresh_board(force=True)
-    page = FakePage([{"token": "/betroom", "x": 400, "y": 400, "w": 100, "h": 100},
-                     {"token": "/tiproom", "x": 100, "y": 200, "w": 100, "h": 100}])
+    page = FakePage([{"token": "/betroom#0", "x": 400, "y": 400, "w": 100, "h": 100},
+                     {"token": "/tiproom#0", "x": 100, "y": 200, "w": 100, "h": 100}])
     room.pilot.click = True
     async def walk():
         for step in range(1, 13):
@@ -231,7 +233,7 @@ def test_margin_escape_replaces_only_the_sixth_motor_output(tmp_path):
 def test_card_and_its_padding_reset_margin_rounds(tmp_path, position):
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
     room.refresh_board(force=True)
-    page = FakePage([{"token": "/betroom", "x": 0, "y": 0, "w": 280, "h": 200}])
+    page = FakePage([{"token": "/betroom#0", "x": 0, "y": 0, "w": 280, "h": 200}])
     async def walk():
         for _ in range(5):
             await room.step(page, IMG, 900, 600, 1)
@@ -259,8 +261,8 @@ def test_unhealthy_replies_leave_no_door(reply):
 def test_door_stop_enters_only_after_two_readings(tmp_path, target):
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
     room.refresh_board(force=True)
-    page = FakePage([{"token": c["path"], "x": i * 300, "y": 0, "w": 280, "h": 200}
-                     for i, c in enumerate(room.board()["cards"])])
+    page = FakePage([{"token": path + "#0", "x": i * 300, "y": 0, "w": 280, "h": 200}
+                     for i, path in enumerate(("/betroom", "/tiproom"))])
     async def walk():
         await room.enter(page)
         x = 100 if target == "/betroom" else 400
@@ -283,7 +285,7 @@ def test_unhealthy_door_cannot_commit_a_stale_card(tmp_path):
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=http)
     room.refresh_board(force=True)
     http.bad.add("http://127.0.0.1:4673/health")
-    room._commit(IMG, 100, 100, 1, {"token": "/tiproom"}, {}, 0.5, None)
+    room._commit(IMG, 100, 100, 1, {"token": "/tiproom#0"}, {}, 0.5, None)
     assert room.destination is None and room.entered == []
 
 

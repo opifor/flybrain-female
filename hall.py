@@ -2,6 +2,7 @@
 from room import Room as RoomWalk, _atomic_write
 from roomkit import Declaration
 import json
+import random
 
 DISCLOSURE = "The doors are the rooms people built. Which one she walks into is her stop."
 DECLARATION = Declaration(
@@ -9,11 +10,11 @@ DECLARATION = Declaration(
     cards={"source": "rooms whose doors are ready to open", "refresh_seconds": 2},
     commit_means="she enters that room",
     reward_source="The hall brings no sugar or shock; each room says where its own sugar and shock come from.",
-    chosen=[DISCLOSURE, "door order rotates every visit so no door owns the left",
+    chosen=[DISCLOSURE, "twelve doors, shuffled every visit, six per room when two rooms are healthy",
             "The rooms are paper for now; the plan is to take them on-chain."],
     measured=["She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.",
               "The page counts how often it pushes her out of an empty margin."],
-    how=("door order rotates every visit so no door owns the left.",
+    how=("twelve doors, shuffled every visit, six per room when two rooms are healthy.",
          "she needs readings from another door before a stop can open this one.",
          "entering a room brings her to that room's cards.",
          "every room leads back here, by her door or by the clock."))
@@ -33,15 +34,43 @@ class Hall(RoomWalk):
             self.entered = json.loads(self.public.read_text(encoding="utf-8")).get("events", [])
 
     def board_source(self):
-        return lambda: self.registry.healthy(self.http)
+        def fetch():
+            rooms = self.registry.healthy(self.http)
+            cards = []
+            for position, door in enumerate(rooms):
+                count = 12 // len(rooms) + (position < 12 % len(rooms))
+                previews = []
+                try:
+                    saved = json.loads((self.dir.parent / door["path"].strip("/") / "room.json").read_text(encoding="utf-8"))
+                    for item in saved["cards"]:
+                        if not isinstance(item, dict):
+                            continue
+                        if item.get("end_at", float("inf")) <= self._now():
+                            continue
+                        preview = (" / ".join(str(item[k]) for k in ("title", "artist") if item.get(k))
+                                   if door["path"] == "/musicroom" else item.get("question", ""))
+                        if isinstance(preview, str) and preview and preview not in previews:
+                            previews.append(preview)
+                except (OSError, ValueError, KeyError, TypeError):
+                    pass
+                for index in range(count):
+                    cards.append({**door, "token": f'{door["path"]}#{index}',
+                                  "preview": previews[index % len(previews)] if previews else ""})
+            return cards
+        return fetch
+
+    def remember(self, token, meta):
+        self.meta[token] = dict(meta)
+
+    def smell_of(self, token):
+        preview = self.meta.get(token, {}).get("preview", "")
+        return self.nose.smell(preview) if preview else None
 
     def board(self):
         board = super().board()
         board["order_seed"] = max(0, self.counters["visits"] - 1)
         cards = board["cards"]
-        if cards:
-            offset = board["order_seed"] % len(cards)
-            board["cards"] = cards[offset:] + cards[:offset]
+        random.Random(board["order_seed"]).shuffle(cards)
         if self._now() - board["updated"] > 4:
             board["cards"] = []
         return board
@@ -49,7 +78,8 @@ class Hall(RoomWalk):
     def _commit(self, img, cx, cy, seed, card, dwell, drive, smell):
         if self.destination is not None:
             return
-        doors = self.registry.healthy(self.http)
+        healthy = {d["path"] for d in self.registry.healthy(self.http)}
+        doors = [d for d in self.board()["cards"] if d["path"] in healthy]
         door = next((d for d in doors if d["token"] == card["token"]), None)
         if door is None:
             return
@@ -58,8 +88,7 @@ class Hall(RoomWalk):
         if drive is None:
             self._note_intent(self._now(), card["token"], "none", None, "no reference",
                               "the fly has looked at no other card in this visit")
-            # Two blind stops on the same door: the hall walks her to a door she
-            # has not looked at, so the choice is made between doors, not by habit.
+            # Two blind stops lead her toward a card she has not seen.
             self._blind += 1
             if self._blind >= 2:
                 unseen = [d["token"] for d in doors
@@ -80,6 +109,7 @@ class Hall(RoomWalk):
 
     async def enter(self, page):
         self.destination = None
+        self._blind = 0
         await super().enter(page)
 
     def poll_events(self):
@@ -88,5 +118,5 @@ class Hall(RoomWalk):
     def state(self):
         board = self.board()
         return {**super().state(), "events": self.entered,
-                "doors": [{"name": card["name"], "path": card["path"]} for card in board["cards"]],
+                "doors": [{key: card[key] for key in ("name", "path", "preview")} for card in board["cards"]],
                 "order_seed": board["order_seed"]}
