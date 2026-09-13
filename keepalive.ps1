@@ -23,7 +23,27 @@ function note($m) {
 }
 
 note "keepalive up"
+
+# The betting room's bookie and the roamer share one secret for the life of
+# this boot. It is minted here, handed to both as an environment variable,
+# and written nowhere. The bookie is paper only; it listens on loopback.
+$bytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+$env:FLY_INTENT_TOKEN = [System.BitConverter]::ToString($bytes).Replace("-", "").ToLower()
+
+function start-bookie {
+  note "starting bookie.py"
+  return Start-Process -FilePath $py -ArgumentList "bookie.py" -WorkingDirectory $root -PassThru -WindowStyle Hidden `
+       -RedirectStandardOutput (Join-Path $root "buildookie.out.log") `
+       -RedirectStandardError (Join-Path $root "buildookie.err.log")
+}
+
+$b = start-bookie
 while ($true) {
+  if ($b.HasExited) {
+    note ("bookie.py exited with " + $b.ExitCode)
+    $b = start-bookie
+  }
   note "starting roam.py"
   $p = Start-Process -FilePath $py -ArgumentList "roam.py" -WorkingDirectory $root -PassThru -WindowStyle Hidden `
        -RedirectStandardOutput (Join-Path $root "build\roam.out.log") `
