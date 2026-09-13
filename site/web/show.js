@@ -105,6 +105,7 @@
     let timer, raf, destroyed = false, lastTime = performance.now(), lastPoll = 0, imageReady = false;
     const whoStart = performance.now();
     let feed = [], previousFeed = [], feedAt = 0;
+    let gazeKey = null, gazeProgress = 0, gazeDrive = 0, intentKey, decision = null;
     const seen = new Set(), cards = new Map(), records = new Map(), listeners = new Set();
     img.onload = () => {
       imageReady = true; sample.width = img.naturalWidth; sample.height = img.naturalHeight;
@@ -136,6 +137,13 @@
       if (!live) { trail = []; moments = []; return; }
       if (d.cursor) { target = {x:clamp(number(d.cursor.x)) * 1280, y:clamp(number(d.cursor.y)) * 800}; if (!cursor) cursor = {...target}; }
       for (const c of d.betting?.cards || []) cards.set(String(c.market_id), c);
+      const intent = d.betting?.last_intent;
+      const nextIntent = intent ? `${intent.at}:${intent.token}` : null;
+      if (nextIntent && nextIntent !== intentKey) {
+        // A saved receipt should not stamp again when someone joins the stream.
+        if (intentKey !== undefined) decision = {...intent, side:String(intent.side).toLowerCase(), started:now};
+        intentKey = nextIntent;
+      } else if (intentKey === undefined) intentKey = null;
       for (const e of [...(d.betroom?.open_bets || []), ...(d.betroom?.settled_bets || [])]) records.set(String(e.id ?? e.look_id), e);
       if (d.seq !== sequence || !imageReady) { sequence = d.seq; img.src = origin + '/frame.jpg?s=' + encodeURIComponent(d.seq); }
       const events = [...(d.betting?.events || []), ...(d.betting?.learning?.last || []).filter(e => e.status === 'delivered' && e.sign !== 0).map(e => ({...e, kind:e.sign > 0 ? 'sugar' : 'shock'}))];
@@ -284,6 +292,51 @@
       text('paper room · no real bets ·', 664, 997, 592);
       text(`femaleflybrain.com · UTC ${new Date().toISOString().slice(11, 19)}`, 664, 1031, 592);
     }
+    function drawGaze(now, dt) {
+      if (!state.betting?.in_room) return;
+      const gaze = state.betting.gaze;
+      const currentKey = gaze ? `${gaze.token}:${gaze.since}` : null;
+      if (currentKey !== gazeKey) { gazeKey = currentKey; gazeProgress = 0; gazeDrive = 0; }
+      const ease = 1 - Math.exp(-dt * 12);
+      function ring(r, progress) {
+        g.strokeStyle = '#ff79b0'; g.lineWidth = 2;
+        g.beginPath(); g.arc(r.x + 26, r.y + 44, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); g.stroke();
+      }
+      if (gaze) {
+        gazeProgress += (clamp(number(gaze.steps) / Math.max(1, number(gaze.needed))) - gazeProgress) * ease;
+        gazeDrive += (clamp(number(gaze.drive), -1, 1) - gazeDrive) * ease;
+        const r = rect({market_id:gaze.token});
+        if (r) {
+          ring(r, gazeProgress);
+          const y = r.y + 264, left = r.x + 66, right = r.x + r.w - 70;
+          const leaning = gaze.drive != null && Math.abs(number(gaze.drive)) >= 0.02;
+          g.save(); g.fillStyle = '#181b20'; g.fillRect(r.x + 12, y - 22, r.w - 24, 64);
+          g.font = '20px ui-monospace,monospace';
+          g.fillStyle = leaning && gaze.drive < 0 ? '#e9edf3' : '#818a97'; g.fillText('NO', r.x + 18, y);
+          g.fillStyle = leaning && gaze.drive > 0 ? '#e9edf3' : '#818a97'; g.fillText('YES', right + 14, y);
+          g.strokeStyle = '#818a97'; g.lineWidth = 1; g.beginPath(); g.moveTo(left, y - 6); g.lineTo(right, y - 6); g.stroke();
+          g.fillStyle = leaning ? '#e9c987' : '#818a97'; ellipse(left + (gazeDrive + 1) / 2 * (right - left), y - 6, 4, 4);
+          g.font = '18px ui-sans-serif,system-ui,sans-serif'; g.fillStyle = '#818a97';
+          const words = (gaze.smell || []).slice(0, 6);
+          g.fillText(words.length ? `smells like: ${words.join(' · ')}` : 'smells like nothing she knows', r.x + 18, y + 30, r.w - 36);
+          g.restore();
+        }
+      }
+      if (!decision || now - decision.started >= 1200) return;
+      const r = rect({market_id:decision.token}), age = now - decision.started;
+      if (!r || !['yes', 'no'].includes(decision.side)) return;
+      g.save();
+      if (decision.status === 'booked') {
+        if (age < 600) ring(r, 1);
+        g.globalAlpha *= clamp((1200 - age) / 500);
+        g.translate(r.x + r.w / 2, r.y + 142); g.rotate(-8 * Math.PI / 180);
+        g.textAlign = 'center'; g.font = 'bold 72px ui-sans-serif,system-ui,sans-serif';
+        g.fillStyle = decision.side === 'yes' ? '#ff79b0' : '#8b93a1'; g.fillText(decision.side.toUpperCase(), 0, 0);
+      } else {
+        g.fillStyle = '#818a97'; g.font = '18px ui-monospace,monospace'; g.fillText('refused', r.x + 18, r.y + 320);
+      }
+      g.restore();
+    }
     function draw(now) {
       if (destroyed) return;
       const dt = Math.min(0.1, (now - lastTime) / 1000); lastTime = now;
@@ -350,6 +403,7 @@
           g.fillStyle = '#e9edf3'; g.font = '20px ui-monospace,monospace';
           g.fillText(entry.text, 40, 50);
         }
+        drawGaze(now, dt);
         if (retina) drawRetina();
       }
       g.restore();

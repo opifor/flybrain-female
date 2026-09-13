@@ -21,11 +21,11 @@ def test_bookie_health_failure_clears_the_live_claim():
 
 def test_room_presence_and_health_are_separate():
     room = SimpleNamespace(in_room=False, bookie_status={"at": 100, "ok": True},
-                           public_events=[], state=lambda: {"learning": {"last": []}},
+                           public_events=[], last_intents=[], state=lambda: {"learning": {"last": []}, "gaze": None},
                            board=lambda: {"cards": [{"market_id": "market", "slot": 2}]})
     with patch.dict(roam.STATE, room=room):
         assert roam.betting_status() == {"in_room": False, "bookie": room.bookie_status,
-                                          "events": [], "learning": {"last": []},
+                                          "events": [], "learning": {"last": []}, "gaze": None, "last_intent": None,
                                           "cards": [{"market_id": "market", "slot": 2}]}
     with patch.dict(roam.STATE, room=None):
         assert roam.betting_status()["bookie"]["ok"] is False

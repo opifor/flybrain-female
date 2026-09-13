@@ -24,6 +24,9 @@ CARDS = [dict(market_id=str(i), shelf='fast', slot=i, end_at=time.time() + 3600,
     ('Solana Up or Down - next 15 minutes', .47),
     ('XRP Up or Down - next 15 minutes', .51)])]
 DATA = {'events': [], 'learning': [], 'open': [], 'settled': [], 'live': True, 'cards': CARDS}
+DATA['gaze'] = dict(token='0', steps=1, needed=2, drive=.35, side='yes',
+                    smell=['earth', 'rain'], since=time.time(), blind=0)
+DATA['last_intent'] = dict(token='0', side='YES', drive=.35, at=time.time(), status='booked', reason=None)
 FRAME = b''
 SEQ = 0
 START = time.monotonic()
@@ -55,6 +58,7 @@ def fixture():
                 betroom=dict(balance=104.2, win_count=1, loss_count=0,
                              open_bets=DATA['open'], settled_bets=DATA['settled']),
                 betting=dict(in_room=True, bookie=dict(ok=True, at=time.time()), cards=DATA['cards'],
+                             gaze=DATA['gaze'], last_intent=DATA['last_intent'],
                              events=DATA['events'], learning=dict(last=DATA['learning'])))
 
 
@@ -106,6 +110,41 @@ INSTRUMENT = """(() => {
     };
   }
 })();"""
+
+
+def check_gaze(page, checks):
+    labels = "['NO','YES','smells like: earth · rain'].every(t => window.ink.some(e => e.method === 'fillText' && e.args[0] === t))"
+    arc = "e.method === 'arc' && e.args[0] === 82 && e.args[1] === 92 && e.args[2] === 30 && e.stroke === '#ff79b0'"
+    stamp = "e.method === 'fillText' && e.args[0] === 'YES' && e.font.startsWith('bold 72px')"
+    page.wait_for_function(labels)
+    page.wait_for_function(f"window.ink.some(e => {arc} && e.args[4] > -Math.PI / 2 && e.args[4] < Math.PI / 2)")
+    assert not page.evaluate(f"window.ink.some(e => {stamp})")
+    DATA['last_intent'] = {**DATA['last_intent'], 'at': time.time() + 1}
+    page.evaluate('window.ink = []')
+    page.wait_for_function(f"window.ink.some(e => {stamp} && e.alpha === 1)")
+    page.wait_for_function(f"window.ink.some(e => {arc} && e.args[4] === Math.PI * 1.5)")
+    page.screenshot(path=str(STREAM_FRAME.with_name('gaze_frame.png')))
+    page.wait_for_timeout(1250)
+    page.evaluate('window.ink = []')
+    page.wait_for_function(labels)
+    assert not page.evaluate(f"window.ink.some(e => {stamp})")
+    for status in ['refused', 'unreachable']:
+        DATA['last_intent'] = {**DATA['last_intent'], 'at': DATA['last_intent']['at'] + 1, 'status': status}
+        page.evaluate('window.ink = []')
+        page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'refused')")
+        assert not page.evaluate(f"window.ink.some(e => {stamp})")
+    gaze = DATA['gaze']
+    DATA['gaze'] = None
+    DATA['last_intent'] = {**DATA['last_intent'], 'at': DATA['last_intent']['at'] + 1, 'side': 'none'}
+    page.wait_for_function('window.received?.betting.gaze === null && window.received?.betting.last_intent.side === "none"')
+    page.evaluate('window.ink = []')
+    page.wait_for_timeout(100)
+    assert not page.evaluate(f"window.ink.some(e => {arc})")
+    assert not page.evaluate("window.ink.some(e => e.method === 'fillText' && (e.args[0].startsWith('smells like') || e.args[0] === 'NONE'))")
+    DATA['gaze'] = {**gaze, 'drive': None, 'side': 'none', 'smell': []}
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'smells like nothing she knows')")
+    DATA['gaze'] = gaze
+    checks.append('Gaze arc, scale and smell render; only a new booked receipt stamps; refusals, silence and empty smells stay distinct.')
 
 
 def check_broadcast(page, checks, errors):
@@ -201,6 +240,7 @@ def capture(port):
         page.goto(origin + '/show.html?relay=' + origin)
         page.wait_for_function("document.querySelector('img').naturalWidth === 1280")
         page.evaluate("() => { window.paperShow.onState(d => window.received = d); }")
+        check_gaze(page, checks)
         check_broadcast(page, checks, errors)
         page.evaluate("() => { const container = document.querySelector('canvas').parentElement; window.paperShow.destroy(); window.soundContexts = []; window.notes = []; window.ink = []; window.paperShow = window.mountShow(container, {audio:true}); window.paperShow.onState(d => window.received = d); }")
         page.get_by_role('button', name='what she sees', exact=True).wait_for(state='visible')
@@ -271,11 +311,13 @@ def capture(port):
 
         for width in [1280,400]:
             panel = browser.new_page(viewport=dict(width=width,height=1000))
+            panel.add_init_script(INSTRUMENT)
             panel.on('pageerror', lambda e: errors.append(str(e)))
             panel.route('https://**/*', lambda route: route.abort())
             panel.goto(origin+'/index.html?relay='+origin+'#betting')
             panel.locator('#bet-stage canvas').wait_for()
             panel.wait_for_function("document.getElementById('bet-frame').naturalWidth===1280")
+            panel.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'smells like: earth · rain')")
             panel.locator('#betting').scroll_into_view_if_needed()
             panel.wait_for_timeout(700)
             assert panel.evaluate('document.documentElement.scrollWidth <= innerWidth'), width

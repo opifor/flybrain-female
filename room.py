@@ -414,7 +414,7 @@ class Room:
             d = {"token": card["token"], "steps": 0, "blind": 0, "A": 0.0, "V": 0.0,
                  "kc": 0, "lean_sum": 0.0,
                  "pairs": 0, "drive_sum": 0.0, "reference": [],
-                 "cursor": None, "mark": None, "card": card}
+                 "cursor": None, "mark": None, "card": card, "since": self._now()}
             self._dwell = d
         d["held"] = card["token"] in self._held      # the book, not the page
         d["card"] = card
@@ -582,7 +582,16 @@ class Room:
     def state(self):
         d = self._dwell
         now = None
+        gaze = None
         if d is not None:
+            drive = self._drive_of(d)
+            smell = self.smell_of(d["token"]) or {}
+            words = [o["why"][5:] for o in smell.get("odorants", [])
+                     if o.get("why", "").startswith("word:")]
+            gaze = {"token": d["token"], "steps": int(d["steps"]), "needed": self.dwell_min,
+                    "drive": drive, "side": "none" if drive is None or abs(drive) < 0.02 else
+                    "yes" if drive > 0 else "no", "smell": list(dict.fromkeys(words))[:6],
+                    "since": d["since"], "blind": int(d["blind"])}
             m = self.meta.get(d["token"]) or {}
             now = {"token": d["token"], "symbol": m.get("symbol") or "",
                    "name": m.get("name") or "", "held": bool(d.get("held")),
@@ -592,7 +601,7 @@ class Room:
                 "commits": c["commits"], "intents": c["intents"], "booked": c["booked"],
                 "refused": c["refused"], "dislikes": c["dislikes"], "busy": c["busy"],
                 "seen": len(self._seen),
-                "now": now, "last_intents": self.last_intents[-10:],
+                "now": now, "gaze": gaze, "last_intents": self.last_intents[-10:],
                 "learning": {"sugar": c["sugar"], "shock": c["shock"],
                              "last": self.last_dopamine[-10:]},
                 "board_size": len(self._board["cards"]),

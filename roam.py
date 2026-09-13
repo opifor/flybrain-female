@@ -555,7 +555,10 @@ def betting_status():
     room = STATE.get("room")
     if room is None:
         return {"in_room": False, "bookie": {"at": 0, "ok": False}}
+    entry = room.last_intents[-1] if room.last_intents else None
     return {"in_room": room.in_room, "bookie": room.bookie_status,
+            "gaze": room.state()["gaze"],
+            "last_intent": {"token": entry["symbol"], **{k: entry[k] for k in ("side", "drive", "at", "status", "reason")}} if entry else None,
             "events": room.public_events, "learning": room.state()["learning"],
             "cards": room.board()["cards"]}
 
