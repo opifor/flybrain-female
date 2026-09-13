@@ -196,6 +196,8 @@ p{max-width:66ch;color:var(--ink);margin:0 0 18px}
   display:block;object-fit:cover;border-radius:2px;border:1px solid var(--line);
   background:#000}
 .step .no{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.step.after-launch .no{grid-column:2}
+@media(max-width:640px){.step.after-launch .no{grid-column:1}}
 .step .what{color:var(--ink);font-weight:500;font-size:16.5px}
 .step .what em{font-style:normal;color:var(--ink-dim);display:block;font-size:15px;margin-top:5px;line-height:1.55}
 .step .tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:500}
@@ -295,9 +297,9 @@ td.num{font-variant-numeric:tabular-nums;color:#eaf4fa}
 
 <section id="story" style="padding-top:44px">
   <div class="wrap">
-    <div class="eyebrow">eight steps</div>
+    <div class="eyebrow">done, now, next</div>
     <h2>How she got here</h2>
-    <p class="lede">From the first fork to her own launch on 11 September 2026.</p>
+    <p class="lede">From the first fork to her own launch, and the rooms she lives in now.</p>
     <div class="path">
       <div class="step done"><img class="thumb" data-scene="0" data-at="first" loading="lazy" width="1280" height="720" alt="Forked"><div class="no">01</div><div class="what">Forked<em>Started from FLYBRAIN's public rig. Three setup bugs fixed and reported upstream.</em></div><div class="tag">done</div></div>
       <div class="step done"><img class="thumb" data-scene="0" data-at="last" loading="lazy" width="1280" height="720" alt="Female connectome loaded"><div class="no">02</div><div class="what">Female connectome loaded<em>139,255 neurons, 3,641,142 signed connections, FlyWire FAFB v783.</em></div><div class="tag">done</div></div>
@@ -306,7 +308,14 @@ td.num{font-variant-numeric:tabular-nums;color:#eaf4fa}
       <div class="step done"><img class="thumb" data-scene="3" data-at="last" loading="lazy" width="1280" height="720" alt="Both eyes"><div class="no">05</div><div class="what">Both eyes<em>783 left and 789 right L1 cells on one shared hex grid, 785 columns per eye.</em></div><div class="tag">done</div></div>
       <div class="step done"><img class="thumb" data-scene="4" data-at="mid" loading="lazy" width="1280" height="720" alt="One constant instead of a training run"><div class="no">06</div><div class="what">One constant instead of a training run<em>Excitatory weights scaled by 0.5 put the steering neurons in the same band as the trained male; click threshold set to 100 Hz for her.</em></div><div class="tag">done</div></div>
       <div class="step done"><img class="thumb" data-scene="5" data-at="last" loading="lazy" width="1280" height="720" alt="Taught the form"><div class="no">07</div><div class="what">Taught the form<em>55 cell-type gains by evolution strategy, 247 evaluations, offline 2 of 3 fields, the same as the male; live on the launchpad she typed the ticker herself, 1 of 3.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="6" data-at="last" loading="lazy" width="1280" height="720" alt="Launched"><div class="no">08</div><div class="what">Launched<em>She launched $HER from her own wallet on the same launchpad, block 60,428,098. <a href="https://www.ponsfamily.com/launchpad/0x1da8a52df87aa12694ef3ba765e2cf99a8135dee">Her token page</a>.</em></div><div class="tag">done</div></div>
+      <div class="step done"><img class="thumb" data-scene="6" data-at="last" loading="lazy" width="1280" height="720" alt="Launched"><div class="no">08</div><div class="what">Launched<em>She launched $HER from her own wallet on the same launchpad, block 60,428,098. <a href="https://www.ponsfamily.com/launchpad/0x1da8a52df87aa12694ef3ba765e2cf99a8135dee">Her token page</a>.</em></div><div class="tag">done · 11 sep</div></div>
+      <div class="step done after-launch"><div class="no">09</div><div class="what">The paper betting room opened<em>She bets paper money on 5- and 15-minute markets. Wins are sugar; losses are shock.</em></div><div class="tag">done</div></div>
+      <div class="step done after-launch"><div class="no">10</div><div class="what">A hall and doors<em>The house got a hall and doors between her rooms.</em></div><div class="tag">done</div></div>
+      <div class="step done after-launch"><div class="no">11</div><div class="what">The music room opened in beta<em>Commons tracks play here; her Johnston organ hears them.</em></div><div class="tag">done</div></div>
+      <div class="step done after-launch"><div class="no">12</div><div class="what">Her Rooms<em>The site became Her Rooms.</em></div><div class="tag">done</div></div>
+      <div class="step now after-launch"><div class="no">13</div><div class="what">Her screen, all day and night<em>She streams her own screen 24/7 at <a href="/show.html">her live screen</a>. The Kick stream is being prepared.</em></div><div class="tag">now</div></div>
+      <div class="step todo after-launch"><div class="no">14</div><div class="what">The tipping room<em>Her wallet, the creator fee, and a surprise sugar-and-shock method for tipping holders.</em></div><div class="tag">next</div></div>
+      <div class="step todo after-launch"><div class="no">15</div><div class="what">More rooms, more ways to listen<em>More rooms are planned, along with listener reactions through chat.</em></div><div class="tag">next</div></div>
     </div>
   </div>
 </section>
@@ -329,7 +338,7 @@ td.num{font-variant-numeric:tabular-nums;color:#eaf4fa}
 <section id="next">
   <div class="wrap">
     <h2>where this is going</h2>
-    <p>The project has turned its own way: <a href="rooms/">a house of rooms</a> she lives in. The aim is to become the first fly streamer on <a href="https://kick.com/femalefly">Kick</a>.</p>
+    <p>Explore <a href="/rooms/">her rooms</a> or watch <a href="/show.html">her own screen, streaming 24/7</a>. More rooms and listener reactions through chat are planned; her <a href="https://kick.com/femalefly">Kick</a> stream is being prepared.</p>
   </div>
 </section>
 </main>

@@ -52,16 +52,23 @@ def build(graph, output):
         readouts += [row('Proboscis motor', int((sub == 'proboscis_motor_neuron').sum()))]
         readouts += [row(t, count('^' + t)) for t in ('KC', 'MBON', 'PAM', 'PPL1')]
         content += group('What we read from her', 'DNa02 steers; DNa01 moves forward; MDN moves back; DNp09 stops. A click means DNp09 reaches click_hz while speed is below 0.25. Proboscis motor cells are recorded as the click readout group, not the trigger. KC → MBON connections change with dopamine; their responses carry learned smell preferences.', readouts)
-        empty = []
-        for name, tp, sp in [
-            ('Taste / gustatory', r'gustatory|^GRN', r'^(bitter|low-salt|sugar/water|taste_peg|water_PN)$|gustatory'),
-            ('Compass EPG', r'^EPG$', r'^EPG$'),
-            ('Clock', r'^(5th-LNv|[sl]-LNv|LNd.*|DN1[a-zA-Z-]*|DN2|DN3)$', r'^(LNv|DN1p|DN3)$'),
-            ('Thermo / hygro', r'thermo|hygro', r'^(cold|cooling|dry|evaporative_cooling|heating|humid|moist)$')]:
+        doors, counting = [], []
+        for name, explanation, tp, sp in [
+            ('taste', 'she has {n} taste cells; nothing on the page tastes of anything yet', r'gustatory|^GRN', r'^(bitter|low-salt|sugar/water|taste_peg|water_PN)$|gustatory'),
+            ('compass', "{n} cells that keep a heading, like a sailor’s compass; no world gives her a heading", r'^EPG$', r'^EPG$'),
+            ('clock', '{n} cells that keep the day; she does not know what time it is', r'^(5th-LNv|[sl]-LNv|LNd.*|DN1[a-zA-Z-]*|DN2|DN3)$', r'^(LNv|DN1p|DN3)$'),
+            ('weather', '{n} cells for warmth and humidity; every room is the same temperature', r'thermo|hygro', r'^(cold|cooling|dry|evaporative_cooling|heating|humid|moist)$')]:
             mask = match(types, tp) | match(sub, sp)
             labels = sorted(set(types[mask]) | set(sub[mask]))
-            empty.append(row(name, int(mask.sum())) + '<li>Matched type <code>' + escape(tp) + '</code> or subclass <code>' + escape(sp) + '</code> (case-insensitive). Labels found: ' + escape(', '.join(v for v in labels if v) or 'none') + '.</li>')
-        content += group('What nobody talks to yet', 'These entrances receive no direct input from us. The rest of the brain is not given extra sensory input either; cells may still receive activity through the connectome. These annotation searches are a map of named groups, not an exhaustive biological census.', empty)
+            cells = int(mask.sum())
+            doors.append(f'<article><h3>{name}</h3><p>{escape(explanation.format(n=f"{cells:,}"))}.</p></article>')
+            counting.append(row(name, cells) + '<li>Matched type <code>' + escape(tp) + '</code> or subclass <code>' + escape(sp) + '</code> (case-insensitive). Labels found: ' + escape(', '.join(v for v in labels if v) or 'none') + '.</li>')
+        content += ('<section id="closed-doors"><h2>What nobody talks to yet</h2>'
+                    '<p>doors in her brain that nothing on our side opens yet</p>'
+                    '<div class="columns">' + ''.join(doors) + '</div>'
+                    '<details><summary>how these were counted</summary>'
+                    '<p>These entrances receive no direct input from us. The rest of the brain is not given extra sensory input either; cells may still receive activity through the connectome. These annotation searches are a map of named groups, not an exhaustive biological census.</p>'
+                    '<ul>' + ''.join(counting) + '</ul></details></section>')
         exc = float(z['exc_scale']) if 'exc_scale' in z else 1.0
         click = float(z['click_hz']) if 'click_hz' in z else 330.0
         drive = float(z['drive_hz']) if 'drive_hz' in z else 180.0

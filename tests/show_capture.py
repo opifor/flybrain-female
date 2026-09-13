@@ -762,7 +762,10 @@ def check_story(browser, origin, checks, errors):
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
             '/rooms/', '/brain.html', '/story.html', '/#ca-text', '/watch.html']
         expect(page.locator('.story-intro h1')).to_have_text('Her Story')
-        expect(page.locator('#story .step .no')).to_have_text([f'{i:02}' for i in range(1, 9)])
+        expect(page.locator('#story .step .no')).to_have_text([f'{i:02}' for i in range(1, 16)])
+        expect(page.locator('#story .step .tag')).to_have_text(['done'] * 7 + ['done · 11 sep'] + ['done'] * 4 + ['now', 'next', 'next'])
+        expect(page.locator('#story .step').nth(7).locator('.what')).to_contain_text('Launched')
+        expect(page.locator('#story .now a')).to_have_attribute('href', '/show.html')
         expect(page.locator('#launch time')).to_have_text('2026-09-11 17:19 UTC')
         expect(page.locator('#launch td')).to_have_text([
             'Female Flybrain (HER)', '0x1da8a52df87aa12694ef3ba765e2cf99a8135dee',
@@ -772,7 +775,7 @@ def check_story(browser, origin, checks, errors):
         expect(page.locator('#comparison h2')).to_have_text('Sister builds')
         assert page.locator('#comparison .cmp-row').count() == 20
         assert page.locator('#next a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
-            'rooms/', 'https://kick.com/femalefly']
+            '/rooms/', '/show.html', 'https://kick.com/femalefly']
         page.wait_for_function('window.__filmFrame === 0')
         page.evaluate("window.scrollTo(0, document.querySelector('#film').offsetTop + (document.querySelector('#film').offsetHeight - innerHeight) * 0.5)")
         page.wait_for_function('window.__filmFrame === Math.round((window.__filmFrames - 1) * 0.5)')
@@ -783,6 +786,10 @@ def check_story(browser, origin, checks, errors):
         page.wait_for_function("[...document.querySelectorAll('#story img')].some(im => im.getAttribute('src')?.startsWith('film/') && im.naturalWidth > 0)")
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         if width == 1280:
+            page.set_viewport_size(dict(width=width, height=2200))
+            page.locator('#story .path').scroll_into_view_if_needed()
+            page.locator('#story .path').screenshot(path=str(SHOTS / 'story_steps.png'), animations='disabled')
+            page.set_viewport_size(dict(width=width, height=1000))
             page.evaluate('window.scrollTo(0, 0)')
             page.wait_for_function('window.__filmFrame === 0')
             page.screenshot(path=str(SHOTS / 'story_1280.png'))
@@ -796,7 +803,7 @@ def check_story(browser, origin, checks, errors):
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         assert not errors, errors
         page.close()
-        checks.append(f'Story at {width}px: navigation, eight steps, launch receipt, forward and reverse film scroll, reduced motion and no overflow.')
+        checks.append(f'Story at {width}px: navigation, fifteen steps with past/now/next, launch receipt, forward and reverse film scroll, reduced motion and no overflow.')
 
 
 def check_music(page, checks):
@@ -990,6 +997,24 @@ def check_brain(browser, origin, checks, errors):
                 expect(page.locator('#watch-room')).to_have_text('In ' + state['life']['now']['room'])
             else:
                 expect(page.get_by_role('heading', name='What she can sense')).to_be_visible()
+                doors = page.locator('#closed-doors')
+                expect(doors.locator('h3')).to_have_text(['taste', 'compass', 'clock', 'weather'])
+                expect(doors.locator('article p')).to_have_text([
+                    'she has 361 taste cells; nothing on the page tastes of anything yet.',
+                    '47 cells that keep a heading, like a sailor’s compass; no world gives her a heading.',
+                    '238 cells that keep the day; she does not know what time it is.',
+                    '103 cells for warmth and humidity; every room is the same temperature.'])
+                details = doors.locator('details')
+                expect(details).to_have_count(1)
+                assert not details.evaluate('(el) => el.open')
+                expect(details.locator('ul')).to_be_hidden()
+                expect(details.locator('summary')).to_have_text('how these were counted')
+                if width == 1280:
+                    doors.screenshot(path=str(SHOTS / 'brain_doors.png'))
+                details.locator('summary').click()
+                expect(details.locator('ul')).to_be_visible()
+                details.locator('summary').click()
+                expect(details.locator('ul')).to_be_hidden()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             page.screenshot(path=str(SHOTS / f'{slug}_{width}.png'), full_page=True)
             if slug == 'watch':
