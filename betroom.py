@@ -170,11 +170,16 @@ class Room:
 
     def _events_worker(self, after):
         try:
+            health_code, health = self.http.get_json(self.executor_url + "/health")
+            self.bookie_status = {"at": self._now(), "ok": health_code == 200 and
+                                  health.get("ok") is True and not health.get("publish_error")}
             code, result = self.http.get_json(f"{self.executor_url}/events?after={after}",
                                              headers={"X-Fly-Intent": self.intent_token})
             if code == 200:
                 self._events_result = result
+                self.public_events = (self.public_events + result.get("events", []))[-100:]
         except (OSError, ValueError) as exc:
+            self.bookie_status = {"at": self._now(), "ok": False}
             self._say(f"events unavailable: {exc}")
         finally:
             self._events_busy = False
@@ -290,6 +295,8 @@ class Room:
         self._events_result = None
         self._events_busy = False
         self._events_at = 0
+        self.bookie_status = {"at": 0, "ok": False}
+        self.public_events = []
         self._lock = threading.Lock()
         self._load_room()
 

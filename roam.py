@@ -537,6 +537,14 @@ def betroom_state():
         return None
 
 
+def betting_status():
+    room = STATE.get("room")
+    if room is None:
+        return {"in_room": False, "bookie": {"at": 0, "ok": False}}
+    return {"in_room": room.in_room, "bookie": room.bookie_status,
+            "events": room.public_events, "learning": room.state()["learning"]}
+
+
 @app.get("/betroom")
 def betroom_page():
     return FileResponse(str(ROOT / "web" / "betroom.html"))
@@ -860,6 +868,7 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             moment = live_state(stats, neural, hz, page.url, cx, cy)
             if betroom_on():
                 moment["betroom"] = betroom_state()
+                moment["betting"] = betting_status()
             RELAY["state"], RELAY["state_n"] = moment, RELAY["state_n"] + 1
             await send(moment)
 
@@ -971,6 +980,7 @@ def publish(stats, jpg, url, hz, neural=None):
             "neural": neural,
             "stream": TUNNEL["url"],
             **({"betroom": betroom_state()} if betroom_on() else {}),
+            **({"betting": betting_status()} if betroom_on() else {}),
             "updated": int(time.time()),
         }, indent=1)
         (OUT / "roam_state.json").write_text(payload)

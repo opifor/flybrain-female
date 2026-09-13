@@ -7,39 +7,21 @@
 <style>
 :root{--ground:#0b0c0e;--card:#181b20;--ink:#e9edf3;--dim:#818a97}
 html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif}
-#room{width:1280px;margin:auto;padding:14px 56px 40px;box-sizing:border-box}
-.label{font-size:12px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:8px 0}
-.grid{display:grid;grid-template-columns:repeat(4,280px);grid-auto-rows:160px;gap:14px;margin-bottom:16px}
+#room{width:1280px;margin:auto;padding:48px 56px;box-sizing:border-box}
+.grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
-.question{font-size:16px;line-height:20px;height:60px;overflow:hidden;margin-left:30px}
+.question{font-size:24px;line-height:32px;height:168px;overflow:hidden;margin-left:30px}
 .category{position:absolute;top:16px;left:14px;width:18px;height:50px;border-radius:4px}
 .bar{height:16px;background:#2b3038;border-radius:8px;overflow:hidden;margin-top:14px}
 .fill{height:100%;background:#9aa7b8}
 .price{font-size:12px;color:var(--dim);margin-top:8px}
 .empty{visibility:hidden}
 .card.held{opacity:0.55}
-.holding{font-size:12px;margin-top:3px;color:var(--ink)}
-.card.held .bar{margin-top:4px}
-#book{font-size:13px;margin:16px 0;color:#cbd1da}
-#disclosure{max-width:1150px;color:var(--dim);font-size:12px;line-height:18px}
-#disclosure p{margin:8px 0}
-#error{color:#e8be83;font-size:12px}
 </style>
 </head>
 <body>
 <main id="room">
-<div class="label">the betting room / paper USDC</div>
-<div id="book">Waiting for the paper book.</div>
-<div class="label">fast / current five and fifteen minutes</div>
 <div id="fast" class="grid"></div>
-<div id="error"></div>
-<div id="disclosure">
-<p>One open bet per market: the same reading cannot add to her bet. This is a rule of the room, chosen by people, not a decision of hers.</p>
-<p>She can leave a bet early: a stop on a card she holds, with the opposite reading, sells at the midpoint. Whether she sells is her reading; when she looks is her walk. Profit or loss teaches her the moment it is booked.</p>
-<p>CHOSEN by people: a person chose current BTC and ETH 5-minute markets and BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, so her learning signal arrives while she is still in the room; refreshed every 30 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.</p>
-<p>MEASURED: the connectome, the Kenyon cells that fire, their output synapses, DoOR receptor responses, Gamma market observations and CLOB midpoint quotes. CHOSEN: two readings before a stop can commit; drive is the dwell's mean relative leaning against other cards seen this visit. Like means YES, dislike means NO. Stake is floor(abs(drive) times free balance in cents). No cap, no floor, no price test in sizing.</p>
-<p>Paper only. No real orders. Midpoint fills ignore fees, spread, liquidity and minimum order size. A closed market with prices exactly 1/0 or 0/1 settles each bet. Wins deliver +1 dopamine and losses -1 to the recorded dwell's eligible Kenyon cells. Payouts round down to cents; the ledger records the remainder. Learning is partly shared across smells. The upstream coin calibration does not establish predictive skill for these markets or this female graph. Smell offsets, single-look noise and neighbouring cards remain in the reading.</p>
-</div>
 </main>
 <script>
 const slots = {fast: []};
@@ -47,7 +29,7 @@ for (const [shelf, count] of [['fast', 6]]) {
   for (let i = 0; i < count; i++) {
     const node = document.createElement('div');
     node.className = 'card empty';
-    node.innerHTML = '<div class="category"></div><div class="question"></div><div class="bar"><div class="fill"></div></div><div class="price"></div><div class="holding"></div>';
+    node.innerHTML = '<div class="category"></div><div class="question"></div><div class="bar"><div class="fill"></div></div><div class="price"></div>';
     document.getElementById(shelf).appendChild(node);
     slots[shelf].push(node);
   }
@@ -65,8 +47,6 @@ function draw() {
       if (!item) return;
       const held = bookState.markets?.[item.market_id]?.open === true;
       node.classList.toggle('held', held);
-      const bet = bookState.open_bets.find(p => p.market_id === item.market_id);
-      node.querySelector('.holding').textContent = held && bet ? `her bet: ${bet.side} ${bet.stake.toFixed(2)} USDC at ${bet.price.toFixed(3)}` : '';
       node.querySelector('.question').textContent = item.question;
       node.querySelector('.fill').style.width = (item.yes_price * 100) + '%';
       node.querySelector('.category').style.background = colours[item.category.toLowerCase()] || colours.other;
@@ -83,9 +63,8 @@ async function loadBoard() {
     if (!response.ok) throw Error('board unavailable');
     const data = await response.json();
     board = data.cards || [];
-    document.getElementById('error').textContent = data.error || '';
     draw();
-  } catch (error) { document.getElementById('error').textContent = String(error); }
+  } catch (error) { }
 }
 async function loadBook() {
   try {
@@ -94,12 +73,8 @@ async function loadBook() {
     const book = await response.json();
     if (!book) throw Error('paper book unavailable');
     bookState = book;
-    document.getElementById('book').textContent = `Paper balance ${book.balance.toFixed(2)} USDC / ${book.open_bets.length} open bets / ${book.win_count} wins / ${book.loss_count} losses`;
-    for (const [reason, count] of Object.entries(book.refusals || {})) {
-      document.getElementById('book').textContent += ` / refused: ${reason}, ${count}`;
-    }
     draw();
-  } catch (error) { document.getElementById('book').textContent = String(error); }
+  } catch (error) { }
 }
 loadBoard(); loadBook();
 setInterval(loadBoard, 2000);

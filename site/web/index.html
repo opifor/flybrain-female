@@ -501,6 +501,17 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 #matches .dblk p:last-child{margin-bottom:0}
 @media (max-width:720px){#matches .match-brains{grid-template-columns:1fr}
   #matches .match{padding:18px 16px}}
+
+#betting .bet-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px}
+#betting .lstage{aspect-ratio:8/5}
+#betting .bet-summary{font-family:var(--mono);font-size:12px;margin-bottom:16px}
+#betting .bet-feed{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto;font-size:13px}
+#betting .bet-feed li{padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+#betting .bet-cursor{position:absolute;width:12px;height:12px;border:1px solid var(--cyan);border-radius:50%;transform:translate(-50%,-50%);pointer-events:none}
+#betting details{margin-top:20px;color:var(--ink-dim)}
+#betting summary{cursor:pointer;font-family:var(--mono);font-size:12px}
+#betting details p{font-size:15px}
+@media(max-width:720px){#betting .bet-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -654,6 +665,27 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
     <p style="margin-top:22px;color:var(--ink-dim);font-size:15px">No wallet, no keyboard, no downloads.</p>
   </div>
 </section>
+
+<section id="betting">
+  <div class="wrap livew">
+    <div class="eyebrow">paper</div>
+    <h2>Her betting room</h2>
+    <p id="bet-status" role="status">Waiting for the relay.</p>
+    <div class="bet-grid">
+      <div class="lstage"><img id="bet-frame" alt="The page she is looking at"><span id="bet-cursor" class="bet-cursor" hidden></span><div id="bet-off" class="loff">Waiting for a live frame.</div></div>
+      <div><div id="bet-summary" class="bet-summary">Paper book unavailable.</div><ol id="bet-feed" class="bet-feed" aria-label="Recent paper activity"></ol></div>
+    </div>
+    <p class="lsay" style="margin-top:22px">Her eye meets six market cards. Stops and relative readings can buy a paper bet or leave one early. Booked profit and loss teach the Kenyon cells recorded during that look.</p>
+    <details><summary>What is happening here</summary>
+<p>One open bet per market: the same reading cannot add to her bet. This is a rule of the room, chosen by people, not a decision of hers.</p>
+<p>She can leave a bet early: a stop on a card she holds, with the opposite reading, sells at the midpoint. Whether she sells is her reading; when she looks is her walk. Profit or loss teaches her the moment it is booked.</p>
+<p>CHOSEN by people: a person chose current BTC and ETH 5-minute markets and BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, so her learning signal arrives while she is still in the room; refreshed every 30 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.</p>
+<p>MEASURED: the connectome, the Kenyon cells that fire, their output synapses, DoOR receptor responses, Gamma market observations and CLOB midpoint quotes. CHOSEN: two readings before a stop can commit; drive is the dwell's mean relative leaning against other cards seen this visit. Like means YES, dislike means NO. Stake is floor(abs(drive) times free balance in cents). No cap, no floor, no price test in sizing.</p>
+<p>Paper only. No real orders. Midpoint fills ignore fees, spread, liquidity and minimum order size. A closed market with prices exactly 1/0 or 0/1 settles each bet. Wins deliver +1 dopamine and losses -1 to the recorded dwell's eligible Kenyon cells. Payouts round down to cents; the ledger records the remainder. Learning is partly shared across smells. The upstream coin calibration does not establish predictive skill for these markets or this female graph. Smell offsets, single-look noise and neighbouring cards remain in the reading.</p>
+    </details>
+  </div>
+</section>
+<script src="betting.js" defer></script>
 
 <section id="matches">
   <div class="wrap">
