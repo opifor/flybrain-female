@@ -319,8 +319,10 @@ class Life:
         if balance is not None:
             equity = balance + sum(stake_value(pos) for pos in book.get("open_bets", []))
             date = stamp(now, "%Y-%m-%d")
-            if self.day.get("date") != date:
-                self.day.update(date=date, balance=equity)
+            # A fresh book is a fresh day for the tally; yesterday's baseline says nothing about it.
+            book_id = book.get("book") or book.get("start_balance")
+            if self.day.get("date") != date or self.day.get("book") != book_id:
+                self.day.update(date=date, balance=equity, book=book_id)
             delta = round(equity - self.day["balance"], 2)
             if self.high is not None and balance > self.high:
                 self._line("balance.high", f"new paper high · {balance:.2f} usdc", now)
