@@ -374,3 +374,14 @@ def test_a_removed_directory_comes_back(tmp_path):
     block = life.observe(paper(), 100)
     assert block["now"]["room"] == "paper room"
     assert (tmp_path / "life" / "feed.jsonl").exists()
+
+
+def test_loopback_paths_name_her_rooms(tmp_path):
+    life = Life(tmp_path)
+    state = moment(url="http://127.0.0.1:4660/hall")
+    block = life.observe(state, 100)
+    assert block["now"]["room"] == "hall"
+    assert not texts(block, "page.open")
+    state = moment(url="http://127.0.0.1:4660/musicroom")
+    block = life.observe(state, 101)
+    assert block["now"]["room"] == "music room"
