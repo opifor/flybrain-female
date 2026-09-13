@@ -922,7 +922,9 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                 stats["visited"] = stats["visited"][-40:]
                 await send({"type": "place", "url": page.url, "title": title,
                             "why": why})
-                await log(f"arrived: {title} - {page.url[:64]}")
+                # Her own rooms live on loopback; the address says nothing to a viewer, the name does.
+                where = "" if room_at(page.url) is not None or "127.0.0.1" in page.url else f" - {page.url[:64]}"
+                await log(f"arrived: {title}{where}")
                 return True
             except Exception as exc:
                 await log(f"could not open: {str(exc)[:70]}")
