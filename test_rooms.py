@@ -46,6 +46,64 @@ def make_room(cls, tmp_path, **kwargs):
                spawn=lambda fn, *args: fn(*args), **kwargs)
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("stale_health", [False, True])
+def test_new_book_replays_rewards_without_old_claims(tmp_path, capsys, legacy, stale_health):
+    class Events:
+        def __init__(self):
+            self.afters = []
+
+        def get_json(self, url, **kwargs):
+            if url.endswith("/health"):
+                return 200, {"ok": True, "book": "old" if stale_health else "new"}
+            after = int(url.split("after=")[1])
+            self.afters.append(after)
+            return 200, {"book": "new", "last": 1, "events": [reward] if after == 0 else []}
+
+    http = Events()
+    room = make_room(betroom.Room, tmp_path, fetch_board=lambda: [], http=http)
+    room.book_id = "old"
+    room.last_seq = 928
+    room._look_seq = 42
+    room.refs = {"keep": ["look-keep"]}
+    room._save_room()
+    if legacy:
+        saved = json.loads(room.room_file.read_text(encoding="utf-8"))
+        del saved["book_id"]
+        room.room_file.write_text(json.dumps(saved), encoding="utf-8")
+    history = json.dumps({"seq": 1, **({} if legacy else {"book": "old"})}) + "\n"
+    room.dopamine_file.write_text(history, encoding="utf-8")
+    room = make_room(betroom.Room, tmp_path, fetch_board=lambda: [], http=http)
+    room.looks_dir.mkdir(parents=True)
+    (room.looks_dir / "reward-look.json").write_text(json.dumps({
+        "token": "market", "brain_id": room.brain_id, "eligible": [2, 4]}), encoding="utf-8")
+    reward = {"seq": 1, "kind": "dopamine", "market_id": "market",
+              "look_id": "reward-look", "sign": 1}
+    room.poll_events()
+    room.poll_events()
+    assert http.afters[-1] == 0
+    assert room.book_id == "new" and room.last_seq == 1
+    assert room._claimed == {1}
+    assert room.refs == {"keep": ["look-keep"]} and room._look_seq == 42
+    assert room.mb.log.count(("dopamine", (1, 1.0))) == 1
+    assert capsys.readouterr().out.count("new book new, cursor reset") == 1
+    saved = json.loads(room.room_file.read_text(encoding="utf-8"))
+    assert saved["book_id"] == "new" and saved["last_seq"] == 1
+    text = room.dopamine_file.read_text(encoding="utf-8")
+    assert text.startswith(history)
+    records = [json.loads(line) for line in text.splitlines()[1:]]
+    assert [r["status"] for r in records] == ["pending", "delivered"]
+    assert all(r["book"] == "new" for r in records)
+    with room.dopamine_file.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps({"book": "old", "seq": 929}) + "\n")
+    again = make_room(betroom.Room, tmp_path, fetch_board=lambda: [], http=http)
+    assert again.last_seq == 1 and again._claimed == {1}
+    again.poll_events()
+    again.poll_events()
+    assert again.mb.log == []
+    assert "cursor reset" not in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("kind", ["betroom", "tiproom", "musicroom"])
 def test_room_door_uses_the_same_dwell_and_never_calls_executor(tmp_path, kind):
     import musicroom

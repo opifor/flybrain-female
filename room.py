@@ -155,6 +155,13 @@ class Room:
         self.refresh_board()
         pending, self._events_result = self._events_result, None
         if pending is not None and not pending.get("error"):
+            book = pending.get("book")
+            if book is not None and book != self.book_id:
+                self.book_id = book
+                self.last_seq = 0
+                self._claimed.clear()
+                self._save_room()
+                self._say(f"new book {book}, cursor reset")
             for ev in pending.get("events", []):
                 if ev["seq"] <= self.last_seq:
                     continue
@@ -170,8 +177,14 @@ class Room:
             health_code, health = self.http.get_json(self.executor_url + "/health")
             self.bookie_status = {"at": self._now(), "ok": health_code == 200 and
                                   health.get("ok") is True and not health.get("publish_error")}
+            book = self.book_id
+            if health.get("book") is not None and health["book"] != book:
+                after = 0
             code, result = self.http.get_json(f"{self.executor_url}/events?after={after}",
                                              headers={"X-Fly-Intent": self.intent_token})
+            if code == 200 and after and result.get("book") is not None and result["book"] != book:
+                code, result = self.http.get_json(f"{self.executor_url}/events?after=0",
+                                                 headers={"X-Fly-Intent": self.intent_token})
             if code == 200:
                 self._events_result = result
                 self.public_events = (self.public_events + result.get("events", []))[-100:]
@@ -203,7 +216,7 @@ class Room:
         if look and look.get("brain_id") != self.brain_id:
             eligible = []
         sign = self.reward_sign(ev)
-        record = {"mode": "paper", "at": self._now(), "seq": ev["seq"],
+        record = {"mode": "paper", "book": self.book_id, "at": self._now(), "seq": ev["seq"],
                   self.event_token_key: ev[self.event_token_key], "look_id": ev["look_id"],
                   "sign": sign, "amount": 1.0, "eligible": eligible,
                   "status": "break even" if sign == 0 else "pending" if eligible else "missing eligibility"}
@@ -239,7 +252,8 @@ class Room:
     def _save_room(self):
         with self._lock:
             _atomic_write(self.room_file, json.dumps({"mode": "paper", "meta": self.meta,
-                "refs": self.refs, "last_seq": self.last_seq, "look_seq": self._look_seq,
+                "refs": self.refs, "book_id": self.book_id,
+                "last_seq": self.last_seq, "look_seq": self._look_seq,
                 "counters": self.counters, "last_intents": self.last_intents,
                 "last_dopamine": self.last_dopamine, "cards": self._board["cards"]}, indent=1).encode("utf-8"))
 
@@ -247,6 +261,7 @@ class Room:
         if self.room_file.exists():
             d = json.loads(self.room_file.read_text(encoding="utf-8"))
             self.meta, self.refs = d["meta"], d["refs"]
+            self.book_id = d.get("book_id")
             self.last_seq, self._look_seq = d["last_seq"], d["look_seq"]
             self.counters.update(d["counters"])
             self.last_intents, self.last_dopamine = d["last_intents"], d["last_dopamine"]
@@ -254,6 +269,8 @@ class Room:
         if self.dopamine_file.exists():
             for line in self.dopamine_file.read_text(encoding="utf-8").splitlines():
                 event = json.loads(line)
+                if event.get("book") != self.book_id:
+                    continue
                 self._claimed.add(event["seq"])
                 self.last_seq = max(self.last_seq, event["seq"])
 
@@ -279,6 +296,7 @@ class Room:
             digest.update(np.asarray(values, dtype=np.int64).tobytes())
         self.brain_id = digest.hexdigest()
         self._claimed = set()
+        self.book_id = None
         self.in_room = False
         self.destination = None
         self.entered_at = None

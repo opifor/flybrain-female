@@ -52,6 +52,19 @@ def setup(tmp_path):
     return world, ledger, ex
 
 
+def test_book_identity_survives_replay_and_changes_on_rotation(setup):
+    world, ledger, ex = setup
+    opening = json.loads(ledger.path.read_text(encoding="utf-8").splitlines()[0])
+    book = str(opening["at"])
+    assert ex.health()["book"] == book
+    assert ex.events(928) == (200, {"book": book, "last": 0, "events": []})
+    assert betbook.Ledger(ledger.path).book.book_id == book
+    ledger.path.rename(ledger.path.with_suffix(".old"))
+    ex.ledger = betbook.Ledger(ledger.path, clock=lambda: opening["at"] + 1)
+    assert ex.health()["book"] == str(opening["at"] + 1)
+    assert ex.events()[1]["book"] != book
+
+
 @pytest.mark.parametrize("drive", [0.5, -0.5])
 def test_one_open_bet_per_market_until_settlement(setup, drive):
     world, led, ex = setup

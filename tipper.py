@@ -30,6 +30,7 @@ def check_body(body):
 class Book:
     def __init__(self):
         self.opened = False
+        self.book_id = None
         self.balance_cents = self.seq = self.intents = 0
         self.pending, self.daily, self.addresses = {}, {}, {}
         self.events, self.look_ids, self.thanks_ids = [], set(), set()
@@ -47,6 +48,7 @@ class Book:
             if self.opened or int(e["start_cents"]) < 0:
                 raise LedgerError("invalid opening balance")
             self.opened = True
+            self.book_id = str(e["at"])
             self.balance_cents = int(e["start_cents"])
             return
         if not self.opened:

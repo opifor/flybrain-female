@@ -37,6 +37,7 @@ def paths(state_dir):
 class Book:
     def __init__(self):
         self.opened = False
+        self.book_id = None
         self.balance_cents = self.start_cents = self.seq = self.intents = 0
         self.pending, self.positions = {}, {}
         self.events, self.settled = [], []
@@ -62,6 +63,7 @@ class Book:
                 raise LedgerError("negative starting balance")
             self.balance_cents = self.start_cents = start
             self.opened = True
+            self.book_id = str(e["at"])
             return e
         if not self.opened:
             raise LedgerError("entry before open")

@@ -132,6 +132,7 @@ class WriteAhead:
 class Executor:
     def health(self):
         return {"ok": self.ledger.ok, "mode": "paper",
+                "book": self.ledger.book.book_id,
                 "balance": self.ledger.book.balance_cents / 100 if self.ledger.ok else None,
                 "error": self.ledger.error, "publish_error": self.ledger.publish_error,
                 "resolver_error": self.resolver_error}
@@ -139,8 +140,9 @@ class Executor:
     def events(self, after=0):
         with self.lock:
             if not self.ledger.ok:
-                return 503, {"error": self.ledger.error, "last": None, "events": []}
-            return 200, {"last": self.ledger.book.seq,
+                return 503, {"error": self.ledger.error, "book": self.ledger.book.book_id,
+                             "last": None, "events": []}
+            return 200, {"last": self.ledger.book.seq, "book": self.ledger.book.book_id,
                          "events": [e for e in self.ledger.book.events if e["seq"] > after]}
 
     def guarded_intent(self, body, validate, execute):

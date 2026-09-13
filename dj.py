@@ -32,6 +32,7 @@ class Book:
     def __init__(self, tracks, clock=time.time):
         self.tracks, self.clock = tracks, clock
         self.opened = False
+        self.book_id = None
         self.balance_cents = self.seq = self.intents = 0
         self.pending = {}
         self.events, self.look_ids, self.reaction_ids = [], set(), set()
@@ -66,6 +67,7 @@ class Book:
             if self.opened:
                 raise LedgerError("repeated opening")
             self.opened = True
+            self.book_id = str(e["at"])
             return
         if not self.opened:
             raise LedgerError("entry before open")
