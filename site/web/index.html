@@ -186,6 +186,11 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:12px}
 .entry-buttons a:hover{border-color:var(--ink);color:var(--ink)}
 .entry-buttons a:first-child:hover{background:var(--ink);color:var(--ground)}
 .entry-note{font-size:11px;color:var(--ink-dim);margin:20px 0 0}
+.kick-status{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--ink-dim);margin-top:12px}
+.kick-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+.kick-status.on::before{background:var(--live)}
+.screen-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.screen-heading a{font-size:12px}
 .entry-down{align-self:center;display:flex;width:44px;height:44px;align-items:center;justify-content:center;border:0}
 .entry-down::after{content:"";width:12px;height:12px;border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);transform:rotate(45deg)}
 @media(max-width:800px){#entry{padding:24px;gap:16px}
@@ -276,18 +281,19 @@ function renderEntry(state){
     <div class="entry-block" id="entry-where">
       <div class="eyebrow">where</div>
       <nav class="entry-buttons" aria-label="Watch her">
-        <a href="https://kick.com/femalefly">watch her live on kick</a>
-        <a href="/rooms/betting">the paper room</a>
+        <a href="/show.html">watch her live</a>
         <a href="/rooms/">her rooms</a>
+        <a href="/story.html">her story</a>
       </nav>
       <p class="entry-note">24/7 · she chooses where to go · you watch</p>
+      <a id="kick-status" class="kick-status" href="https://kick.com/femalefly" aria-live="polite">kick · unknown</a>
     </div>
   </div>
 </section>
 
 <section id="live" aria-label="Her screen">
   <div class="screen-wrap">
-    <h2>her screen</h2>
+    <div class="screen-heading"><h2>her screen</h2><a href="/show.html">open the full show →</a></div>
     <div id="her-stage"></div>
     <p id="screen-now">in the — · —</p>
     <ol id="entry-feed" aria-label="Her latest activity"></ol>
@@ -464,6 +470,19 @@ async function tick(){
 
 tick();
 setInterval(tick, 15000);
+async function kickTick() {
+  let live = null;
+  try {
+    const response = await fetch('/api/kick', {signal: AbortSignal.timeout(8000)});
+    if (!response.ok) throw new Error('kick unavailable');
+    live = (await response.json()).live;
+  } catch (_) {}
+  const light = document.getElementById('kick-status');
+  light.textContent = 'kick · ' + (live === true ? 'live' : live === false ? 'offline' : 'unknown');
+  light.classList.toggle('on', live === true);
+}
+kickTick();
+setInterval(kickTick, 60000);
 </script>
 </body>
 </html>

@@ -1,11 +1,20 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Watch · Female Flybrain</title><link rel="stylesheet" href="rooms.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Watch · Female Flybrain</title><link rel="stylesheet" href="rooms.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+.show-button{display:inline-flex;background:var(--rose);color:var(--ground);padding:16px 32px;font-size:20px;text-decoration:none}
+.show-button:hover{background:var(--ink)}
+.kick-status{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--dim)}
+.kick-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.kick-status.on::before{background:#6fdca6}
+</style></head>
 <body>
 <header class="site-nav"><a href="/">Female Flybrain · Her Rooms</a><nav aria-label="Main"><a href="/rooms/">rooms</a><a href="/brain.html">brain</a><a href="/story.html">story</a><a href="/#ca-text">$HER</a><a href="/watch.html">watch</a></nav></header>
-<main><span class="paper">paper</span><h1>Watch</h1>
-<p class="lede">The stream is not live yet. We’ll announce it on X at <a href="https://x.com/opifor">@opifor</a>.</p>
-<a class="button" href="https://kick.com/femalefly">Watch Female Flybrain on Kick →</a>
+<main><span class="paper">paper</span><h1>the show is always on</h1>
+<p class="lede">Her show is open to everyone, all day and all night. She chooses where to go. You watch.</p>
+<a class="button show-button" href="/show.html">watch her live</a>
+<p><a id="kick-status" class="kick-status" href="https://kick.com/femalefly" aria-live="polite">kick · unknown</a></p>
+<p>Kick is where the stream goes when it is on. It is announced on X at <a href="https://x.com/opifor">@opifor</a>.</p>
 <section aria-live="polite"><h2>Now</h2><p id="watch-now">Waiting for her next update.</p><p id="watch-room">Room unavailable.</p></section>
 <section><h2>What you’ll see</h2><p>The arena she moves through, WHO / NOW / FEED beside it, and the last hour of her life: where she went and what happened there.</p><p>You’ll hear the music she picks. Sugar and shock reactions are coming to chat later.</p><p>Every room is paper. No real money, no real bets.</p></section>
 </main>
@@ -26,5 +35,18 @@
     setTimeout(tick, 1000);
   }
   tick();
+  async function kickTick() {
+    let live = null;
+    try {
+      const response = await fetch('/api/kick', {signal: AbortSignal.timeout(8000)});
+      if (!response.ok) throw new Error('kick unavailable');
+      live = (await response.json()).live;
+    } catch (_) {}
+    const light = document.getElementById('kick-status');
+    light.textContent = 'kick · ' + (live === true ? 'live' : live === false ? 'offline' : 'unknown');
+    light.classList.toggle('on', live === true);
+  }
+  kickTick();
+  setInterval(kickTick, 60000);
 })();
 </script></body></html>

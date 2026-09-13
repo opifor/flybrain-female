@@ -4,8 +4,8 @@
 // "Access-Control-Allow-Origin: *,*" - a duplicated header that every browser
 // rejects - so reading the chain straight from the page showed "offline" at
 // random. This runs at the edge, where CORS does not apply, and the page then
-// talks only to its own origin. Everything that is not /api/state falls
-// through to the static assets.
+// talks only to its own origin. Everything except /api/state and /api/kick
+// falls through to the static assets.
 //
 // It reads. There is no key here and no method in the allowlist that writes.
 
@@ -132,6 +132,29 @@ async function state(env) {
 export default {
   async fetch(request, env, ctx) {
     const u = new URL(request.url);
+    if (u.pathname === '/api/kick' || u.pathname === '/api/kick/') {
+      if (request.method !== 'GET') return new Response('method not allowed', { status: 405 });
+      const cache = caches.default;
+      const key = new Request(u.origin + '/api/kick');
+      const hit = await cache.match(key);
+      if (hit) return hit;
+      let status = { live: null };
+      try {
+        const response = await fetch('https://kick.com/api/v2/channels/femalefly', {
+          headers: { 'User-Agent': 'femaleflybrain' },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!response.ok) throw new Error('kick unavailable');
+        const channel = await response.json();
+        if (!channel || !Object.hasOwn(channel, 'livestream')) throw new Error('kick status missing');
+        status = { live: channel.livestream !== null, checked: new Date().toISOString() };
+      } catch (_) {}
+      const response = Response.json(status, {
+        headers: { 'Cache-Control': 'public, max-age=60' },
+      });
+      ctx.waitUntil(cache.put(key, response.clone()));
+      return response;
+    }
     if (u.pathname !== '/api/state' && u.pathname !== '/api/state/') return env.ASSETS.fetch(request);
     if (request.method !== 'GET') return new Response('method not allowed', { status: 405 });
 

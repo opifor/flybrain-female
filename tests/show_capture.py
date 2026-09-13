@@ -119,6 +119,8 @@ class Handler(SimpleHTTPRequestHandler):
             body, mime = b'{"markets":{},"open_bets":[]}', 'application/json'
         elif path == '/api/state':
             body, mime = b'{"ok":true,"launched":false,"block":123}', 'application/json'
+        elif path == '/api/kick':
+            body, mime = json.dumps({'live': DATA.get('kick_live', True)}).encode(), 'application/json'
         else:
             return super().do_GET()
         self.send_response(200)
@@ -643,10 +645,12 @@ def check_entry(browser, origin, checks, errors):
     out = SHOTS
     out.mkdir(parents=True, exist_ok=True)
     for width in [1280, 400]:
+        DATA['kick_live'] = True
         state = fixture()
         state.pop('life', None)
         state['live'] = True
         page = browser.new_page(viewport=dict(width=width, height=800))
+        page.clock.install()
         page.on('pageerror', lambda e: errors.append(str(e)))
         page.route('https://**/*', lambda route: route.abort())
         page.route(origin + '/state', lambda route: route.fulfill(json=state))
@@ -669,9 +673,20 @@ def check_entry(browser, origin, checks, errors):
             assert blocks[0]['y'] < blocks[1]['y'] < blocks[2]['y']
             assert page.evaluate('document.documentElement.scrollWidth <= 400')
         links = page.locator('.entry-buttons a')
-        assert links.nth(0).get_attribute('href') == 'https://kick.com/femalefly'
-        assert links.nth(1).get_attribute('href') == '/rooms/betting'
-        assert links.nth(2).get_attribute('href') == '/rooms/'
+        expect(links).to_have_text(['watch her live', 'her rooms', 'her story'])
+        assert links.evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
+            '/show.html', '/rooms/', '/story.html']
+        light = page.locator('#kick-status')
+        expect(light).to_have_text('kick · live')
+        expect(light).to_have_class('kick-status on')
+        expect(light).to_have_attribute('href', 'https://kick.com/femalefly')
+        expect(page.locator('.entry-note')).to_have_text('24/7 · she chooses where to go · you watch')
+        expect(page.get_by_role('link', name='open the full show →')).to_have_attribute('href', '/show.html')
+        for live, label in [(None, 'unknown'), (False, 'offline'), (True, 'live')]:
+            DATA['kick_live'] = live
+            page.clock.fast_forward(60000)
+            expect(light).to_have_text('kick · ' + label)
+            expect(light).to_have_class('kick-status on' if live is True else 'kick-status')
         assert page.locator('#betting, #matches, #comparison').count() == 0
         assert page.locator('.film, #story, .step').count() == 0
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
@@ -697,6 +712,8 @@ def check_entry(browser, origin, checks, errors):
         assert bottom <= (960 if width == 1280 else 2400), bottom
         assert page.locator('#her-stage canvas').count() > 0
         page.screenshot(path=str(out / f'index_calm_{width}.png'), full_page=True)
+        if width == 1280:
+            page.screenshot(path=str(out / 'entry_where.png'))
         state['life']['feed'][0]['text'] = 'entered http://127.0.0.1:4660/betroom'
         state['life']['feed'][1]['text'] = 'left http://localhost:4660/musicroom'
         expect(page.locator('#entry-feed li span').first).to_have_text('entered /betroom')
@@ -943,6 +960,10 @@ def check_brain(browser, origin, checks, errors):
             assert font.count() == 1
             assert all(name in font.get_attribute('href') for name in ('Instrument+Serif', 'Archivo', 'IBM+Plex+Mono'))
             if slug == 'watch':
+                expect(page.locator('h1')).to_have_text('the show is always on')
+                expect(page.get_by_role('link', name='watch her live', exact=True)).to_have_attribute('href', '/show.html')
+                expect(page.locator('#kick-status')).to_have_text('kick · live')
+                expect(page.locator('#kick-status')).to_have_attribute('href', 'https://kick.com/femalefly')
                 expect(page.locator('#watch-now')).to_have_text(state['life']['now']['doing'])
                 expect(page.locator('#watch-room')).to_have_text('In ' + state['life']['now']['room'])
             else:
