@@ -1,5 +1,17 @@
 (() => {
   'use strict';
+  const legend = [
+    {cue:'pink ring on a card', text:': each eye read fills it; full, she may choose.', scope:'cards'},
+    {cue:'NO — YES line', text:': the dot follows her mushroom body’s favoured side.', scope:'cards'},
+    {cue:'smells like', text:': card words her nose recognises from before.', scope:'cards'},
+    {cue:'YES or NO stamp', text:': she committed. Refused: market held or too soon for the bookie.', scope:'cards'},
+    {cue:'her trail', text:': her footpath; hue follows steering, brightness follows firing rate.', scope:'general'},
+    {cue:'wings', text:': beat with speed; stop when she stops. Antennae twitch with smell.', scope:'general'},
+    {cue:'small coin on a card', text:': an open paper bet lives there.', scope:'betting'},
+    {cue:'warm flash and sparks', text:': sugar, win, 1s pause. Dark flash: shock, loss.', scope:'general'},
+    {cue:'what she sees', text:': the small box shows her retina’s sampled frame.', scope:'retina'},
+    {cue:'nudges', text:': how often the page pushed her out of an empty margin.', scope:'general'},
+  ];
   const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
   const number = v => typeof v === 'string' && v.includes('/') ? v.split('/').map(Number).reduce((a, b) => a / b) : Number(v ?? 0);
   const price = v => v == null ? '?' : number(v).toFixed(2);
@@ -164,6 +176,7 @@
     let pixels = null, state = null, live = false, sequence = null, trail = [], moments = [], cursor = null, target = null;
     let timer, raf, destroyed = false, lastTime = performance.now(), lastPoll = 0, imageReady = false;
     const whoStart = performance.now();
+    let legendRoom = null, legendStart = whoStart;
     let feed = [], previousFeed = [], feedAt = 0;
     let gazeKey = null, gazeProgress = 0, gazeDrive = 0, intentKey, decision = null;
     const seen = new Set(), cards = new Map(), records = new Map(), listeners = new Set();
@@ -274,6 +287,33 @@
         hex(x + u * 300, y + v * 210, 6, light);
       }
     }
+    function drawLegend(now) {
+      const path = roomPath(), room = currentRoom();
+      const betting = path === '/betroom' && (room?.in_room || state?.betting?.in_room);
+      const hasCards = betting || (room?.in_room && Object.keys(room.rects || {}).length > 0);
+      const entries = legend.filter(entry => entry.scope === 'general' ||
+        (entry.scope === 'cards' && hasCards) || (entry.scope === 'betting' && betting) ||
+        (entry.scope === 'retina' && retina));
+      const roomKey = `${path}:${entries.map(entry => entry.cue).join('|')}`;
+      if (roomKey !== legendRoom) { legendRoom = roomKey; legendStart = now; }
+      const elapsed = now - legendStart, phase = elapsed % 12000;
+      const entry = entries[Math.floor(elapsed / 12000) % entries.length];
+      g.save();
+      g.font = '18px ui-monospace,monospace';
+      g.globalAlpha = Math.min(clamp(phase / 500), clamp((12000 - phase) / 500));
+      const prefix = 'how to read her · ';
+      g.fillStyle = '#ff79b0'; g.fillText(prefix, 664, 944);
+      let x = 664 + g.measureText(prefix).width, y = 944;
+      const parts = [{text:entry.cue, color:'#e9edf3'}, {text:entry.text, color:'#8b93a1'}];
+      // Carry whole words to the next line and keep the prefix on the first.
+      for (const part of parts) for (const token of part.text.match(/\s*\S+/g) || []) {
+        let word = token;
+        if (x + g.measureText(word).width > 1256) { x = 664; y += 24; word = word.trimStart(); }
+        g.fillStyle = part.color; g.fillText(word, x, y);
+        x += g.measureText(word).width;
+      }
+      g.restore();
+    }
     function drawBroadcast(now) {
       g.fillStyle = '#090a0c'; g.fillRect(1280, 0, 640, 1080); g.fillRect(0, 800, 1280, 280);
       g.fillStyle = '#292d35';
@@ -377,6 +417,7 @@
         if (g.measureText(value(feed[0]?.text)).width <= 592) break;
       }
       text(feed[0]?.text, 664, 900, 592, stripFont);
+      drawLegend(now);
       text('her rooms · all paper ·', 664, 997, 592);
       text(`femaleflybrain.com · UTC ${new Date().toISOString().slice(11, 19)}`, 664, 1031, 592);
     }
