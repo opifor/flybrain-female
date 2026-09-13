@@ -479,6 +479,28 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   .film:not(.still) .bl,.film:not(.still) .br{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#matches .match{position:relative;border:1px solid var(--line);background:var(--plate);
+  padding:22px 24px;margin-top:24px;overflow-wrap:anywhere}
+#matches .match-tags{display:flex;justify-content:space-between;gap:12px;margin-bottom:20px}
+#matches .corner{position:static}
+#matches h3{font-family:var(--serif);font-size:clamp(28px,4vw,36px);font-weight:400;
+  line-height:1.15;margin:0 0 10px}
+#matches .match-picture{display:block;width:100%;height:auto;margin:24px 0}
+#matches .match-picture-link{display:block;border:0}
+#matches .match-brains{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+#matches table{table-layout:fixed;font-size:14px}
+#matches caption{text-align:left;font-family:var(--mono);font-size:11.5px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);padding-bottom:10px}
+#matches th{white-space:normal;letter-spacing:.06em;padding-right:10px}
+#matches th:first-child{width:42%}
+#matches td{padding-right:0}
+#matches .match-effect{display:block;color:var(--ink-dim);font-size:13px;margin-top:5px}
+#matches .match-links{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:14px;margin:18px 0}
+#matches .ldetails{grid-template-columns:1fr}
+#matches .dblk p{color:var(--ink-dim);font-size:15px}
+#matches .dblk p:last-child{margin-bottom:0}
+@media (max-width:720px){#matches .match-brains{grid-template-columns:1fr}
+  #matches .match{padding:18px 16px}}
 </style>
 </head>
 <body>
@@ -631,6 +653,94 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 
     <p style="margin-top:22px;color:var(--ink-dim);font-size:15px">No wallet, no keyboard, no downloads.</p>
   </div>
+</section>
+
+<section id="matches">
+  <div class="wrap">
+    <h2>Matches</h2>
+    <p class="lede">One female brain, one male brain, the same rules. Every match is a preregistered protocol, run on both, published either way.</p>
+    <div id="match-cards" aria-live="polite"><p>Loading the records.</p></div>
+    <noscript><p>Read the <a href="matches/index.json">match records</a>.</p></noscript>
+  </div>
+  <script>
+  (async function(){
+    const host = document.getElementById('match-cards');
+    function element(tag, text, cls){
+      const el = document.createElement(tag);
+      if (text != null) el.textContent = text;
+      if (cls) el.className = cls;
+      return el;
+    }
+    function link(label, url){
+      const el = element('a', label); el.href = url; return el;
+    }
+    async function read(path){
+      const response = await fetch(path, {cache:'no-cache'});
+      if (!response.ok) throw new Error(path);
+      return response.json();
+    }
+    try {
+      const paths = await read('matches/index.json');
+      const cards = await Promise.all(paths.map(read));
+      host.replaceChildren();
+      if (!cards.length) host.append(element('p', 'No matches published yet.'));
+      cards.forEach((card, i) => {
+        const article = element('article', null, 'match');
+        const tags = element('div', null, 'match-tags');
+        tags.append(element('span', 'Match ' + (i + 1), 'corner'), element('time', card.date, 'corner'));
+        tags.lastChild.dateTime = card.date;
+        article.append(tags, element('h3', card.title), element('p', card.claim));
+        const picture = element('img', null, 'match-picture');
+        picture.src = card.picture; picture.alt = card.title;
+        const fullPicture = link('', card.picture);
+        fullPicture.className = 'match-picture-link';
+        fullPicture.append(picture); article.append(fullPicture);
+        const brains = element('div', null, 'match-brains');
+        for (const brain of card.brains){
+          const block = element('div');
+          const table = element('table');
+          table.append(element('caption', brain.name));
+          const head = element('thead'), header = element('tr');
+          for (const label of ['Prediction', 'Result']){
+            const th = element('th', label); th.scope = 'col'; header.append(th);
+          }
+          head.append(header); table.append(head);
+          const body = element('tbody');
+          for (const row of brain.predictions){
+            const tr = element('tr'), th = element('th', row.prediction);
+            th.scope = 'row'; th.title = row.statement;
+            const result = element('td', row.verdict);
+            result.append(element('span', row.effect, 'match-effect'),
+                          element('span', 'SE: ' + row.se, 'match-effect'));
+            tr.append(th, result); body.append(tr);
+          }
+          table.append(body); block.append(table);
+          const links = element('div', null, 'match-links');
+          for (const [label, url] of Object.entries(brain.links)) links.append(link(label, url));
+          block.append(links); brains.append(block);
+        }
+        article.append(brains, element('div', 'What it means', 'eyebrow'), element('p', card.meaning));
+        const protocol = element('div', null, 'match-links');
+        protocol.append(link(card.protocol, card.links.protocol)); article.append(protocol);
+        const button = element('button', 'Measured versus chosen', 'lmore');
+        button.type = 'button'; button.setAttribute('aria-expanded', 'false');
+        const details = element('div', null, 'ldetails');
+        details.id = 'match-details-' + i; details.hidden = true;
+        button.setAttribute('aria-controls', details.id);
+        const content = element('div', null, 'dblk');
+        for (const paragraph of card.measured) content.append(element('p', paragraph));
+        details.append(content);
+        button.addEventListener('click', () => {
+          details.hidden = !details.hidden;
+          button.setAttribute('aria-expanded', String(!details.hidden));
+        });
+        article.append(button, details); host.append(article);
+      });
+    } catch (error){
+      host.replaceChildren(element('p', 'The match records could not be loaded. Please try again.'));
+    }
+  })();
+  </script>
 </section>
 
 <div class="cabar">
