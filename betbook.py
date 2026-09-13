@@ -15,6 +15,7 @@ from pathlib import Path
 from polymarket import DISCLOSURE
 
 CHOSEN = {"size": "floor(abs(drive) * free USDC cents)",
+          "pacing": "one open bet per market",
           "shares": "stake USDC / CLOB midpoint, exact fraction",
           "payout": "winning shares rounded down to USDC cents; remainder recorded",
           "resolution": "Gamma closed=true and outcomePrices exactly 1/0 or 0/1",
@@ -47,6 +48,7 @@ class Book:
         self.pending, self.positions = {}, {}
         self.events, self.settled = [], []
         self.counts = {"wins": 0, "losses": 0, "refused": 0}
+        self.refusals = {}
         self.look_ids = set()
 
     def apply(self, e):
@@ -101,6 +103,7 @@ class Book:
                 if not e["reason"]:
                     raise LedgerError("refusal has no reason")
                 self.counts["refused"] += 1
+                self.refusals[e["reason"]] = self.refusals.get(e["reason"], 0) + 1
             del self.pending[i]
         elif kind == "settled":
             if i not in self.positions:
@@ -130,13 +133,17 @@ class Book:
         return {"mode": "paper", "start_cents": self.start_cents,
                 "balance_cents": self.balance_cents, "seq": self.seq, "intents": self.intents,
                 "positions": list(self.positions.values()), "pending": list(self.pending.values()),
-                "settled": self.settled, "counts": self.counts}
+                "settled": self.settled, "counts": self.counts, "refusals": self.refusals}
 
     def public(self, at=None):
         def display(p):
             return {**p, "stake": int(p["stake_cents"]) / 100,
                     "price": float(Fraction(p["price"])), "shares": float(Fraction(p["shares"]))}
+        markets = {e["market_id"]: {"open": False} for e in self.events}
+        for p in self.positions.values():
+            markets[p["market_id"]] = {"open": True}
         return {"mode": "paper", "balance": self.balance_cents / 100,
+                "markets": markets, "refusals": dict(self.refusals),
                 "balance_cents": self.balance_cents, "start_balance": self.start_cents / 100,
                 "open_bets": [display(p) for p in self.positions.values()],
                 "settled_bets": [display(p) for p in self.settled],

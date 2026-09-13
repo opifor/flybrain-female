@@ -52,6 +52,37 @@ def setup(tmp_path):
     return world, ledger, ex
 
 
+@pytest.mark.parametrize("drive", [0.5, -0.5])
+def test_one_open_bet_per_market_until_settlement(setup, drive):
+    world, led, ex = setup
+    assert ex.intent(world.body())[1]["status"] == "booked"
+    balance = led.book.balance_cents
+    for n in range(3):
+        reply = ex.intent(world.body(drive, look=f"second-{n}"))[1]
+        assert (reply["status"], reply["reason"]) == ("refused", "open position")
+    assert led.book.balance_cents == balance
+    assert len(led.book.positions) == 1
+    public = json.loads(led.public_path.read_text())
+    assert public["markets"][world.raw["id"]]["open"] is True
+    assert public["refusals"] == {"open position": 3}
+    replay = betbook.rebuild(led.path)
+    assert replay.refusals == public["refusals"]
+    assert [e["reason"] for e in replay.events if e["kind"] == "refused"] == ["open position"] * 3
+    world.raw.update(closed=True, outcomePrices=json.dumps(["1", "0"]))
+    assert len(ex.resolve_once()) == 1
+    assert json.loads(led.public_path.read_text())["markets"][world.raw["id"]]["open"] is False
+    world.raw = fixture("gamma_btc")[0]
+    assert ex.intent(world.body(look="after-settlement"))[1]["status"] == "booked"
+
+
+def test_an_open_bet_does_not_close_another_market(setup):
+    world, led, ex = setup
+    assert ex.intent(world.body())[1]["status"] == "booked"
+    world.raw["id"] = "999"
+    assert ex.intent(world.body(look="other-market"))[1]["status"] == "booked"
+    assert {p["market_id"] for p in led.book.positions.values()} == {fixture("gamma_btc")[0]["id"], "999"}
+
+
 @pytest.mark.parametrize("drive", [1.0, -1.0, 0.37, -0.27, 0.0001])
 def test_stake_and_shares_come_only_from_drive_and_balance(setup, drive):
     world, led, ex = setup

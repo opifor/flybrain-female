@@ -17,6 +17,9 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans
 .fill{height:100%;background:#9aa7b8}
 .price{font-size:12px;color:var(--dim);margin-top:8px}
 .empty{visibility:hidden}
+.card.held{opacity:0.55}
+.holding{font-size:12px;margin-top:3px;color:var(--ink)}
+.card.held .bar{margin-top:4px}
 #book{font-size:13px;margin:16px 0;color:#cbd1da}
 #disclosure{max-width:1150px;color:var(--dim);font-size:12px;line-height:18px}
 #disclosure p{margin:8px 0}
@@ -33,6 +36,7 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans
 <div id="slow" class="grid"></div>
 <div id="error"></div>
 <div id="disclosure">
+<p>One open bet per market: while her bet on a question is unsettled, that card takes no second bet. This is a rule of the room, chosen by people, not a decision of hers.</p>
 <p>CHOSEN by people: current BTC and ETH 15-minute markets, then the six highest-volume open Yes/No markets closing within seven days, excluding negRisk groups; refreshed every 60 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.</p>
 <p>MEASURED: the connectome, the Kenyon cells that fire, their output synapses, DoOR receptor responses, Gamma market observations and CLOB midpoint quotes. CHOSEN: two readings before a stop can commit; drive is the dwell's mean relative leaning against other cards seen this visit. Like means YES, dislike means NO. Stake is floor(abs(drive) times free balance in cents). No cap, no floor, no price test in sizing.</p>
 <p>Paper only. No real orders. Midpoint fills ignore fees, spread, liquidity and minimum order size. A closed market with prices exactly 1/0 or 0/1 settles each bet. Wins deliver +1 dopamine and losses -1 to the recorded dwell's eligible Kenyon cells. Payouts round down to cents; the ledger records the remainder. Learning is partly shared across smells. The upstream coin calibration does not establish predictive skill for these markets or this female graph. Smell offsets, single-look noise and neighbouring cards remain in the reading.</p>
@@ -44,12 +48,13 @@ for (const [shelf, count] of [['fast', 2], ['slow', 6]]) {
   for (let i = 0; i < count; i++) {
     const node = document.createElement('div');
     node.className = 'card empty';
-    node.innerHTML = '<div class="category"></div><div class="question"></div><div class="bar"><div class="fill"></div></div><div class="price"></div>';
+    node.innerHTML = '<div class="category"></div><div class="question"></div><div class="bar"><div class="fill"></div></div><div class="price"></div><div class="holding"></div>';
     document.getElementById(shelf).appendChild(node);
     slots[shelf].push(node);
   }
 }
 let board = [];
+let bookState = {markets: {}, open_bets: []};
 const colours = {crypto: '#b99bd9', politics: '#8aaacb', sports: '#9fbe93', other: '#c4b28e'};
 function draw() {
   for (const shelf of ['fast', 'slow']) {
@@ -59,6 +64,10 @@ function draw() {
       node.className = item ? 'card' : 'card empty';
       node.dataset.token = item ? item.market_id : '';
       if (!item) return;
+      const held = bookState.markets?.[item.market_id]?.open === true;
+      node.classList.toggle('held', held);
+      const bet = bookState.open_bets.find(p => p.market_id === item.market_id);
+      node.querySelector('.holding').textContent = held && bet ? `her bet: ${bet.side} ${bet.stake.toFixed(2)} USDC at ${bet.price.toFixed(3)}` : '';
       node.querySelector('.question').textContent = item.question;
       node.querySelector('.fill').style.width = (item.yes_price * 100) + '%';
       node.querySelector('.category').style.background = colours[item.category.toLowerCase()] || colours.other;
@@ -85,7 +94,12 @@ async function loadBook() {
     if (!response.ok) throw Error('paper book unavailable');
     const book = await response.json();
     if (!book) throw Error('paper book unavailable');
+    bookState = book;
     document.getElementById('book').textContent = `Paper balance ${book.balance.toFixed(2)} USDC / ${book.open_bets.length} open bets / ${book.win_count} wins / ${book.loss_count} losses`;
+    for (const [reason, count] of Object.entries(book.refusals || {})) {
+      document.getElementById('book').textContent += ` / refused: ${reason}, ${count}`;
+    }
+    draw();
   } catch (error) { document.getElementById('book').textContent = String(error); }
 }
 loadBoard(); loadBook();

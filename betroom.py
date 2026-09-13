@@ -110,6 +110,11 @@ class Room:
 
     def _commit(self, img, cx, cy, seed, card, dwell, drive, smell):
         at, token = self._now(), card["token"]
+        book = self.read_book()
+        # Keep an unanswered intent closed while publication or event delivery catches up.
+        if (self.refs.get(token) or book.get("markets", {}).get(token, {}).get("open") or
+                any(p["market_id"] == token for p in book.get("open_bets", []))):
+            return
         self.counters["commits"] += 1
         look_id = self._write_look(at, img, cx, cy, seed, card, dwell, drive, smell)
         if drive is None:

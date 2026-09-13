@@ -94,6 +94,8 @@ class Bookie:
                 return 200, {"status": "refused", "event": led.terminal("refused", i, reason=reason),
                              "reason": reason}
 
+            if any(p["market_id"] == body["market_id"] for p in led.book.positions.values()):
+                return refuse("open position")
             drive = body["drive"]
             if not 0 < abs(drive) <= 1 or (drive > 0) != (body["side"] == "YES"):
                 return refuse("side disagrees with drive")

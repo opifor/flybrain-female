@@ -404,6 +404,26 @@ class ALookThatReadNothing(Base):
         self.assertEqual(self.room._dwell["steps"], 1)
 
 class Commit(Base):
+    def test_open_market_cannot_commit_even_when_page_says_unheld(self):
+        self.room.public.write_text(json.dumps({"open_bets": [
+            {"market_id": TOKEN_A, "token_id": TOKEN_A + "2", "side": "NO"}]}))
+        self.likes()
+        self.commit(IN_A)
+        self.assertEqual(self.http.intents(), [])
+        self.assertEqual(self.room.counters["commits"], 0)
+        self.assertEqual(self.looks(), [])
+
+    def test_booked_intent_blocks_until_settlement_event(self):
+        self.likes()
+        self.commit(IN_A)
+        look = self.http.intents()[0]["body"]["look_id"]
+        self.commit(IN_A)
+        self.assertEqual(len(self.http.intents()), 1)
+        self.room._apply_event({"kind": "settled", "seq": 1, "market_id": TOKEN_A,
+                                "look_id": look, "side": "YES", "outcome": "YES"})
+        self.commit(IN_A)
+        self.assertEqual(len(self.http.intents()), 2)
+
     def test_liking_a_coin_is_a_buy(self):
         self.likes()
         self.commit(IN_A)
@@ -448,6 +468,7 @@ class Commit(Base):
         self.assertEqual(self.http.intents(), [])
 
     def test_above_the_room_is_positive_and_below_it_is_negative(self):
+        self.http.intent_reply = (200, {"status": "refused"})
         self.likes()
         self.commit(IN_A)
         self.assertGreater(self.http.intents()[0]["body"]["drive"], 0)
@@ -457,6 +478,7 @@ class Commit(Base):
         self.assertLess(last["drive"], 0)
 
     def test_doubling_both_sides_of_a_card_changes_nothing(self):
+        self.http.intent_reply = (200, {"status": "refused"})
         self.readings(A=(300.0, 100.0), B=(100.0, 100.0))
         self.commit(IN_A)
         self.readings(A=(600.0, 200.0), B=(200.0, 200.0))

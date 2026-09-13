@@ -12,7 +12,6 @@ import os
 import secrets
 import threading
 import time
-from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -90,19 +89,13 @@ async def session(args):
             if step % 8 == 0 or result[2]:
                 print(json.dumps({"step": step + 1, "stop": bool(result[2]), **room.state()}), flush=True)
             room.poll_events()
-            if led.book.positions:
-                fill = next(iter(led.book.positions.values()))
-                print(f"paper {fill['side']} stake {int(fill['stake_cents']) / 100:.2f} USDC "
-                      f"price {float(Fraction(fill['price'])):.6f} look {fill['look_id']}", flush=True)
-                print(f"public state: {led.public_path}", flush=True)
-                return 0
         if room._intent:
             deadline = time.monotonic() + 45
             while not room._intent.get("done") and time.monotonic() < deadline:
                 await asyncio.sleep(0.1)
+        print(json.dumps({"steps": args.steps, "open_bets": led.book.public()["open_bets"],
+                          "refusals": led.book.refusals}), flush=True)
         if led.book.positions:
-            fill = next(iter(led.book.positions.values()))
-            print(json.dumps(fill), flush=True)
             return 0
         print("No fill in this session. The room did not invent a stop or a drive.", flush=True)
         return 1
