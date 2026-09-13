@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 WHO = ["her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.",
        "she never speaks. the numbers do.", "paper money only. no real bets.",
-       "the first fly streamer on kick.", "he launched a coin, she got a house."]
+       "the first fly streamer on kick."]
 COUNTS = "bets sold won lost pnl pages clicks scrolls sugar shock".split()
 FEED_LIMIT = 48  # Longer lines disappear beyond the stream column.
 

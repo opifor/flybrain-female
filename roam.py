@@ -599,7 +599,8 @@ def register_rooms(betting):
             raise FileNotFoundError("music catalogue is absent")
         from ear import FlyEar
         ear = FlyEar(betting.fb)
-    except (ImportError, OSError, ValueError) as exc:
+    except (ImportError, OSError, ValueError, AttributeError) as exc:
+        # A brain without the type index (a test double) simply has no ear.
         print(f"[musicroom] ear unavailable: {exc}", flush=True)
     music = MusicRoom(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
                      Path(settings.get("FLY_STATE_DIR") or OUT),
