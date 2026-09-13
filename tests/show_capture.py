@@ -309,6 +309,7 @@ def check_broadcast(page, checks, errors):
 
 def capture(port):
     global FRAME
+    SHOTS.mkdir(parents=True, exist_ok=True)
     origin = f'http://127.0.0.1:{port}'
     static = tempfile.TemporaryDirectory(prefix='show-music-')
     static_dir = Path(static.name)
@@ -333,7 +334,7 @@ def capture(port):
         arena.locator('.card:not(.empty)').nth(5).wait_for()
         assert arena.locator('.question').first.evaluate("e => { const r = document.createRange(); r.selectNodeContents(e); return r.getClientRects().length; }") == 3
         FRAME = arena.screenshot(type='jpeg', quality=90)
-        (OUT / 'flybrain-show-frame.jpg').write_bytes(FRAME)
+        (SHOTS / 'flybrain-show-frame.jpg').write_bytes(FRAME)
         arena.close()
         context = browser.new_context(viewport=dict(width=1920, height=1080),
                                       record_video_dir=str(OUT / 'flybrain-show-video'),
@@ -400,7 +401,7 @@ def capture(port):
                 expected = dict(bet=1,sell=2,sugar=3,shock=1,settled=3)[name]
                 assert page.evaluate('window.notes.length') - before == expected, name
                 checks.append(f'{name}: {expected} synthesized notes, one event delivery.')
-            page.screenshot(path=str(OUT / f'flybrain-show-{name}.png'))
+            page.screenshot(path=str(SHOTS / f'flybrain-show-{name}.png'))
             if name == 'bet':
                 page.wait_for_timeout(1200)
                 assert page.evaluate('window.notes.length') - before == 1
@@ -428,7 +429,7 @@ def capture(port):
             panel.wait_for_timeout(700)
             assert panel.evaluate('document.documentElement.scrollWidth <= innerWidth'), width
             assert panel.locator('#bet-stage canvas').bounding_box()['width'] > 100
-            panel.screenshot(path=str(OUT / f'flybrain-show-panel-{width}.png'))
+            panel.screenshot(path=str(SHOTS / f'flybrain-show-panel-{width}.png'))
             checks.append(f'Betting panel at {width}px has an overlay and no page overflow.')
             panel.close()
 
@@ -445,7 +446,7 @@ def capture(port):
         checks.append('mute=1 creates no audio context, including after a click.')
         DATA['live'] = False
         muted.wait_for_function("window.ink.some(e=>e.method==='fillText' && e.args[0]==='Waiting for the relay.')")
-        muted.screenshot(path=str(OUT/'flybrain-show-offline.png'))
+        muted.screenshot(path=str(SHOTS/'flybrain-show-offline.png'))
         checks.append('Offline state covers the stale frame and removes the live show.')
         assert not errors, errors
         browser.close()
@@ -721,8 +722,12 @@ def check_rooms(browser, origin, checks, errors):
         else:
             expect(record).to_contain_text('entered music room')
             expect(record).to_contain_text('door order: unavailable')
-            state['rooms']['/hall']['doors'] = [{'name': 'music room'}, {'name': 'the betting room'}]
+            state['rooms']['/hall']['doors'] = [
+                {'name': 'music room', 'path': '/musicroom'},
+                {'name': 'the betting room', 'path': '/betroom'}]
             expect(record).to_contain_text('door order: music room → the betting room')
+        expect(page.get_by_role('heading', name='her screen right now')).to_be_visible()
+        page.wait_for_function("document.querySelector('#bet-stage img').naturalWidth > 0")
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         assert not errors, errors
         page.close()

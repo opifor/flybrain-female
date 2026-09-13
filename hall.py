@@ -6,12 +6,12 @@ import json
 DISCLOSURE = "The doors are the rooms people built. Which one she walks into is her stop."
 DECLARATION = Declaration(
     name="the hall", path="/hall",
-    cards={"source": "registered rooms with healthy loopback executors", "refresh_seconds": 2},
-    commit_means="entering that room",
-    reward_source="The hall delivers no sugar or shock; the entered room declares its own reward source.",
+    cards={"source": "rooms whose doors are ready to open", "refresh_seconds": 2},
+    commit_means="she enters that room",
+    reward_source="The hall brings no sugar or shock; each room says where its own sugar and shock come from.",
     chosen=[DISCLOSURE, "door order rotates every visit so no door owns the left"],
-    measured=["Two readings and a descending-neuron stop open a door.",
-              "nudges: how often the page had to push her out of an empty margin"],
+    measured=["She stays on a door for two readings; a stop from her brain opens it after she has looked at another door.",
+              "The page counts how often it pushes her out of an empty margin."],
     how=("door order rotates every visit so no door owns the left.",
          "she needs readings from another door before a stop can open this one.",
          "entering a room brings her to that room's cards.",
@@ -85,4 +85,7 @@ class Hall(RoomWalk):
         self.refresh_board()
 
     def state(self):
-        return {**super().state(), "events": self.entered}
+        board = self.board()
+        return {**super().state(), "events": self.entered,
+                "doors": [{"name": card["name"], "path": card["path"]} for card in board["cards"]],
+                "order_seed": board["order_seed"]}

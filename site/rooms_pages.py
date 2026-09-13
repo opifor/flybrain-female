@@ -62,9 +62,12 @@ def generate(destination=WEB / 'rooms'):
 <section><h2>her paper record</h2>{badge}<dl class="counters">{counters}</dl>
 <p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
 <div data-live="book">Paper book unavailable.</div></section></div>'''
-        if slug == 'betting':
-            body += '<section><h2>the live arena</h2><div id="bet-stage"></div></section>'
-        write(slug, d['name'], body, slug == 'betting')
+        arena = slug in ('betting', 'music', 'hall')
+        if arena:
+            body += ('<section><h2>her screen right now</h2>'
+                     "<p>whatever room she is in appears here; the paper record above is this room's</p>"
+                     '<div id="bet-stage"></div></section>')
+        write(slug, d['name'], body, arena)
     write('index', 'Her Rooms', '<div class="rooms">' + ''.join(cards) + '</div>')
 
 

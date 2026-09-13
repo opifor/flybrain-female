@@ -20,6 +20,11 @@ def test_rooms_pages(tmp_path):
         for sentence in declaration.how:
             assert sentence in text
         assert declaration.reward_source in text
+        if slug in ('betting', 'music', 'hall'):
+            assert text.count('<h2>her screen right now</h2>') == 1
+            assert "whatever room she is in appears here; the paper record above is this room's" in text
+            assert text.count('id="bet-stage"') == 1
+            assert '<script src="show.js"></script>' in text
         positions.append(index.index(f'<h2>{declaration.name}</h2>'))
     assert positions == sorted(positions)
     for path in tmp_path.iterdir():

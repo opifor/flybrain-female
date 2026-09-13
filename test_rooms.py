@@ -120,8 +120,17 @@ def test_rooms_explain_their_own_play():
     for declaration in (betroom.DECLARATION, tiproom.DECLARATION, musicroom.DECLARATION):
         assert 3 <= len(declaration.public()["how"]) <= 8
     assert "YES" in betroom.DECLARATION.how[3]
-    assert "fixture thanks" in tiproom.DECLARATION.how[-2]
+    assert "practice thank-you" in tiproom.DECLARATION.how[-2]
     assert "Johnston organs" in musicroom.DECLARATION.how[-3]
+
+
+def test_declarations_keep_code_out_of_prose():
+    import musicroom
+    for declaration in (hall.DECLARATION, betroom.DECLARATION, tiproom.DECLARATION, musicroom.DECLARATION):
+        prose = [declaration.commit_means, declaration.reward_source, declaration.cards["source"],
+                 *declaration.chosen, *declaration.measured, *declaration.how]
+        for sentence in prose:
+            assert not any(term in sentence for term in ("(", "abs(", "floor(")), sentence
 
 
 def test_hall_hides_an_executor_that_does_not_answer(tmp_path):
@@ -132,6 +141,9 @@ def test_hall_hides_an_executor_that_does_not_answer(tmp_path):
     http.bad.add("http://127.0.0.1:4673/health")
     room.refresh_board(force=True)
     assert [c["path"] for c in room.board()["cards"]] == ["/betroom"]
+    assert room.state()["doors"] == [{"name": "the betting room", "path": "/betroom"}]
+    room.clock = lambda: 1700000005
+    assert room.state()["doors"] == []
 
 
 def test_hall_order_rotates_with_visits_and_survives_restart(tmp_path):
@@ -141,6 +153,10 @@ def test_hall_order_rotates_with_visits_and_survives_restart(tmp_path):
         board = room.board()
         expected = ["/betroom", "/tiproom"] if visit % 2 else ["/tiproom", "/betroom"]
         assert board["order_seed"] == visit - 1
+        state = room.state()
+        assert state["order_seed"] == visit - 1
+        names = {"/betroom": "the betting room", "/tiproom": "the tipping room"}
+        assert state["doors"] == [{"name": names[path], "path": path} for path in expected]
         assert [c["token"] for c in board["cards"]] == expected
         assert [c["token"] for c in room.registry.healthy(room.http)] == ["/betroom", "/tiproom"]
         assert [c["token"] for c in room.board()["cards"]] == expected
