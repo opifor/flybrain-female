@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Watch · Female Flybrain</title><link rel="stylesheet" href="rooms.css"></head>
+<body>
+<header class="site-nav"><a href="./">Female Flybrain · Her Rooms</a><nav aria-label="Main"><a href="rooms/">rooms</a><a href="brain.html">brain</a><a href="story.html">story</a><a href="index.html#ca-text">$HER</a><a href="https://kick.com/femalefly">watch</a></nav></header>
+<main><span class="paper">paper</span><h1>Watch</h1>
+<p class="lede">The stream is not live yet. We’ll announce it on X at <a href="https://x.com/opifor">@opifor</a>.</p>
+<a class="button" href="https://kick.com/femalefly">Watch Female Flybrain on Kick →</a>
+<section aria-live="polite"><h2>Now</h2><p id="watch-now">Waiting for her next update.</p><p id="watch-room">Room unavailable.</p></section>
+<section><h2>What you’ll see</h2><p>The arena she moves through, WHO / NOW / FEED beside it, and the last hour of her life: where she went and what happened there.</p><p>You’ll hear the music she picks. Sugar and shock reactions are coming to chat later.</p><p>Every room is paper. No real money, no real bets.</p></section>
+</main>
+<script>
+(() => {
+  'use strict';
+  const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
+  async function tick() {
+    let now;
+    try {
+      const response = await fetch(origin + '/state', {cache:'no-store', signal:AbortSignal.timeout(8000)});
+      if (!response.ok) throw new Error('relay unavailable');
+      const state = await response.json();
+      if (state.live) now = state.life?.now;
+    } catch (_) {}
+    document.getElementById('watch-now').textContent = now?.doing || 'Waiting for her next update.';
+    document.getElementById('watch-room').textContent = now?.room ? 'In ' + now.room : 'Room unavailable.';
+    setTimeout(tick, 1000);
+  }
+  tick();
+})();
+</script></body></html>

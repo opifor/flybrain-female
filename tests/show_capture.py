@@ -434,6 +434,7 @@ def capture(port):
 
         check_entry(browser, origin, checks, errors)
         check_rooms(browser, origin, checks, errors)
+        check_brain(browser, origin, checks, errors)
 
         muted = browser.new_page(viewport=dict(width=1920,height=1080))
         muted.add_init_script(INSTRUMENT)
@@ -726,6 +727,39 @@ def check_rooms(browser, origin, checks, errors):
         assert not errors, errors
         page.close()
         checks.append(f'Rooms {slug}: paper history renders at 400px without overflow.')
+
+
+def check_brain(browser, origin, checks, errors):
+    from playwright.sync_api import expect
+
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    for width in (1280, 400):
+        for slug in ('brain', 'watch'):
+            state = fixture()
+            state['live'] = True
+            page = browser.new_page(viewport=dict(width=width, height=900))
+            page.on('pageerror', lambda error: errors.append(str(error)))
+            page.route(origin + '/state', lambda route: route.fulfill(json=state))
+            page.goto(f'{origin}/{slug}.html?relay={origin}')
+            expect(page.locator('h1')).to_be_visible()
+            if slug == 'watch':
+                expect(page.locator('#watch-now')).to_have_text(state['life']['now']['doing'])
+                expect(page.locator('#watch-room')).to_have_text('In ' + state['life']['now']['room'])
+            else:
+                expect(page.get_by_role('heading', name='What she can sense')).to_be_visible()
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            page.screenshot(path=str(SHOTS / f'{slug}_{width}.png'), full_page=True)
+            if slug == 'watch':
+                state['life'] = {'now': {'doing': '<b>plain text</b>', 'room': 'x' * 200}}
+                expect(page.locator('#watch-now')).to_have_text('<b>plain text</b>')
+                assert page.locator('#watch-now b').count() == 0
+                expect(page.locator('#watch-room')).to_have_text('In ' + 'x' * 200)
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+                state['live'] = False
+                expect(page.locator('#watch-now')).to_have_text('Waiting for her next update.')
+            assert not errors, errors
+            checks.append(f'{slug} at {width}px: content, safe text and no overflow.')
+            page.close()
 
 
 if __name__ == '__main__':
