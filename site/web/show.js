@@ -178,6 +178,24 @@
     const whoStart = performance.now();
     let legendRoom = null, legendStart = whoStart;
     let feed = [], previousFeed = [], feedAt = 0;
+    let paintImage = null, paintKey = null, paintPending = false, paintLoaded = null, paintAttemptAt = -Infinity;
+    function loadPaint(now) {
+      try {
+        const book = state?.rooms?.['/paintroom']?.book;
+        if (!broadcast || !book) return;
+        const next = JSON.stringify([book.last_seq, book.opened_at, book.canvas_marks ?? book.marks]);
+        if (next === paintKey || paintPending || now - paintAttemptAt < 2000) return;
+        paintAttemptAt = now; paintPending = true;
+        const image = new Image();
+        image.onload = () => {
+          paintPending = false;
+          if (destroyed || !image.naturalWidth || !image.naturalHeight) return;
+          paintImage = image; paintKey = next; paintLoaded = book;
+        };
+        image.onerror = () => { paintPending = false; };
+        image.src = origin + '/paintroom/canvas.png?v=' + encodeURIComponent(next);
+      } catch (_) { paintPending = false; }
+    }
     let gazeKey = null, gazeProgress = 0, gazeDrive = 0, intentKey, decision = null;
     const seen = new Set(), cards = new Map(), records = new Map(), listeners = new Set();
     img.onload = () => {
@@ -214,6 +232,7 @@
     }
     function accept(d) {
       const now = performance.now(); state = d; lastPoll = now;
+      loadPaint(now);
       if (broadcast) {
         const next = d?.life?.feed?.slice(0, 14) || [];
         if (JSON.stringify(next) !== JSON.stringify(feed)) {
@@ -381,12 +400,29 @@
       });
       text(`paper balance ${money(current.balance)} usdc`, 1304, 423, 592);
       text(`${delta(current.today_delta)} today`, 1304, 453, 592, 22, '#8b93a1');
-      caption('feed', 1304, 508);
+      const painting = roomPath() === '/paintroom', feedShift = painting ? 300 : 0;
+      if (painting) {
+        g.save();
+        try {
+          if (state?.rooms?.['/paintroom']?.book && paintImage?.naturalWidth && paintImage?.naturalHeight) {
+            caption('her canvas', 1304, 501);
+            g.fillStyle = '#090a0c'; g.fillRect(1304, 512, 592, 287);
+            const scale = Math.min(592 / paintImage.naturalWidth, 287 / paintImage.naturalHeight);
+            const width = paintImage.naturalWidth * scale, height = paintImage.naturalHeight * scale;
+            g.imageSmoothingEnabled = true;
+            g.drawImage(paintImage, 1304 + (592 - width) / 2, 512 + (287 - height) / 2, width, height);
+            const marks = paintLoaded?.canvas_marks ?? paintLoaded?.marks, colour = paintLoaded?.dominant_colour;
+            if (marks != null && Number.isFinite(Number(marks)) && typeof colour === 'string' && colour) {
+              text(`${marks} marks · ${colour}`, 1304, 819, 592, 18, '#8b93a1');
+            }
+          }
+        } catch (_) {} finally { g.restore(); }
+      } else caption('feed', 1304, 508);
       const progress = clamp((now - feedAt) / 400);
       function feedRows(rows, offset, alpha, newest = false) {
-        g.save(); g.beginPath(); g.rect(1298, 523, 598, 537); g.clip(); g.globalAlpha = alpha;
-        rows.forEach((row, i) => {
-          const y = 550 + i * 37 + offset;
+        g.save(); g.beginPath(); g.rect(1298, 523 + feedShift, 598, 537 - feedShift); g.clip(); g.globalAlpha = alpha;
+        rows.slice(0, painting ? 6 : 14).forEach((row, i) => {
+          const y = 550 + feedShift + i * 37 + offset;
           text(row.at, 1304, y, 106, 22, '#8b93a1');
           g.font = '22px ui-monospace,monospace'; g.fillStyle = '#e9edf3';
           const line = value(row.text), width = 480;
