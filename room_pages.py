@@ -15,7 +15,9 @@ def page(declaration, cards, style, script):
     values = {"title": declaration.name, "declaration": json.dumps(declaration.public()).replace("<", "\\u003c"),
               "cards": cards, "style": style, "script": script,
               "door": '' if declaration.path == "/hall" else
-                      '<div id="door" class="door" data-token="/hall">the hall</div>'}
+                      '\n'.join(f'<div id="door-{edge}" class="door {edge}" data-token="/hall">'
+                                f'{"the hall" if edge in ("top", "bottom") else ""}</div>'
+                                for edge in ("top", "bottom", "left", "right"))}
     for key, value in values.items():
         text = text.replace("{{" + key + "}}", value)
     return text

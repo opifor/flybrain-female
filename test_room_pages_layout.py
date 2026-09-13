@@ -7,6 +7,7 @@ import time
 
 import pytest
 from playwright.sync_api import sync_playwright, expect
+from room import RECTS_JS
 
 
 @pytest.fixture(scope="module")
@@ -23,7 +24,7 @@ def room_origin():
         thread.join()
 
 
-@pytest.mark.parametrize("room", ["betroom", "musicroom", "hall"])
+@pytest.mark.parametrize("room", ["betroom", "musicroom", "tiproom", "hall"])
 def test_room_screen_bands(room_origin, room, tmp_path):
     cards = [dict(token=f"card-{i}", name=f"Track {i}", artist="River", license="CC BY 3.0",
                   duration=60, market_id=f"card-{i}", slot=i, shelf="fast", question=f"Question {i}?",
@@ -41,18 +42,23 @@ def test_room_screen_bands(room_origin, room, tmp_path):
         assert status == {"x": 56, "y": 700, "width": 1168, "height": 56}
         boxes = page.locator(".card").evaluate_all("nodes => nodes.map(n => {const r=n.getBoundingClientRect(); return {x:r.x,y:r.y,w:r.width,h:r.height};})")
         assert all(box["y"] + box["h"] <= 696 for box in boxes)
+        assert all(box["x"] >= 56 and box["x"] + box["w"] <= 1224 and box["y"] >= 48 for box in boxes)
         if room == "betroom":
             assert boxes == [dict(x=56 + i % 3 * 400, y=48 + i // 3 * 328, w=368, h=320) for i in range(6)]
         if room != "hall":
-            expect(page.locator("#door")).to_be_visible()
-            assert page.locator("#door").bounding_box() == {"x": 56, "y": 760, "width": 1168, "height": 40}
-            overlaps = page.evaluate("""() => [...document.querySelectorAll('body *')].filter(e => {
-                if (e.id === 'door' || e.contains(document.querySelector('#door'))) return false;
-                const r = e.getBoundingClientRect(), s = getComputedStyle(e);
-                return s.visibility !== 'hidden' && r.width > 0 && r.height > 0 &&
-                    r.top < 800 && r.bottom > 760 && r.left < 1224 && r.right > 56;
-            }).map(e => e.tagName + '#' + e.id)""")
-            assert overlaps == []
+            expected = [dict(x=0, y=0, w=1280, h=40), dict(x=0, y=760, w=1280, h=40),
+                        dict(x=0, y=0, w=48, h=800), dict(x=1232, y=0, w=48, h=800)]
+            expect(page.locator('.door[data-token="/hall"]')).to_have_count(4)
+            doors = [r for r in page.evaluate(RECTS_JS) if r["token"] == "/hall"]
+            assert doors == [dict(token="/hall", held=False, **box) for box in expected]
+            for edge in ("top", "bottom", "left", "right"):
+                expect(page.locator(f"#door-{edge}")).to_be_visible()
+            for door in doors:
+                for box in boxes + [dict(x=status["x"], y=status["y"], w=status["width"], h=status["height"])]:
+                    assert (box["x"] + box["w"] <= door["x"] or door["x"] + door["w"] <= box["x"] or
+                            box["y"] + box["h"] <= door["y"] or door["y"] + door["h"] <= box["y"])
+        else:
+            expect(page.locator(".door")).to_have_count(0)
         if room == "musicroom":
             expect(page.locator("#status")).to_have_text("now playing: nothing")
             expect(page.locator("#status audio")).to_be_hidden()

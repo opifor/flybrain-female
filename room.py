@@ -294,6 +294,7 @@ class Room:
         self._seen, self._smell, self.meta, self.refs = {}, {}, {}, {}
         self._held = set()
         self._last_rects = []
+        self._current_card = None
         self._look_seq = self.last_seq = 0
         self.last_intents, self.last_dopamine = [], []
         self._said_no_book = False
@@ -370,6 +371,7 @@ class Room:
         rects = await self._rects(page)
         self._last_rects = rects
         card = self._card_at(rects, cx, cy)
+        self._current_card = card
         token = card["token"] if card else None
         if token is not None and (self._dwell is None or self._dwell["token"] != token):
             self.mb.forget_trace()
@@ -641,10 +643,17 @@ class Room:
                    "name": m.get("name") or "", "held": bool(d.get("held")),
                    "drive": self._drive_of(d), "dwell_steps": int(d["steps"])}
         c = self.counters
+        rects = {r["token"]: {key: int(r[key]) for key in ("x", "y", "w", "h")}
+                 for r in self._last_rects}
+        # The frame is one door, but the stream follows the edge under her feet.
+        if self._current_card is not None:
+            r = self._current_card
+            rects[r["token"]] = {key: int(r[key]) for key in ("x", "y", "w", "h")}
         return {"room": self.declaration.public(), "in_room": bool(self.in_room), "visits": c["visits"], "looks": c["looks"],
                 "entered_at": self.entered_at, "last_exit": self.last_exit,
-                "rects": {r["token"]: {key: int(r[key]) for key in ("x", "y", "w", "h")}
-                          for r in self._last_rects},
+                "rects": rects,
+                "door_rects": [{key: int(r[key]) for key in ("x", "y", "w", "h")}
+                               for r in self._last_rects if r["token"] == "/hall"],
                 "commits": c["commits"], "intents": c["intents"], "booked": c["booked"],
                 "refused": c["refused"], "dislikes": c["dislikes"], "busy": c["busy"],
                 "seen": len(self._seen), "nudges": c["nudges"],

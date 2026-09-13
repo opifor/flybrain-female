@@ -770,7 +770,7 @@ async def screenshot(page):
     return raw
 
 
-ROOM_STAY_MAX_S = 600
+ROOM_STAY_MAX_S = 360
 
 
 def room_clock(room, now):

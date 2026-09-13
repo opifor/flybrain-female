@@ -53,7 +53,10 @@ def test_room_door_uses_the_same_dwell_and_never_calls_executor(tmp_path, kind):
     room.read_book = lambda: {"now_playing": {"track_id": "song", "started_at": room._now()}}
     room.spawn = lambda *args: pytest.fail("the door must not contact the executor")
     room.refresh_board = lambda **kwargs: None
-    page = FakePage([{"token": "/hall", "x": 56, "y": 760, "w": 1168, "h": 40}])
+    boxes = [dict(x=0, y=0, w=1280, h=40), dict(x=0, y=760, w=1280, h=40),
+             dict(x=0, y=0, w=48, h=800), dict(x=1232, y=0, w=48, h=800)]
+    page = FakePage([dict(token="/hall", **box) for box in boxes])
+    assert len(asyncio.run(room._rects(page))) == 4
     asyncio.run(room.enter(page))
     assert room.state()["entered_at"] == 1700000000
     assert room.state()["last_exit"] is None
@@ -61,10 +64,24 @@ def test_room_door_uses_the_same_dwell_and_never_calls_executor(tmp_path, kind):
     room._seen["other"] = (1.0, 0.0)
     room.pilot.fired[None] = room.fb.fired
     room.pilot.click = True
-    asyncio.run(room.step(page, IMG, 640, 780, 1))
+    asyncio.run(room.step(page, IMG, 24, 400, 1))
     assert room.destination is None
-    asyncio.run(room.step(page, IMG, 640, 780, 2))
+    dwell = room._dwell
+    assert room.state()["rects"]["/hall"] == boxes[2]
+    room.pilot.click = False
+    asyncio.run(room.step(page, IMG, 640, 20, 2))
+    assert room._dwell is dwell and dwell["steps"] == 2
+    assert dwell["card"] == dict(token="/hall", **boxes[0])
+    assert room.state()["rects"]["/hall"] == boxes[0]
+    assert room.state()["door_rects"] == boxes
+    for x, y in [(24, 400), (640, 20), (640, 780), (1256, 400)] * 2:
+        room._margin_steps = 5
+        asyncio.run(room.step(page, IMG, x, y, 3))
+        assert room._margin_steps == 0 and room.counters["nudges"] == 0
+    room.pilot.click = True
+    asyncio.run(room.step(page, IMG, 640, 20, 4))
     assert room.destination == "/hall"
+    assert room.state()["rects"]["/hall"] == boxes[0]
     assert room.state()["last_exit"] == {"by": "door", "at": 1700000000}
     assert room.last_intents[-1]["side"] == "door"
     assert room._intent is None
@@ -75,15 +92,16 @@ def test_room_door_uses_the_same_dwell_and_never_calls_executor(tmp_path, kind):
     assert room.entered_at == 1700000010
 
 
-def test_room_clock_closes_at_ten_minutes_only_while_visiting(tmp_path):
+def test_room_clock_closes_at_six_minutes_only_while_visiting(tmp_path):
     room = make_room(tiproom.Room, tmp_path, fetch_board=lambda: [])
     assert roam.room_clock(room, 1700000600) is None
     asyncio.run(room.enter(FakePage([])))
-    assert roam.room_clock(room, room.entered_at + 599.999) is None
+    assert roam.ROOM_STAY_MAX_S == 360
+    assert roam.room_clock(room, room.entered_at + 359.999) is None
     assert room.destination is None and room.last_exit is None
-    assert roam.room_clock(room, room.entered_at + 600) == "clock"
+    assert roam.room_clock(room, room.entered_at + 360) == "clock"
     assert room.destination == "/hall"
-    assert room.state()["last_exit"] == {"by": "clock", "at": 1700000600}
+    assert room.state()["last_exit"] == {"by": "clock", "at": 1700000360}
     room.leave()
     assert roam.room_clock(room, 1700000700) is None
     hallway = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
@@ -91,9 +109,9 @@ def test_room_clock_closes_at_ten_minutes_only_while_visiting(tmp_path):
     assert roam.room_clock(hallway, hallway.entered_at + 600) is None
 
 
-def test_only_rooms_have_the_hall_bar():
+def test_only_rooms_have_the_hall_frame():
     for name, text in room_pages.pages().items():
-        assert ('<div id="door" class="door" data-token="/hall">the hall</div>' in text) == (name != "hall")
+        assert text.count('data-token="/hall"') == (0 if name == "hall" else 4)
 
 
 @pytest.mark.parametrize("kind", ["hall", "betroom", "tiproom", "musicroom"])

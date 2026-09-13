@@ -11,7 +11,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 #room{width:1280px;margin:auto;padding:48px 56px;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
-.door{position:fixed;top:760px;left:56px;right:56px;height:40px;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;padding:5px 14px;color:var(--dim);font-size:20px;z-index:1}
+.door{position:fixed;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;color:var(--dim);font-size:20px;z-index:1}
+.door.top,.door.bottom{left:0;right:0;height:40px;padding:5px 56px;z-index:2}
+.door.top{top:0}
+.door.bottom{bottom:0}
+.door.left,.door.right{top:0;bottom:0;width:48px}
+.door.left{left:0}
+.door.right{right:0}
 #status{position:fixed;top:700px;left:56px;right:56px;height:56px;box-sizing:border-box;background:var(--ground);font-size:20px;line-height:28px;overflow:hidden;z-index:1}
 #status p{margin:0}
 #status audio{display:none}

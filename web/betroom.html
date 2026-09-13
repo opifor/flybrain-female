@@ -11,7 +11,13 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 #room{width:1280px;margin:auto;padding:48px 56px;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
-.door{position:fixed;top:760px;left:56px;right:56px;height:40px;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;padding:5px 14px;color:var(--dim);font-size:20px;z-index:1}
+.door{position:fixed;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;color:var(--dim);font-size:20px;z-index:1}
+.door.top,.door.bottom{left:0;right:0;height:40px;padding:5px 56px;z-index:2}
+.door.top{top:0}
+.door.bottom{bottom:0}
+.door.left,.door.right{top:0;bottom:0;width:48px}
+.door.left{left:0}
+.door.right{right:0}
 #status{position:fixed;top:700px;left:56px;right:56px;height:56px;box-sizing:border-box;background:var(--ground);font-size:20px;line-height:28px;overflow:hidden;z-index:1}
 #status p{margin:0}
 #status audio{display:none}
@@ -32,7 +38,10 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 <main id="room">
 <div id="fast" class="grid"></div>
 <div id="status" role="status"></div>
-<div id="door" class="door" data-token="/hall">the hall</div>
+<div id="door-top" class="door top" data-token="/hall">the hall</div>
+<div id="door-bottom" class="door bottom" data-token="/hall">the hall</div>
+<div id="door-left" class="door left" data-token="/hall"></div>
+<div id="door-right" class="door right" data-token="/hall"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
 <script id="room-declaration" type="application/json">{"name": "the betting room", "path": "/betroom", "cards": {"source": "Polymarket current binary markets", "refresh_seconds": 30}, "commit_means": "a bet", "reward_source": "Resolved wins deliver sugar and losses shock; a sale teaches the sign of its paper (for now) profit.", "chosen": ["CHOSEN by people: a person chose current BTC and ETH 5-minute markets and BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, so her learning signal arrives while she is still in the room; refreshed every 30 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.", "a ten-minute room clock and a door in every room"], "measured": ["Stops and relative drive come from the female brain; this does not establish predictive skill.", "nudges: how often the page had to push her out of an empty margin"], "how": ["her eye settles on a card; a decision only starts once she has stayed on it for two rounds.", "the card's question is turned into a smell, word by word, and fed to her olfactory neurons.", "her mushroom body remembers whether that smell brought sugar or shock before.", "while she stays, the drive it produces is summed; positive means YES, negative means NO, zero means she walks away.", "the paper (for now) bookie takes the bet; a resolved win brings sugar and a loss brings shock, and she learns.", "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."]}</script>
