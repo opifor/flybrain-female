@@ -64,7 +64,7 @@ def label(record, cards):
 
 
 class Life:
-    def __init__(self, dir="build/life"):
+    def __init__(self, dir="build/life", music_catalogue="data/music/catalog.json"):
         self.dir = Path(dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         self.path = self.dir / "feed.jsonl"
@@ -73,6 +73,8 @@ class Life:
         self.samples, self.quiet = [], None
         self.cooldown, self.high, self.wins = {}, None, 0
         self.day = {}
+        self.music_catalogue = Path(music_catalogue)
+        self.music_tracks = {}
         for path in (self.dir / "feed.1.jsonl", self.path):
             if path.exists():
                 with path.open(encoding="utf-8") as stream:
@@ -94,6 +96,7 @@ class Life:
         self.room, self.high = saved.get("room", "the web"), saved.get("high")
         self.wins, self.cooldown = saved.get("wins", 0), saved.get("cooldown", {})
         self.cards = saved.get("cards", [])
+        self.music_reactions = saved.get("music_reactions", {})
         self.first = not self.day and not self.rows
 
     def _fresh(self, family, value):
@@ -126,15 +129,55 @@ class Life:
         cards, url = betting.get("cards", []), state.get("url", "")
         self.cards = list({c.get("market_id"): c for c in self.cards + cards}.values())[-200:]
         host = domain(url)
+        music = state.get("rooms", {}).get("/musicroom") or {}
+        music_book = music.get("book") or {}
+        playing = music_book.get("now_playing")
+        if music_book and not self.music_tracks:
+            try:
+                self.music_tracks = {str(r["id"]): r for r in
+                                     json.loads(self.music_catalogue.read_text(encoding="utf-8"))}
+            except (OSError, ValueError):
+                pass
+        plays = list(music_book.get("plays", []))
+        if playing and not any((p.get("track_id"), p.get("started_at")) ==
+                               (playing.get("track_id"), playing.get("started_at")) for p in plays):
+            plays.append(playing)
+        for play in plays:
+            title = play.get("title", "the track")
+            artist = self.music_tracks.get(str(play.get("track_id")), {}).get("artist", "unknown artist")
+            start = play["started_at"]
+            identity = [str(play.get("track_id")), start]
+            key = f"music:{play.get('track_id')}:{start}"
+            if self._fresh("music.play", identity) and key not in self.rows:
+                self._line("music.play", market_line("she put on ", title, f" by {artist}"), start, key=key,
+                           hidden=self.first and start < now - 600)
+            end = play.get("ended_at")
+            if end is not None and end <= now and self._fresh("music.end", identity) and key + ":end" not in self.rows:
+                self._line("music.end", market_line("", title, f" ended · she stayed {max(0, round(end - start))} s"), end,
+                           key=key + ":end",
+                           hidden=self.first and end < now - 600)
+        reactions = music_book.get("reactions", {}).get("tracks", {})
+        for track_id, counts in reactions.items():
+            title = self.music_tracks.get(str(track_id), {}).get("title") or next(
+                (p["title"] for p in reversed(plays) if str(p.get("track_id")) == str(track_id)), "the track")
+            previous = self.music_reactions.get(str(track_id), {})
+            for kind in ("sugar", "shock"):
+                total = counts.get(kind, 0)
+                added = max(0, total - previous.get(kind, 0))
+                if added and not self.first:
+                    self._line("music.react", f"a listener sent {kind} for {title}", now, {kind: added})
+            self.music_reactions[str(track_id)] = dict(counts)
         entries = state.get("rooms", {}).get("/hall", {}).get("events", [])
         entered = [e for e in entries if e.get("kind") == "entered"]
         room = "paper room" if betting.get("in_room") else "the web"
+        if music.get("in_room"):
+            room = "music room"
         if room == "the web" and entered:
             latest = max(entered, key=lambda e: e.get("at", 0))
             # A retained doorway event must not follow her onto an unrelated page.
             path = urlsplit(url).path if url else latest.get("path")
             if path == latest.get("path"):
-                room = {"/hall": "hall", "/tiproom": "tip room"}.get(path, "the web")
+                room = {"/hall": "hall", "/tiproom": "tip room", "/musicroom": "music room"}.get(path, "the web")
         if room != self.room:
             self._line("room.enter", f"she walked into the {room.removeprefix('the ')}", now)
         self.room = room
@@ -259,6 +302,7 @@ class Life:
         recent = {k: sum(r["counts"].get(k, 0) for r in self.rows.values() if r["ts"] > now-600)
                   for k in ("sugar", "shock")}
         doing = {"hall": "walking the hall", "tip room": "visiting the tip room",
+                 "music room": f"listening to {playing['title']}" if playing else "looking at the music shelf",
                  "the web": f"reading {host}"}.get(room, "looking at the board")
         if room == "paper room":
             opened = book.get("open_bets", [])
@@ -277,7 +321,7 @@ class Life:
         self.seen = self.current_seen
         self.day.update(since=self.since, memory=dict(seen=sorted(self.seen), stats=self.stats,
                         url=self.url, room=self.room, high=self.high, wins=self.wins,
-                        cooldown=self.cooldown, cards=self.cards))
+                        cooldown=self.cooldown, cards=self.cards, music_reactions=self.music_reactions))
         self.dir.mkdir(parents=True, exist_ok=True)
         pending = self.dir / "day.tmp"
         pending.write_text(json.dumps(self.day), encoding="utf-8")

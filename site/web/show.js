@@ -6,12 +6,13 @@
   const signed = v => (v >= 0 ? '+' : '') + v.toFixed(2);
   const key = e => `${e.kind}:${e.seq ?? e.id ?? `${e.at}:${e.market_id}:${e.action || ''}`}`;
 
-  function makeSound() {
+  function makeSound(media) {
     let ctx, master, pan, tone, filt, lfo, on = false, volume = 0.5;
     function init() {
       if (ctx) return;
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       master = ctx.createGain(); master.gain.value = 0;
+      ctx.createMediaElementSource(media).connect(master);
       pan = ctx.createStereoPanner(); tone = ctx.createGain(); tone.gain.value = 0;
       const trem = ctx.createGain(); trem.gain.value = 0.7;
       filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 200; filt.Q.value = 2;
@@ -36,7 +37,7 @@
       o.onended = () => { o.disconnect(); g.disconnect(); };
     }
     return {
-      async start() { init(); on = true; await ctx.resume(); master.gain.setTargetAtTime(volume * 0.25, ctx.currentTime, 0.15); return ctx.state === 'running'; },
+      async start() { init(); on = true; await ctx.resume(); master.gain.setTargetAtTime(on ? volume * 0.25 : 0, ctx.currentTime, 0.15); return ctx.state === 'running'; },
       mute(value) { on = !value; if (ctx) master.gain.setTargetAtTime(on ? volume * 0.25 : 0, ctx.currentTime, 0.08); },
       volume(value) { volume = clamp(value); if (ctx && on) master.gain.setTargetAtTime(volume * 0.25, ctx.currentTime, 0.08); },
       state(d, live) {
@@ -62,7 +63,38 @@
     const broadcast = layout === 'broadcast' || (size?.width === 1920 && size?.height === 1080);
     const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
     const forcedMute = new URLSearchParams(location.search).get('mute') === '1';
-    const sound = audio && !forcedMute ? makeSound() : null;
+    const musicAudio = document.createElement('audio');
+    musicAudio.hidden = true; musicAudio.preload = 'auto';
+    musicAudio.muted = !audio || forcedMute;
+    container.append(musicAudio);
+    const sound = audio && !forcedMute ? makeSound(musicAudio) : null;
+    let music = null, musicKey = null, musicCredits = new Map();
+    fetch('music/catalog.json').then(r => r.ok ? r.json() : []).then(rows => {
+      musicCredits = new Map(rows.map(row => [String(row.id), row]));
+    }).catch(() => {});
+    function syncMusic() {
+      if (!music || !audio) return;
+      const offset = Math.max(0, Date.now() / 1000 - number(music.started_at));
+      if (offset >= number(music.duration)) { musicAudio.pause(); return; }
+      if (musicAudio.readyState >= 1) {
+        const end = Number.isFinite(musicAudio.duration) ? musicAudio.duration : number(music.duration);
+        if (offset >= end) { musicAudio.pause(); return; }
+        if (Math.abs(musicAudio.currentTime - offset) > 0.75) musicAudio.currentTime = offset;
+        musicAudio.play().catch(() => {});
+      }
+    }
+    musicAudio.addEventListener('loadedmetadata', syncMusic);
+    function acceptMusic(d, healthy) {
+      const room = d?.rooms?.['/musicroom'];
+      music = healthy && room?.in_room ? room.book?.now_playing : null;
+      const next = music ? `${music.track_id}:${music.started_at}` : null;
+      if (next !== musicKey) {
+        musicKey = next; musicAudio.pause();
+        if (music && audio) musicAudio.src = `music/${encodeURIComponent(String(music.track_id))}.ogg`;
+        else { musicAudio.removeAttribute('src'); musicAudio.load(); }
+      }
+      syncMusic();
+    }
     container.style.position = 'relative'; container.style.overflow = 'hidden';
     if (size) container.style.aspectRatio = `${size.width} / ${size.height}`;
     let img = container.querySelector('img');
@@ -89,7 +121,7 @@
     let hint, muteButton, muted = forcedMute;
     function unlock() {
       if (!sound || muted) return;
-      sound.start().then(ok => { if (ok && hint) hint.hidden = true; }).catch(() => {});
+      sound.start().then(ok => { if (ok && hint) hint.hidden = true; syncMusic(); }).catch(() => {});
     }
     if (sound) {
       muteButton = button('mute'); muteButton.setAttribute('aria-pressed', 'false');
@@ -132,6 +164,7 @@
         }
       }
       live = d?.live === true && number(d.age) < 15;
+      acceptMusic(d, live);
       sound?.state(d, live);
       for (const f of listeners) f(d);
       if (!live) { trail = []; moments = []; return; }
@@ -240,7 +273,18 @@
       text('live', 1776, 166, 100);
       caption('now', 1304, 235);
       text(current.doing, 1304, 276, 592, 30);
-      text(current.room == null ? 'in the —' : `in the ${current.room.replace(/^the /, '')}`, 1304, 310, 592, 22, '#8b93a1');
+      if (music) {
+        const credit = musicCredits.get(String(music.track_id)) || {};
+        g.strokeStyle = '#8b93a1'; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(1315, 302); g.lineTo(1315, 286); g.lineTo(1322, 289); g.stroke();
+        g.beginPath(); g.ellipse(1311, 302, 4, 2.5, -0.4, 0, Math.PI * 2); g.stroke();
+        const suffix = ` · ${credit.artist || 'unknown artist'} · ${credit.license || 'license pending'}`;
+        g.font = '16px ui-monospace,monospace';
+        let title = String(music.title);
+        while (title.length && g.measureText(title + suffix).width > 566) title = title.slice(0, -1);
+        if (title !== String(music.title)) title = title.slice(0, -1) + '…';
+        text(title + suffix, 1330, 307, 566, 16, '#8b93a1');
+      } else text(current.room == null ? 'in the —' : `in the ${current.room.replace(/^the /, '')}`, 1304, 310, 592, 22, '#8b93a1');
       ['spikes/s', 'turn', 'sugar', 'shock'].forEach((label, i) => {
         const x = 1304 + i * 148;
         text(label, x, 349, 140, 22, '#8b93a1');
@@ -351,7 +395,7 @@
       if (!healthy || !imageReady) {
         g.fillStyle = '#090a0ccc'; g.fillRect(0,0,1280,800); g.fillStyle = '#c4b9c0'; g.font = '17px ui-monospace,monospace';
         g.textAlign = 'center'; g.fillText(!healthy ? 'Waiting for the relay.' : 'Waiting for a live frame.',640,400); g.textAlign = 'left';
-        if (!healthy) sound?.state(null,false);
+        if (!healthy) { sound?.state(null,false); acceptMusic(null, false); }
       } else if (cursor && target) {
         const n = state.neural || {}, hz = state.hz || n.dn || {}, firing = clamp(number(n.firing)/16000), spike = clamp(number(n.spikes_per_sec)/2000000);
         moments = moments.filter(m => now - m.at < 2200);
@@ -413,7 +457,7 @@
     poll(); raf = requestAnimationFrame(draw);
     return {
       onState(fn) { listeners.add(fn); if (state) fn(state); return () => listeners.delete(fn); },
-      destroy() { destroyed = true; clearTimeout(timer); cancelAnimationFrame(raf); observer.disconnect(); sound?.destroy(); document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); canvas.remove(); controls.remove(); img.onload = img.onerror = null; },
+      destroy() { destroyed = true; clearTimeout(timer); cancelAnimationFrame(raf); observer.disconnect(); musicAudio.pause(); musicAudio.removeAttribute('src'); musicAudio.load(); musicAudio.remove(); sound?.destroy(); document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); canvas.remove(); controls.remove(); img.onload = img.onerror = null; },
     };
   };
 })();

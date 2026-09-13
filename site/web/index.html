@@ -529,6 +529,9 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 .entry-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
 .entry-status.on::before{background:var(--live)}
 #entry-doing{font-size:30px;margin-bottom:6px}
+#entry-music{font:11px var(--mono);color:var(--ink-dim);overflow-wrap:anywhere}
+#entry-music svg{width:16px;height:20px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.5}
+#entry-music a{display:inline-block;margin-left:6px}
 #entry-room{color:var(--ink-dim);font-size:14px;margin-bottom:24px}
 .entry-tiles{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:8px;margin-bottom:20px}
 .entry-tiles div{min-width:0;border-top:1px solid var(--line);padding-top:12px}
@@ -552,7 +555,13 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   .entry-current{padding:20px}.entry-buttons a{width:100%}}
 </style>
 <script>
+let entryMusicCredits = new Map(), entryMusicState;
+fetch('music/catalog.json').then(r => r.ok ? r.json() : []).then(rows => {
+  entryMusicCredits = new Map(rows.map(row => [String(row.id), row]));
+  if (entryMusicState) renderEntry(entryMusicState);
+}).catch(() => {});
 function renderEntry(state){
+  entryMusicState = state;
   const now = state.life?.now || {};
   const text = (id, value) => { document.getElementById(id).textContent = value; };
   const number = value => Number.isFinite(value) ? value.toLocaleString('en-US') : '\u2014';
@@ -561,6 +570,11 @@ function renderEntry(state){
   status.classList.toggle('on', !!state.live);
   status.textContent = state.live ? 'live' : 'offline';
   text('entry-doing', now.doing || '\u2014');
+  const musicRoom = state.rooms?.['/musicroom'];
+  const playing = state.live && musicRoom?.in_room && musicRoom.book?.now_playing;
+  document.getElementById('entry-music').hidden = !playing;
+  const credit = entryMusicCredits.get(String(playing?.track_id)) || {};
+  text('entry-music-title', playing ? `${playing.title} · ${credit.artist || 'unknown artist'} · ${credit.license || 'license pending'}` : '');
   text('entry-room', 'in the ' + (now.room || '\u2014').replace(/^the /, ''));
   text('entry-spikes', number(now.spikes));
   text('entry-sugar', number(now.sugar_10m));
@@ -597,6 +611,7 @@ function renderEntry(state){
       <div class="eyebrow">now</div>
       <div class="entry-status" id="entry-status">offline</div>
       <h2 id="entry-doing">—</h2>
+      <p id="entry-music" hidden><svg viewBox="0 0 16 20" aria-hidden="true"><path d="M10 15V2l5 3"/><path d="M10 15c0 4-8 5-8 1s8-5 8-1"/></svg> <span id="entry-music-title"></span> <a href="https://kick.com/femalefly">hear it live on kick</a></p>
       <p id="entry-room">in the —</p>
       <div class="entry-tiles">
         <div><b id="entry-spikes">—</b><small>spikes/s</small></div>

@@ -15,6 +15,93 @@ def texts(block, kind):
     return [r["text"] for r in block["feed"] if r["kind"] == kind]
 
 
+def test_music_feed_and_restart(tmp_path):
+    catalogue = tmp_path / "catalog.json"
+    catalogue.write_text(json.dumps([dict(id=123, title="Rain", artist="River")]), encoding="utf-8")
+    play = dict(track_id="123", title="Rain", started_at=100, duration=90)
+    book = dict(now_playing=play, plays=[{**play, "ended_at": None}],
+                reactions={"tracks": {"123": {"sugar": 4, "shock": 1}}})
+    state = moment(url="http://127.0.0.1:4660/musicroom",
+                   rooms={"/musicroom": dict(in_room=True, book=book)})
+    life = Life(tmp_path / "feed", music_catalogue=catalogue)
+    block = life.observe(state, 110)
+    assert block["now"]["room"] == "music room"
+    assert block["now"]["doing"] == "listening to Rain"
+    assert texts(block, "music.play") == ["she put on Rain by River"]
+    assert not texts(block, "music.react")
+    book["reactions"]["tracks"]["123"].update(sugar=5, shock=2)
+    block = life.observe(state, 120)
+    assert set(texts(block, "music.react")) == {"a listener sent sugar for Rain", "a listener sent shock for Rain"}
+    assert block["hour"]["sugar"] == block["hour"]["shock"] == 1
+    book["plays"][0]["ended_at"] = 135
+    book["now_playing"] = None
+    life = Life(tmp_path / "feed", music_catalogue=catalogue)
+    block = life.observe(state, 140)
+    assert texts(block, "music.end") == ["Rain ended · she stayed 35 s"]
+    assert next(r["at"] for r in block["feed"] if r["kind"] == "music.end") == "00:02:15"
+    assert len(texts(block, "music.play")) == 1
+    assert len(texts(block, "music.react")) == 2
+    assert life.observe(state, 141)["feed"] == block["feed"]
+    play = {**play, "started_at": 145}
+    book["now_playing"] = play
+    book["plays"].append({**play, "ended_at": None})
+    assert len(texts(life.observe(state, 150), "music.play")) == 2
+    state["rooms"]["/musicroom"]["in_room"] = False
+    state["url"] = "https://example.com/"
+    assert life.observe(state, 151)["now"]["doing"] == "reading example.com"
+
+
+def test_long_music_title_preserves_artist_and_stay(tmp_path):
+    catalogue = tmp_path / "catalog.json"
+    catalogue.write_text(json.dumps([dict(id="1", title="r" * 100, artist="River")]), encoding="utf-8")
+    play = dict(track_id="1", title="r" * 100, started_at=100, ended_at=140)
+    state = moment(rooms={"/musicroom": dict(in_room=True, book=dict(plays=[play]))})
+    life = Life(tmp_path / "feed", music_catalogue=catalogue)
+    block = life.observe(state, 150)
+    assert texts(block, "music.play")[0].endswith(" by River")
+    assert texts(block, "music.end")[0].endswith(" ended · she stayed 40 s")
+    assert all(len(row["text"]) <= 48 for row in block["feed"])
+    life.observe(moment(), 151)
+    assert len(texts(life.observe(state, 152), "music.play")) == 1
+    assert len(texts(life.observe(state, 153), "music.end")) == 1
+
+
+def test_music_assets_build_skip_and_limits(tmp_path, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location("music_assets", Path(__file__).parent / "site/music_assets.py")
+    assets = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(assets)
+    source = tmp_path / "data/music"
+    source.mkdir(parents=True)
+    catalogue = source / "catalog.json"
+    row = dict(id=123, title="Rain", artist="River", license="CC BY 3.0",
+               page="https://commons.wikimedia.org/wiki/File:Rain.ogg", duration=30,
+               file="data/music/123.wav")
+    catalogue.write_text(json.dumps([row]), encoding="utf-8")
+    calls = []
+    def transcode(command, check):
+        calls.append(command)
+        assert check and command[command.index("-i") + 1] == str(source / "123.wav")
+        assert command[command.index("-c:a") + 1] == "libvorbis"
+        assert command[command.index("-q:a") + 1] == "3"
+        Path(command[-1]).write_bytes(b"ogg fixture")
+    monkeypatch.setattr(assets.subprocess, "run", transcode)
+    output = tmp_path / "web/music"
+    rows = assets.build(catalogue, output)
+    assert rows == [{**{k: v for k, v in row.items() if k != "file"}, "id": "123", "file": "123.ogg"}]
+    assert json.loads((output / "catalog.json").read_text(encoding="utf-8")) == rows
+    assets.build(catalogue, output)
+    assert len(calls) == 1
+    monkeypatch.setattr(assets, "LIMIT", 2)
+    with pytest.raises(ValueError, match="8 MB"):
+        assets.build(catalogue, output)
+    row["id"] = "../escape"
+    catalogue.write_text(json.dumps([row]), encoding="utf-8")
+    with pytest.raises(ValueError, match="filename"):
+        assets.build(catalogue, output)
+
+
 def position(**fields):
     return dict(id=1, seq=1, market_id="eth", question="Ethereum Up or Down - September 13, 12:00AM-12:15AM ET", side="YES",
                 price=0.4, stake=4, stake_cents="400", **fields)

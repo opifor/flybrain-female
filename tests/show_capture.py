@@ -2,7 +2,10 @@
 import argparse
 import json
 import math
+import re
 import subprocess
+import shutil
+import tempfile
 import threading
 import time
 from functools import partial
@@ -27,6 +30,9 @@ DATA = {'events': [], 'learning': [], 'open': [], 'settled': [], 'live': True, '
 DATA['gaze'] = dict(token='0', steps=1, needed=2, drive=.35, side='yes',
                     smell=['earth', 'rain'], since=time.time(), blind=0)
 DATA['last_intent'] = dict(token='0', side='YES', drive=.35, at=time.time(), status='booked', reason=None)
+MUSIC_TRACK = dict(id='123', title='Rain', artist='River', license='CC BY 3.0',
+                   page='https://commons.wikimedia.org/wiki/File:Rain.ogg', duration=60, file='123.ogg')
+DATA['music'] = dict(in_room=False, book=dict(now_playing=None, plays=[], reactions={}))
 FRAME = b''
 SEQ = 0
 START = time.monotonic()
@@ -49,6 +55,7 @@ def fixture():
     SEQ += 1
     t = time.monotonic() - START
     return dict(seq=SEQ, live=DATA['live'], age=0, url='http://127.0.0.1:4660/betroom',
+                rooms={'/musicroom': DATA['music']},
                 **({'life': LIFE} if DATA.get('with_life', True) else {}),
                 cursor=dict(x=.3 + .16 * math.sin(t * .8), y=.43 + .15 * math.cos(t * .7)),
                 hz=dict(steer_L=150 + 130 * math.sin(t), steer_R=150 - 130 * math.sin(t),
@@ -68,6 +75,34 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = urlparse(self.path).path
+        if path.startswith('/music/') and path.endswith('.ogg'):
+            recording = Path(self.translate_path(self.path))
+            if not recording.is_file():
+                self.send_error(404)
+                return
+            body = recording.read_bytes()
+            size = len(body)
+            requested = self.headers.get('Range')
+            match = re.fullmatch(r'bytes=(\d+)-(\d*)', requested or '')
+            start, end = 0, size - 1
+            if requested:
+                if not match or int(match[1]) >= size:
+                    self.send_response(416)
+                    self.send_header('Content-Range', f'bytes */{size}')
+                    self.end_headers()
+                    return
+                start = int(match[1])
+                end = min(int(match[2]), end) if match[2] else end
+            # A seek needs byte ranges, including the tail that carries Ogg duration.
+            self.send_response(206 if requested else 200)
+            self.send_header('Content-Type', 'audio/ogg')
+            self.send_header('Accept-Ranges', 'bytes')
+            self.send_header('Content-Length', str(end - start + 1))
+            if requested:
+                self.send_header('Content-Range', f'bytes {start}-{end}/{size}')
+            self.end_headers()
+            self.wfile.write(body[start:end + 1])
+            return
         if path == '/state':
             body, mime = json.dumps(fixture()).encode(), 'application/json'
         elif path == '/frame.jpg':
@@ -94,6 +129,15 @@ INSTRUMENT = """(() => {
   window.soundContexts = []; window.notes = []; window.ink = [];
   const Native = window.AudioContext;
   window.AudioContext = class extends Native { constructor(...a) { super(...a); window.soundContexts.push(this); } };
+  const mediaSource = AudioContext.prototype.createMediaElementSource;
+  AudioContext.prototype.createMediaElementSource = function(...a) {
+    window.musicSource = mediaSource.apply(this, a); return window.musicSource;
+  };
+  const connect = AudioNode.prototype.connect;
+  window.soundEdges = [];
+  AudioNode.prototype.connect = function(target, ...a) {
+    window.soundEdges.push([this, target]); return connect.call(this, target, ...a);
+  };
   const scheduled = new WeakMap(), setValue = AudioParam.prototype.setValueAtTime;
   AudioParam.prototype.setValueAtTime = function(value, ...a) { scheduled.set(this,value); return setValue.call(this,value,...a); };
   const start = OscillatorNode.prototype.start;
@@ -219,7 +263,19 @@ def check_broadcast(page, checks, errors):
 def capture(port):
     global FRAME
     origin = f'http://127.0.0.1:{port}'
-    server = ThreadingHTTPServer(('127.0.0.1', port), partial(Handler, directory=str(ROOT / 'site/web')))
+    static = tempfile.TemporaryDirectory(prefix='show-music-')
+    static_dir = Path(static.name)
+    for path in (ROOT / 'site/web').iterdir():
+        if path.is_file():
+            shutil.copy2(path, static_dir / path.name)
+    music_dir = static_dir / 'music'
+    music_dir.mkdir()
+    subprocess.run(['ffmpeg', '-nostdin', '-y', '-v', 'error', '-f', 'lavfi', '-i',
+                    'sine=frequency=220:duration=60', '-c:a', 'libvorbis', '-q:a', '3',
+                    str(music_dir / '123.ogg')], check=True)
+    shutil.copy2(music_dir / '123.ogg', music_dir / '124.ogg')
+    (music_dir / 'catalog.json').write_text(json.dumps([MUSIC_TRACK, {**MUSIC_TRACK, 'id': '124'}]), encoding='utf-8')
+    server = ThreadingHTTPServer(('127.0.0.1', port), partial(Handler, directory=str(static_dir)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     checks = []
     with sync_playwright() as p:
@@ -242,6 +298,7 @@ def capture(port):
         page.evaluate("() => { window.paperShow.onState(d => window.received = d); }")
         check_gaze(page, checks)
         check_broadcast(page, checks, errors)
+        check_music(page, checks)
         page.evaluate("() => { const container = document.querySelector('canvas').parentElement; window.paperShow.destroy(); window.soundContexts = []; window.notes = []; window.ink = []; window.paperShow = window.mountShow(container, {audio:true}); window.paperShow.onState(d => window.received = d); }")
         page.get_by_role('button', name='what she sees', exact=True).wait_for(state='visible')
         page.mouse.click(20,20)
@@ -345,9 +402,13 @@ def capture(port):
         obs = autoplay.new_page()
         obs.add_init_script(INSTRUMENT)
         DATA['live'] = True
+        DATA['music'] = dict(in_room=True, book=dict(now_playing=dict(track_id='123', title='Rain',
+                              started_at=time.time() - 12, duration=60)))
         obs.goto(origin+'/show.html?relay='+origin)
         obs.wait_for_function("window.soundContexts[0]?.state === 'running'")
         obs.wait_for_function("[...document.querySelectorAll('span')].find(e=>e.textContent==='click for sound').hidden")
+        obs.wait_for_function("(() => { const a = document.querySelector('audio'); return a && !a.paused && a.currentTime > 10; })()")
+        DATA['music']['in_room'] = False
         checks.append('Autoplay-permitted browser starts audio without a gesture and hides the hint.')
         obs.evaluate("() => { window.paperShow.onState(d => window.received = d); }")
         DATA['events'] = []; DATA['learning'] = []
@@ -392,6 +453,8 @@ def capture(port):
         checks.append('A stop closes the wings even when raw forward rates are nonzero.')
         autoplay.close()
     server.shutdown()
+    server.server_close()
+    static.cleanup()
     (OUT/'flybrain-show-browser-checks.json').write_text(json.dumps(dict(checks=checks,errors=errors),indent=2),encoding='utf-8')
     print(f'{len(checks)} browser checks passed; 0 page errors')
     print(OUT/'flybrain-show-20s.webm')
@@ -450,7 +513,15 @@ def check_entry(browser, origin, checks, errors):
         expect(page.locator('#entry-feed li span')).to_have_text([e['text'] for e in state['life']['feed'][:3]])
         expect(page.locator('#entry-feed time').first).to_have_text('07:02:11')
         entry.screenshot(path=str(out / f'entry_{width}.png'))
+        state['rooms']['/musicroom'] = dict(in_room=True, book=dict(now_playing=dict(track_id='123', title='<b>Rain</b>')))
+        expect(page.locator('#entry-music-title')).to_have_text('<b>Rain</b> · River · CC BY 3.0')
+        expect(page.locator('#entry-music')).to_be_visible()
+        assert page.locator('#entry-music-title b').count() == 0
+        assert page.locator('#entry-music a').get_attribute('href') == 'https://kick.com/femalefly'
+        assert page.evaluate("[...document.querySelectorAll('audio')].every(a => a.paused && !a.getAttribute('src'))")
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         state['live'] = False
+        expect(page.locator('#entry-music')).to_be_hidden()
         expect(page.locator('#entry-status')).to_have_text('offline')
         expect(page.locator('#entry-status')).not_to_have_class('entry-status on')
         state['life']['now'].update(balance=None, today_delta=None, room='the web')
@@ -466,6 +537,53 @@ def check_entry(browser, origin, checks, errors):
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         checks.append(f'Entry at {width}px: three blocks, links, placeholders, live data, offline, and plain text.')
         page.close()
+
+
+def check_music(page, checks):
+    play = dict(track_id='123', title='Rain', started_at=time.time() - 12, duration=60)
+    DATA['music'] = dict(in_room=True, book=dict(now_playing=play, plays=[], reactions={}))
+    page.mouse.click(20, 20)
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'Rain · River · CC BY 3.0')")
+    page.wait_for_function("(() => { const a = document.querySelector('audio'), p = window.received?.rooms['/musicroom'].book.now_playing; return a?.src.endsWith('/music/123.ogg') && !a.paused && Math.abs(a.currentTime - (Date.now()/1000 - p.started_at)) < 1; })()")
+    assert page.locator('audio').count() == 1
+    assert page.evaluate("(() => { const master = window.soundEdges.find(e => e[0] === window.musicSource)?.[1]; return master instanceof GainNode && window.soundEdges.some(e => e[0] === master && e[1] === window.soundContexts[0].destination) && window.soundEdges.some(e => e[0] instanceof StereoPannerNode && e[1] === master); })()")
+    page.get_by_role('button', name='mute', exact=True, include_hidden=True).evaluate('(b) => b.click()')
+    page.wait_for_function("window.soundEdges.find(e => e[0] === window.musicSource)[1].gain.value < 0.001")
+    page.locator('input[type=range]').evaluate("e => { e.value = '0.8'; e.dispatchEvent(new Event('input')); }")
+    page.get_by_role('button', name='unmute', exact=True, include_hidden=True).evaluate('(b) => b.click()')
+    page.wait_for_function("Math.abs(window.soundEdges.find(e => e[0] === window.musicSource)[1].gain.value - 0.2) < 0.001")
+    page.locator('input[type=range]').evaluate("e => { e.value = '0.5'; e.dispatchEvent(new Event('input')); }")
+    page.screenshot(path=str(STREAM_FRAME.with_name('music_frame.png')))
+    page.evaluate("document.querySelector('audio').currentTime = 1")
+    page.wait_for_function("document.querySelector('audio').currentTime > 10")
+    muted = page.context.new_page()
+    muted.goto(page.url + '&mute=1')
+    muted.wait_for_function("document.querySelector('audio')?.src.endsWith('/music/123.ogg') && document.querySelector('audio').currentTime > 10")
+    assert muted.evaluate("document.querySelector('audio').muted && window.soundContexts.length === 0")
+    muted.close()
+    for track_id in ['124', '124']:
+        play = dict(track_id=track_id, title='Rain', started_at=time.time() - 5, duration=60)
+        DATA['music']['book']['now_playing'] = play
+        page.wait_for_function("start => { const a = document.querySelector('audio'); return window.received?.rooms['/musicroom'].book.now_playing.started_at === start && a.src.endsWith('/music/124.ogg') && !a.paused && Math.abs(a.currentTime - (Date.now()/1000 - start)) < 1; }", arg=play['started_at'])
+        assert page.locator('audio').count() == 1
+    DATA['music']['book']['now_playing'] = None
+    page.wait_for_function("(() => { const a = document.querySelector('audio'); return a.paused && !a.getAttribute('src'); })()")
+    DATA['music']['book']['now_playing'] = {**play, 'started_at': time.time() - 5}
+    page.wait_for_function("!document.querySelector('audio').paused")
+    DATA['live'] = False
+    page.wait_for_function("(() => { const a = document.querySelector('audio'); return a.paused && !a.getAttribute('src'); })()")
+    DATA['live'] = True
+    page.wait_for_function("!document.querySelector('audio').paused")
+    DATA['music']['book']['now_playing'] = {**play, 'started_at': time.time() - 61}
+    page.wait_for_function("document.querySelector('audio').paused && window.received.rooms['/musicroom'].book.now_playing.started_at < Date.now()/1000 - 60")
+    DATA['music']['book']['now_playing'] = {**play, 'started_at': time.time() - 5}
+    page.wait_for_function("!document.querySelector('audio').paused")
+    DATA['music']['in_room'] = False
+    page.wait_for_function("(() => { const a = document.querySelector('audio'); return a.paused && !a.getAttribute('src'); })()")
+    page.evaluate('window.ink = []')
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'in the paper room')")
+    assert not page.evaluate("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'Rain · River · CC BY 3.0')")
+    checks.append('Music credits, shared master volume/mute, seek correction, muted playback, track changes, repeat plays, null, expiry, offline and room exit pass.')
 
 
 if __name__ == '__main__':
