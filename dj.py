@@ -44,10 +44,11 @@ class Book:
         if fills and fills[-1]["started_at"] <= at < fills[-1]["started_at"] + fills[-1]["duration"]:
             return fills[-1]
 
-    def refusal(self, track_id, at):
+    def refusal(self, track_id, at, limit=None):
+        # A replayed fill is judged by the rule it was written under, not today's.
         playing = self.playing(at)
         if playing:
-            if at - playing["started_at"] < MIN_PLAY_S:
+            if at - playing["started_at"] < (MIN_PLAY_S if limit is None else limit):
                 return "still playing"
             if track_id == playing["track_id"]:
                 return "already playing"
@@ -83,7 +84,7 @@ class Book:
                 raise LedgerError("outcome differs from intent")
             if e["kind"] == "fill":
                 track = self.tracks[e["track_id"]]
-                if (self.refusal(e["track_id"], e["at"]) or stale_look(ask, e["at"]) or
+                if (self.refusal(e["track_id"], e["at"], e.get("min_play_s", 30)) or stale_look(ask, e["at"]) or
                         not 0 < abs(e["drive"]) <= 1 or e["started_at"] != e["at"] or
                         e["duration"] != track["duration"] or e["title"] != track["title"] or
                         type(e["duration"]) not in (int, float) or not math.isfinite(e["duration"]) or e["duration"] <= 0):
@@ -194,7 +195,7 @@ class DJ(Executor):
             return self.refuse(i, why)
         track = led.book.tracks[body["track_id"]]
         return 200, {"status": "booked", "event": led.terminal("fill", i,
-                    at=now, started_at=now, duration=track["duration"], title=track["title"])}
+                    at=now, started_at=now, duration=track["duration"], title=track["title"], min_play_s=MIN_PLAY_S)}
 
     def _ignore(self, reaction_id, reason):
         logging.warning("music reaction ignored: %s", reason)
