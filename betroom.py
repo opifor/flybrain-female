@@ -22,7 +22,7 @@ import calibration
 from polymarket import Markets, DISCLOSURE
 
 DWELL_MIN = 2
-BOARD_MAX_AGE_S = 60
+BOARD_MAX_AGE_S = 30
 CHAIN_TIMEOUT_S = 45
 FOV_W, FOV_H = 300, 210
 RECTS_JS = """() => Array.from(document.querySelectorAll('[data-token]')).map(e => {
@@ -82,7 +82,9 @@ class Room:
     max_looks = 2000
 
     def board(self):
-        return {**self._board, "disclosure": DISCLOSURE, "error": self._board_error}
+        return {**self._board, "cards": [c for c in self._board["cards"]
+                if c.get("end_at", float("inf")) > self._now()],
+                "disclosure": DISCLOSURE, "error": self._board_error}
 
     def _board_worker(self):
         try:
@@ -112,8 +114,11 @@ class Room:
         at, token = self._now(), card["token"]
         book = self.read_book()
         # Keep an unanswered intent closed while publication or event delivery catches up.
-        if (self.refs.get(token) or book.get("markets", {}).get(token, {}).get("open") or
-                any(p["market_id"] == token for p in book.get("open_bets", []))):
+        pos = next((p for p in book.get("open_bets", []) if p["market_id"] == token), None)
+        if self.refs.get(token) and (pos is None or any(
+                look != pos.get("look_id") for look in self.refs[token])):
+            return
+        if self.meta[token].get("end_at", float("inf")) <= at:
             return
         self.counters["commits"] += 1
         look_id = self._write_look(at, img, cx, cy, seed, card, dwell, drive, smell)
@@ -178,10 +183,12 @@ class Room:
         token, look_id = ev.get("market_id"), ev.get("look_id")
         if ev["kind"] == "fill":
             self.counters["booked"] += 1
+            if ev.get("action") == "sell":
+                self._drop_ref(token, look_id)
         elif ev["kind"] == "refused":
             self.counters["refused"] += 1
             self._drop_ref(token, look_id)
-        elif ev["kind"] == "settled":
+        elif ev["kind"] in ("settled", "dopamine"):
             self._teach(ev)
             self._drop_ref(token, look_id)
 
@@ -192,11 +199,11 @@ class Room:
         eligible = (look or {}).get("eligible", [])
         if look and look.get("brain_id") != self.brain_id:
             eligible = []
-        sign = 1 if ev["side"] == ev["outcome"] else -1
+        sign = ev["sign"] if ev["kind"] == "dopamine" else (1 if ev["side"] == ev["outcome"] else -1)
         record = {"mode": "paper", "at": self._now(), "seq": ev["seq"],
                   "market_id": ev["market_id"], "look_id": ev["look_id"],
                   "sign": sign, "amount": 1.0, "eligible": eligible,
-                  "status": "pending" if eligible else "missing eligibility"}
+                  "status": "break even" if sign == 0 else "pending" if eligible else "missing eligibility"}
         if look and look.get("token") != ev["market_id"]:
             raise ValueError("settlement does not match its look")
         self.dopamine_file.parent.mkdir(parents=True, exist_ok=True)
@@ -206,7 +213,7 @@ class Room:
             f.flush()
             os.fsync(f.fileno())
         self._claimed.add(ev["seq"])
-        if eligible:
+        if eligible and sign:
             self.mb.forget_trace()
             try:
                 self.mb.observe(np.asarray(eligible, dtype=np.int64))

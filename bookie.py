@@ -88,13 +88,15 @@ class Bookie:
                 return 503, {"status": "error", "reason": led.error}
             if body["look_id"] in led.book.look_ids:
                 return 409, {"status": "duplicate", "reason": "look already recorded"}
-            i = led.intent(body)
+            pos = next((p for p in led.book.positions.values() if p["market_id"] == body["market_id"]), None)
+            selling = pos is not None and pos["side"] != body["side"]
+            i = led.intent({**body, "action": "sell" if selling else "buy"})
 
             def refuse(reason):
                 return 200, {"status": "refused", "event": led.terminal("refused", i, reason=reason),
                              "reason": reason}
 
-            if any(p["market_id"] == body["market_id"] for p in led.book.positions.values()):
+            if pos is not None and not selling:
                 return refuse("open position")
             drive = body["drive"]
             if not 0 < abs(drive) <= 1 or (drive > 0) != (body["side"] == "YES"):
@@ -103,7 +105,7 @@ class Bookie:
             if age < 0 or age > 20:
                 return refuse("stale or future look")
             stake = math.floor(Fraction(abs(drive)) * led.book.balance_cents)
-            if stake <= 0:
+            if stake <= 0 and not selling:
                 return refuse("nothing to spend")
             try:
                 raw = self.markets.market(body["market_id"])
@@ -112,9 +114,14 @@ class Bookie:
                     return refuse("outcome token does not match market")
                 if raw.get("closed") is not False or raw.get("active") is not True or timestamp(raw["endDate"]) <= self.clock():
                     return refuse("market is not open")
-                price = self.markets.midpoint(body["token_id"])
+                if selling and tokens[0 if pos["side"] == "YES" else 1] != pos["token_id"]:
+                    return refuse("held token does not match market")
+                price = self.markets.midpoint(pos["token_id"] if selling else body["token_id"])
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 return refuse(f"unquotable: {exc}")
+            if selling:
+                ev = led.sell(i, pos["id"], price, self.clock())
+                return 200, {"status": "booked", "event": ev}
             ev = led.terminal("fill", i, question=raw["question"], stake_cents=str(stake),
                               price=str(price), shares=str(Fraction(stake, 100) / price),
                               quote_source="CLOB midpoint", quoted_at=self.clock(),

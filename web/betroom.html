@@ -30,21 +30,20 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans
 <main id="room">
 <div class="label">the betting room / paper USDC</div>
 <div id="book">Waiting for the paper book.</div>
-<div class="label">fast / current fifteen minutes</div>
+<div class="label">fast / current five and fifteen minutes</div>
 <div id="fast" class="grid"></div>
-<div class="label">slow / closes within seven days</div>
-<div id="slow" class="grid"></div>
 <div id="error"></div>
 <div id="disclosure">
-<p>One open bet per market: while her bet on a question is unsettled, that card takes no second bet. This is a rule of the room, chosen by people, not a decision of hers.</p>
-<p>CHOSEN by people: current BTC and ETH 15-minute markets, then the six highest-volume open Yes/No markets closing within seven days, excluding negRisk groups; refreshed every 60 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.</p>
+<p>One open bet per market: the same reading cannot add to her bet. This is a rule of the room, chosen by people, not a decision of hers.</p>
+<p>She can leave a bet early: a stop on a card she holds, with the opposite reading, sells at the midpoint. Whether she sells is her reading; when she looks is her walk. Profit or loss teaches her the moment it is booked.</p>
+<p>CHOSEN by people: a person chose current BTC and ETH 5-minute markets and BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, so her learning signal arrives while she is still in the room; refreshed every 30 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.</p>
 <p>MEASURED: the connectome, the Kenyon cells that fire, their output synapses, DoOR receptor responses, Gamma market observations and CLOB midpoint quotes. CHOSEN: two readings before a stop can commit; drive is the dwell's mean relative leaning against other cards seen this visit. Like means YES, dislike means NO. Stake is floor(abs(drive) times free balance in cents). No cap, no floor, no price test in sizing.</p>
 <p>Paper only. No real orders. Midpoint fills ignore fees, spread, liquidity and minimum order size. A closed market with prices exactly 1/0 or 0/1 settles each bet. Wins deliver +1 dopamine and losses -1 to the recorded dwell's eligible Kenyon cells. Payouts round down to cents; the ledger records the remainder. Learning is partly shared across smells. The upstream coin calibration does not establish predictive skill for these markets or this female graph. Smell offsets, single-look noise and neighbouring cards remain in the reading.</p>
 </div>
 </main>
 <script>
-const slots = {fast: [], slow: []};
-for (const [shelf, count] of [['fast', 2], ['slow', 6]]) {
+const slots = {fast: []};
+for (const [shelf, count] of [['fast', 6]]) {
   for (let i = 0; i < count; i++) {
     const node = document.createElement('div');
     node.className = 'card empty';
@@ -57,10 +56,10 @@ let board = [];
 let bookState = {markets: {}, open_bets: []};
 const colours = {crypto: '#b99bd9', politics: '#8aaacb', sports: '#9fbe93', other: '#c4b28e'};
 function draw() {
-  for (const shelf of ['fast', 'slow']) {
+  for (const shelf of ['fast']) {
     const items = board.filter(c => c.shelf === shelf);
     slots[shelf].forEach((node, index) => {
-      const item = items[index];
+      const item = items.find(c => c.slot === index && c.end_at > Date.now() / 1000);
       node.className = item ? 'card' : 'card empty';
       node.dataset.token = item ? item.market_id : '';
       if (!item) return;

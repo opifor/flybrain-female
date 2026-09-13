@@ -31,15 +31,13 @@ from polymarket import Markets
 class Page:
     def __init__(self, cards):
         self.rects = []
-        counts = {"fast": 0, "slow": 0}
         canvas = Image.new("RGB", (1280, 800), "#0b0c0e")
         draw = ImageDraw.Draw(canvas)
         for card in cards:
             shelf = card["shelf"]
-            n = counts[shelf]
-            counts[shelf] += 1
+            n = card["slot"]
             x = 56 + (n % 4) * 294
-            y = (80 if shelf == "fast" else 280) + (n // 4) * 174
+            y = 80 + (n // 4) * 174
             self.rects.append({"token": card["market_id"], "held": False,
                                "x": x, "y": y, "w": 280, "h": 160})
             draw.rounded_rectangle((x, y, x + 279, y + 159), radius=12, fill="#181b20", outline="#aaaaaa", width=3)
@@ -80,10 +78,21 @@ async def session(args):
                         f"http://127.0.0.1:{server.server_address[1]}", token,
                         fetch_board=lambda: cards)
     page = Page(cards)
+    refreshed = time.monotonic()
     try:
         await room.enter(page)
         for step in range(args.steps):
-            rect = page.rects[(step // 8) % len(page.rects)]
+            if time.monotonic() - refreshed >= 30:
+                cards = await asyncio.to_thread(markets.board)
+                page = Page(cards)
+                refreshed = time.monotonic()
+                room.refresh_board(force=True)
+            rects = [r for r in page.rects if any(c["market_id"] == r["token"] and
+                     c["end_at"] > time.time() for c in cards)]
+            if not rects:
+                await asyncio.sleep(0.1)
+                continue
+            rect = rects[(step // 8) % len(rects)]
             x, y = rect["x"] + 140, rect["y"] + 80
             result = await room.step(page, page.image, x, y, step + 1)
             if step % 8 == 0 or result[2]:
@@ -93,9 +102,15 @@ async def session(args):
             deadline = time.monotonic() + 45
             while not room._intent.get("done") and time.monotonic() < deadline:
                 await asyncio.sleep(0.1)
-        print(json.dumps({"steps": args.steps, "open_bets": led.book.public()["open_bets"],
+        room._collect_intent()
+        room._events_result = ex.events()[1]
+        room.poll_events()
+        buys = sum(e["kind"] == "fill" and e.get("action") != "sell" for e in led.book.events)
+        sells = sum(e["kind"] == "fill" and e.get("action") == "sell" for e in led.book.events)
+        print(json.dumps({"steps": args.steps, "buys": buys, "sells": sells,
+                          "open_bets": led.book.public()["open_bets"],
                           "refusals": led.book.refusals}), flush=True)
-        if led.book.positions:
+        if buys:
             return 0
         print("No fill in this session. The room did not invent a stop or a drive.", flush=True)
         return 1

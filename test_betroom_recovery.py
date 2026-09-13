@@ -101,16 +101,16 @@ def test_dwell_records_only_the_cells_from_that_card(tmp_path):
     assert look["brain_id"] == room.brain_id
 
 
-def test_refresh_waits_sixty_seconds_and_keeps_last_good_board(tmp_path):
+def test_refresh_waits_thirty_seconds_and_hides_expired_cards(tmp_path):
     room = make_room(tmp_path)
-    room._board = {"cards": [{"market_id": "111"}], "updated": 100}
-    room.clock = lambda: 159
+    room._board = {"cards": [{"market_id": "111", "end_at": 130}], "updated": 100}
+    room.clock = lambda: 129
     assert room.refresh_board() is False
-    room.clock = lambda: 160
+    room.clock = lambda: 130
     assert room.refresh_board() is True
     def fail():
         raise OSError("Gamma unavailable")
     room.fetch_board = fail
     room._board_worker()
-    assert room._board["cards"] == [{"market_id": "111"}]
+    assert room.board()["cards"] == []
     assert room.state()["board_error"] == "Gamma unavailable"

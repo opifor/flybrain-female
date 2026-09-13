@@ -404,14 +404,15 @@ class ALookThatReadNothing(Base):
         self.assertEqual(self.room._dwell["steps"], 1)
 
 class Commit(Base):
-    def test_open_market_cannot_commit_even_when_page_says_unheld(self):
+    def test_opposite_reading_commits_even_when_page_says_unheld(self):
         self.room.public.write_text(json.dumps({"open_bets": [
-            {"market_id": TOKEN_A, "token_id": TOKEN_A + "2", "side": "NO"}]}))
+            {"market_id": TOKEN_A, "token_id": TOKEN_A + "2", "side": "NO", "look_id": "original"}]}))
+        self.room.refs[TOKEN_A] = ["original"]
         self.likes()
         self.commit(IN_A)
-        self.assertEqual(self.http.intents(), [])
-        self.assertEqual(self.room.counters["commits"], 0)
-        self.assertEqual(self.looks(), [])
+        self.assertEqual(len(self.http.intents()), 1)
+        self.assertEqual(self.http.intents()[0]["body"]["side"], "YES")
+        self.assertIn("original", self.room.protected_looks())
 
     def test_booked_intent_blocks_until_settlement_event(self):
         self.likes()

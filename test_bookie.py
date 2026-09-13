@@ -55,7 +55,7 @@ def setup(tmp_path):
 @pytest.mark.parametrize("drive", [0.5, -0.5])
 def test_one_open_bet_per_market_until_settlement(setup, drive):
     world, led, ex = setup
-    assert ex.intent(world.body())[1]["status"] == "booked"
+    assert ex.intent(world.body(drive))[1]["status"] == "booked"
     balance = led.book.balance_cents
     for n in range(3):
         reply = ex.intent(world.body(drive, look=f"second-{n}"))[1]
@@ -224,29 +224,25 @@ def test_live_flag_stops_before_creating_state(tmp_path):
     assert not (tmp_path / "betroom").exists()
 
 
-def test_board_filters_and_paginates():
-    now = fixture("provenance")["captured_at"]
-    btc, eth = fixture("gamma_btc"), fixture("gamma_eth")
-    raw = fixture("gamma_board")
+def test_board_builds_six_current_slugs_and_leaves_missing_slots_empty():
+    now = fixture("provenance")["captured_at"] + 350
     calls = []
+    expected = ["btc-updown-5m-1789263300", "eth-updown-5m-1789263300",
+                "btc-updown-15m-1789263000", "eth-updown-15m-1789263000",
+                "sol-updown-15m-1789263000", "xrp-updown-15m-1789263000"]
     def fetch(url):
         q = parse_qs(urlparse(url).query)
         calls.append(q)
-        if "slug" in q:
-            return btc if q["slug"][0].startswith("btc") else eth
-        return raw if q["offset"] == ["0"] else []
+        slug = q["slug"][0]
+        return [{**fixture("gamma_btc")[0], "slug": slug, "id": str(expected.index(slug) + 1)}]
     cards = polymarket.Markets(fetch, lambda: now).board()
-    assert [c["market_id"] for c in cards[:2]] == [btc[0]["id"], eth[0]["id"]]
-    eligible = []
-    for r in raw:
-        try:
-            eligible.append(polymarket.card(r, "slow", now))
-        except (ValueError, KeyError):
-            pass
-    expected = sorted(eligible, key=lambda c: (-c["volume24hr"], c["market_id"]))[:6]
-    assert cards[2:] == expected
-    assert all(c["outcomes"] == ["Yes", "No"] for c in cards[2:])
-    assert calls[2]["order"] == ["volume24hr"]
+    assert [q["slug"][0] for q in calls] == expected
+    assert [c["slug"] for c in cards] == expected
+    assert [c["slot"] for c in cards] == list(range(6))
+    assert all(c["shelf"] == "fast" for c in cards)
+    missing = polymarket.Markets(lambda url: [] if expected[1] in url else fetch(url), lambda: now).board()
+    assert [c["slot"] for c in missing] == [0, 2, 3, 4, 5]
+    assert polymarket.Markets(lambda url: [], lambda: now).board() == []
 
 
 def test_binary_rejects_negative_risk_and_other_shapes():
@@ -341,3 +337,97 @@ def test_http_header_body_and_paper_health(setup):
         server.shutdown()
         server.server_close()
         worker.join(timeout=5)
+
+
+@pytest.mark.parametrize("drive", [1.0, -1.0])
+@pytest.mark.parametrize("mid,sign", [("0.9", 1), ("0.01", -1), (None, 0)])
+def test_sell_closes_whole_position_and_teaches_original_buy(setup, tmp_path, drive, mid, sign):
+    import betroom
+    from test_betroom import FakeBrain, FakeMB, FakePilot, FakeNose
+    world, led, ex = setup
+    buy = ex.intent(world.body(drive))[1]["event"]
+    assert led.book.balance_cents == 0
+    if mid is not None:
+        world.mid = {"mid": mid}
+    result = ex.intent(world.body(-drive / 2, look="sell-look"))[1]
+    assert result["status"] == "booked"
+    fill = result["event"]
+    assert parse_qs(urlparse(world.calls[-1]).query)["token_id"] == [buy["token_id"]]
+    payout = math.floor(Fraction(buy["shares"]) * Fraction(world.mid["mid"]) * 100)
+    assert int(fill["pnl_cents"]) == payout - 10000
+    assert led.book.balance_cents == payout
+    assert not led.book.positions
+    assert [json.loads(s)["kind"] for s in led.path.read_text().splitlines()][-3:] == ["intent", "fill", "dopamine"]
+    sold = led.book.public()["settled_bets"][0]
+    assert (sold["kind"], sold["look_id"], sold["pnl"], sold["exit_price"]) == (
+        "sold", "look-1", (payout - 10000) / 100, float(Fraction(world.mid["mid"])))
+    fb = FakeBrain()
+    mb = FakeMB(fb)
+    room = betroom.Room(fb, FakePilot(), mb, FakeNose(), None, tmp_path,
+                        "http://127.0.0.1:4672", "secret", fetch_board=lambda: [], spawn=lambda *args: None)
+    room.looks_dir.mkdir(parents=True)
+    for name, cells in (("look-1", [2, 4]), ("sell-look", [1, 3])):
+        (room.looks_dir / (name + ".json")).write_text(json.dumps(
+            {"token": world.raw["id"], "eligible": cells, "brain_id": room.brain_id}), encoding="utf-8")
+    observed = []
+    mb.observe = lambda cells: observed.append(list(cells))
+    room.refs = {world.raw["id"]: ["look-1", "sell-look"]}
+    room._events_result = {"events": led.book.events}
+    room.poll_events()
+    assert observed == ([[2, 4]] if sign else [])
+    assert [v for k, v in mb.log if k == "dopamine"] == ([(sign, 1.0)] if sign else [])
+    assert not room.refs
+    room._events_result = {"events": led.book.events}
+    room.poll_events()
+    assert observed == ([[2, 4]] if sign else [])
+    world.raw.update(closed=True, outcomePrices='["1","0"]')
+    assert ex.resolve_once() == []
+    assert betbook.rebuild(led.path).state() == led.book.state()
+
+
+def test_restart_records_missing_sell_dopamine(setup, monkeypatch):
+    world, led, ex = setup
+    ex.intent(world.body())
+    monkeypatch.setattr(led, "teach_sell", lambda fill: None)
+    ex.intent(world.body(-0.5, look="sell-look"))
+    again = betbook.Ledger(led.path)
+    assert [e["kind"] for e in again.book.events][-2:] == ["fill", "dopamine"]
+    assert again.book.events[-1]["look_id"] == "look-1"
+    assert betbook.Ledger(led.path).book.state() == again.book.state()
+
+
+@pytest.mark.parametrize("change", [{"buy_look_id": "wrong"}, {"payout_cents": "999999"},
+                                   {"held_token_id": "wrong"}, {"pnl_cents": "999999"}])
+def test_sell_replay_rejects_wrong_position_or_arithmetic(setup, change):
+    world, led, ex = setup
+    ex.intent(world.body())
+    ex.intent(world.body(-0.5, look="sell-look"))
+    entries = [json.loads(line) for line in led.path.read_text().splitlines()]
+    book = betbook.Book()
+    for entry in entries[:-2]:
+        book.apply(entry)
+    with pytest.raises(betbook.LedgerError):
+        book.apply({**entries[-2], **change})
+
+
+def test_unquotable_sell_keeps_position_for_resolver(setup):
+    world, led, ex = setup
+    ex.intent(world.body())
+    before = led.book.balance_cents
+    world.mid = {"mid": "NaN"}
+    assert ex.intent(world.body(-0.5, look="sell-look"))[1]["status"] == "refused"
+    assert led.book.balance_cents == before and len(led.book.positions) == 1
+    world.raw.update(closed=True, outcomePrices='["1","0"]')
+    assert len(ex.resolve_once()) == 1
+
+
+def test_board_drops_old_window_when_next_is_not_indexed():
+    calls = []
+    def fetch(url):
+        calls.append(parse_qs(urlparse(url).query)["slug"][0])
+        return fixture("gamma_btc")
+    cards = polymarket.Markets(fetch, lambda: 1789263900).board()
+    assert cards == []
+    assert calls == ["btc-updown-5m-1789263900", "eth-updown-5m-1789263900",
+                     "btc-updown-15m-1789263900", "eth-updown-15m-1789263900",
+                     "sol-updown-15m-1789263900", "xrp-updown-15m-1789263900"]

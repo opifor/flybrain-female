@@ -88,7 +88,9 @@ class Book:
             ask = self.pending[i]
             if any(e[k] != ask[k] for k in ("market_id", "token_id", "side", "drive", "look_id")):
                 raise LedgerError("outcome differs from intent")
-            if kind == "fill":
+            if kind == "fill" and e.get("action") == "sell":
+                self._sell(e, ask)
+            elif kind == "fill":
                 stake, price, shares = int(e["stake_cents"]), Fraction(e["price"]), Fraction(e["shares"])
                 drive = Fraction(ask["drive"])
                 if ask["side"] not in ("YES", "NO") or not 0 < abs(drive) <= 1 or (drive > 0) != (ask["side"] == "YES"):
@@ -105,6 +107,16 @@ class Book:
                 self.counts["refused"] += 1
                 self.refusals[e["reason"]] = self.refusals.get(e["reason"], 0) + 1
             del self.pending[i]
+        elif kind == "dopamine":
+            fill = next((v for v in self.events if v["seq"] == e["fill_seq"]), None)
+            if not fill or fill.get("action") != "sell" or fill["kind"] != "fill":
+                raise LedgerError("dopamine has no sell fill")
+            if any(v.get("fill_seq") == e["fill_seq"] for v in self.events):
+                raise LedgerError("dopamine repeated")
+            pnl = int(fill["pnl_cents"])
+            if (e["sign"] != (1 if pnl > 0 else -1 if pnl < 0 else 0) or
+                    e["look_id"] != fill["buy_look_id"] or e["market_id"] != fill["market_id"] or i != fill["id"]):
+                raise LedgerError("dopamine differs from sell fill")
         elif kind == "settled":
             if i not in self.positions:
                 raise LedgerError("settlement has no open bet")
@@ -129,6 +141,33 @@ class Book:
         self.events.append(e)
         return e
 
+    def _sell(self, e, ask):
+        pos = self.positions.get(e["position_id"])
+        if not pos or ask.get("action") != "sell":
+            raise LedgerError("sell has no open bet")
+        drive = Fraction(ask["drive"])
+        if (not 0 < abs(drive) <= 1 or (drive > 0) != (ask["side"] == "YES") or
+                ask["side"] == pos["side"] or e["market_id"] != pos["market_id"] or
+                e["buy_look_id"] != pos["look_id"] or e["held_token_id"] != pos["token_id"]):
+            raise LedgerError("sell differs from its open bet")
+        price = Fraction(e["exit_price"])
+        exact = Fraction(pos["shares"]) * price * 100
+        payout = math.floor(exact)
+        pnl = payout - int(pos["stake_cents"])
+        if (not 0 < price < 1 or int(e["payout_cents"]) != payout or
+                Fraction(e["rounding_cents"]) != exact - payout or int(e["pnl_cents"]) != pnl):
+            raise LedgerError("invalid sell arithmetic")
+        self.balance_cents += payout
+        if pnl:
+            self.counts["wins" if pnl > 0 else "losses"] += 1
+        self.settled.append({**pos, "kind": "sold", "exit_price": str(price),
+                             "payout_cents": str(payout), "pnl_cents": str(pnl),
+                             "rounding_cents": str(exact - payout), "pnl": pnl / 100,
+                             "at": e["at"], "seq": e["seq"], "sell_look_id": e["look_id"],
+                             "won": pnl > 0})
+        self.settled = self.settled[-50:]
+        del self.positions[e["position_id"]]
+
     def state(self):
         return {"mode": "paper", "start_cents": self.start_cents,
                 "balance_cents": self.balance_cents, "seq": self.seq, "intents": self.intents,
@@ -138,6 +177,7 @@ class Book:
     def public(self, at=None):
         def display(p):
             return {**p, "stake": int(p["stake_cents"]) / 100,
+                    **({"exit_price": float(Fraction(p["exit_price"]))} if "exit_price" in p else {}),
                     "price": float(Fraction(p["price"])), "shares": float(Fraction(p["shares"]))}
         markets = {e["market_id"]: {"open": False} for e in self.events}
         for p in self.positions.values():
@@ -173,6 +213,10 @@ class Ledger:
             self.append("open", start_cents=str(int(start_cents)), disclosure=DISCLOSURE, chosen=CHOSEN)
         for i, ask in list(self.book.pending.items()):
             self.terminal("refused", i, reason="interrupted")
+        for ev in list(self.book.events):
+            if ev["kind"] == "fill" and ev.get("action") == "sell" and not any(
+                    v.get("fill_seq") == ev["seq"] for v in self.book.events):
+                self.teach_sell(ev)
         self.write_book()
 
     def append(self, kind, **fields):
@@ -211,6 +255,27 @@ class Ledger:
         ev = self.append("settled", id=i, seq=self.book.seq + 1, **context,
                          outcome=outcome, payout_cents=str(payout),
                          rounding_cents=str(exact - payout), observation=observation)
+        self.write_book()
+        return ev
+
+    def sell(self, i, position_id, price, quoted_at):
+        pos = self.book.positions[position_id]
+        exact = Fraction(pos["shares"]) * price * 100
+        payout = math.floor(exact)
+        ev = self.terminal("fill", i, action="sell", position_id=position_id,
+                           buy_look_id=pos["look_id"], held_token_id=pos["token_id"],
+                           exit_price=str(price), payout_cents=str(payout),
+                           pnl_cents=str(payout - int(pos["stake_cents"])),
+                           rounding_cents=str(exact - payout),
+                           quote_source="CLOB midpoint", quoted_at=quoted_at)
+        self.teach_sell(ev)
+        return ev
+
+    def teach_sell(self, fill):
+        pnl = int(fill["pnl_cents"])
+        ev = self.append("dopamine", id=fill["id"], seq=self.book.seq + 1,
+                         fill_seq=fill["seq"], market_id=fill["market_id"],
+                         look_id=fill["buy_look_id"], sign=1 if pnl > 0 else -1 if pnl < 0 else 0)
         self.write_book()
         return ev
 

@@ -2,16 +2,17 @@
 import json
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime
 from fractions import Fraction
 from urllib.parse import urlencode
 
 GAMMA = "https://gamma-api.polymarket.com/markets"
 CLOB = "https://clob.polymarket.com/midpoint"
 DISCLOSURE = (
-    "CHOSEN by people: current BTC and ETH 15-minute markets, then the six "
-    "highest-volume open Yes/No markets closing within seven days, excluding "
-    "negRisk groups; refreshed every 60 seconds. Up means YES and Down means NO "
+    "CHOSEN by people: a person chose current BTC and ETH 5-minute markets and "
+    "BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, "
+    "so her learning signal arrives while she is still in the room; refreshed "
+    "every 30 seconds. Up means YES and Down means NO "
     "on the fast shelf. A market's smell is a human mapping from its question "
     "words to DoOR odorants, scaled toward total 2.0. The fly cannot read the "
     "words. The picture is for the viewers. Category colours, price bars and "
@@ -98,36 +99,21 @@ class Markets:
 
     def board(self):
         now = self.clock()
-        window = int(now) - int(now) % 900
         cards = []
-        for asset in ("btc", "eth"):
-            slug = f"{asset}-updown-15m-{window}"
+        for slot, (asset, minutes) in enumerate((
+                ("btc", 5), ("eth", 5), ("btc", 15), ("eth", 15), ("sol", 15), ("xrp", 15))):
+            window = int(now) - int(now) % (minutes * 60)
+            slug = f"{asset}-updown-{minutes}m-{window}"
             for raw in self.fetch(GAMMA + "?" + urlencode({"slug": slug})):
                 if raw.get("slug") != slug:
                     continue
                 try:
-                    cards.append(card(raw, "fast", now))
+                    cards.append({**card(raw, "fast", now), "slot": slot,
+                                  "end_at": window + minutes * 60})
+                    break
                 except (KeyError, TypeError, ValueError):
                     continue
-        offset, slow = 0, []
-        while len(slow) < 6:
-            query = {"closed": "false", "limit": 100, "offset": offset,
-                     "order": "volume24hr", "ascending": "false",
-                     "end_date_min": datetime.fromtimestamp(now, timezone.utc).isoformat(),
-                     "end_date_max": datetime.fromtimestamp(now + 7 * 86400, timezone.utc).isoformat()}
-            rows = self.fetch(GAMMA + "?" + urlencode(query))
-            for raw in rows:
-                try:
-                    item = card(raw, "slow", now)
-                except (KeyError, TypeError, ValueError):
-                    continue
-                if item["market_id"] not in {c["market_id"] for c in cards + slow}:
-                    slow.append(item)
-            if len(rows) < 100:
-                break
-            offset += 100
-        slow.sort(key=lambda c: (-c["volume24hr"], c["market_id"]))
-        return cards + slow[:6]
+        return cards
 
 
 def winner(raw):
