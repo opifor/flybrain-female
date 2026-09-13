@@ -512,8 +512,112 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 #betting details p{font-size:15px}
 @media(max-width:720px){#betting .bet-grid{grid-template-columns:1fr}}
 </style>
+<style>
+#entry{min-height:100svh;display:flex;flex-direction:column;justify-content:center;
+  padding:72px 32px 24px;gap:40px}
+.entry-grid{width:100%;max-width:1380px;margin:auto;display:grid;
+  grid-template-columns:1fr 1.15fr 1fr;gap:32px;align-items:center}
+.entry-block{min-width:0;overflow-wrap:anywhere}
+#entry .eyebrow{color:var(--cyan)}
+.entry-portrait{width:112px;height:112px;object-fit:cover;border-radius:50%;
+  border:1px solid var(--line);display:block;margin-bottom:20px}
+#entry h2{font-size:38px;margin-bottom:18px}
+.entry-copy p{font-size:15px;line-height:1.6;margin-bottom:10px}
+.entry-credit{font-family:var(--mono);font-size:11px;line-height:1.8;display:inline-block;margin-top:12px}
+.entry-current{background:var(--plate);border:1px solid var(--line);padding:24px}
+.entry-status{font-family:var(--mono);font-size:11px;color:var(--ink-dim);display:flex;align-items:center;gap:8px;margin-bottom:18px}
+.entry-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-faint)}
+.entry-status.on::before{background:var(--live)}
+#entry-doing{font-size:30px;margin-bottom:6px}
+#entry-room{color:var(--ink-dim);font-size:14px;margin-bottom:24px}
+.entry-tiles{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:8px;margin-bottom:20px}
+.entry-tiles div{min-width:0;border-top:1px solid var(--line);padding-top:12px}
+.entry-tiles b{display:block;font-family:var(--mono);font-size:17px;font-weight:400}
+.entry-tiles small{font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
+#entry-balance{font-size:12px;font-family:var(--mono);color:var(--ink-dim)}
+#entry-feed{list-style:none;padding:0;margin:0;font-size:12px;line-height:1.6}
+#entry-feed li{display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px;border-top:1px solid var(--line);padding:10px 0}
+#entry-feed time{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.entry-buttons{display:grid;gap:12px}
+.entry-buttons a{display:flex;align-items:center;justify-content:center;min-height:56px;
+  padding:10px 14px;border:1px solid var(--cyan);font-size:14px;text-align:center}
+.entry-buttons a:first-child{background:var(--cyan);color:var(--ground)}
+.entry-buttons a:hover{border-color:var(--ink);color:var(--ink)}
+.entry-buttons a:first-child:hover{background:var(--ink);color:var(--ground)}
+.entry-note{font-size:11px;color:var(--ink-dim);margin:20px 0 0}
+.entry-down{align-self:center;display:flex;width:44px;height:44px;align-items:center;justify-content:center;border:0}
+.entry-down::after{content:"";width:12px;height:12px;border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);transform:rotate(45deg)}
+@media(max-width:800px){#entry{padding:112px 24px 20px;gap:24px}
+  .entry-grid{grid-template-columns:1fr;gap:32px;max-width:480px}
+  .entry-current{padding:20px}.entry-buttons a{width:100%}}
+</style>
+<script>
+function renderEntry(state){
+  const now = state.life?.now || {};
+  const text = (id, value) => { document.getElementById(id).textContent = value; };
+  const number = value => Number.isFinite(value) ? value.toLocaleString('en-US') : '\u2014';
+  const money = value => Number.isFinite(value) ? value.toFixed(2) : '\u2014';
+  const status = document.getElementById('entry-status');
+  status.classList.toggle('on', !!state.live);
+  status.textContent = state.live ? 'live' : 'offline';
+  text('entry-doing', now.doing || '\u2014');
+  text('entry-room', 'in the ' + (now.room || '\u2014').replace(/^the /, ''));
+  text('entry-spikes', number(now.spikes));
+  text('entry-sugar', number(now.sugar_10m));
+  text('entry-shock', number(now.shock_10m));
+  const delta = Number.isFinite(now.today_delta) ? (now.today_delta >= 0 ? '+' : '') + money(now.today_delta) : '\u2014';
+  text('entry-balance', 'paper balance ' + money(now.balance) + ' usdc \u00b7 ' + delta + ' today');
+  const feed = Array.isArray(state.life?.feed) ? state.life.feed.slice(0, 3) : [];
+  const rows = Array.from({length:3}, (_, i) => {
+    const row = document.createElement('li'), at = document.createElement('time'), line = document.createElement('span');
+    at.textContent = feed[i]?.at || '\u2014';
+    line.textContent = feed[i]?.text || '\u2014';
+    row.append(at, line);
+    return row;
+  });
+  document.getElementById('entry-feed').replaceChildren(...rows);
+}
+</script>
 </head>
 <body>
+<section id="entry" aria-label="Meet Female Flybrain">
+  <div class="entry-grid">
+    <div class="entry-block" id="entry-who">
+      <div class="eyebrow">who</div>
+      <img class="entry-portrait" src="fly.png" alt="Female Flybrain portrait" width="112" height="112">
+      <h2>Female Flybrain</h2>
+      <div class="entry-copy">
+        <p>a real female fruit fly brain, 139,255 neurons, simulated live.</p>
+        <p>she never speaks. the numbers do.</p>
+        <p>paper money only. no real bets.</p>
+      </div>
+      <a class="entry-credit" href="#comparison">sister build of FLYBRAIN · FlyWire FAFB v783</a>
+    </div>
+    <div class="entry-block entry-current" id="entry-now">
+      <div class="eyebrow">now</div>
+      <div class="entry-status" id="entry-status">offline</div>
+      <h2 id="entry-doing">—</h2>
+      <p id="entry-room">in the —</p>
+      <div class="entry-tiles">
+        <div><b id="entry-spikes">—</b><small>spikes/s</small></div>
+        <div><b id="entry-sugar">—</b><small>sugar · 10 min</small></div>
+        <div><b id="entry-shock">—</b><small>shock · 10 min</small></div>
+      </div>
+      <p id="entry-balance">paper balance — usdc · — today</p>
+      <ol id="entry-feed"><li><time>—</time><span>—</span></li><li><time>—</time><span>—</span></li><li><time>—</time><span>—</span></li></ol>
+    </div>
+    <div class="entry-block" id="entry-where">
+      <div class="eyebrow">where</div>
+      <nav class="entry-buttons" aria-label="Watch her">
+        <a href="https://kick.com/femalefly">watch her live on kick</a>
+        <a href="#betting">the paper room</a>
+        <a href="#matches">her matches</a>
+      </nav>
+      <p class="entry-note">24/7 · she chooses where to go · you watch</p>
+    </div>
+  </div>
+  <a class="entry-down" href="#film" aria-label="Scroll to the film"></a>
+</section>
 
 <div class="film" id="film">
   <div class="stage" id="stagebox">
@@ -817,7 +921,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 </section>
 
 
-<section>
+<section id="comparison">
   <div class="wrap">
     <div class="eyebrow">the comparison</div>
     <h2>Same experiment, the other sex</h2>
@@ -1580,6 +1684,7 @@ async function relayTick(){
     const r = await fetch(RELAY + '/state', {cache: 'no-store'});
     if (!r.ok) throw new Error(r.status);
     const d = await r.json();
+    renderEntry(d);
     if (!d.live){ goOffline(); return; }
     renderState({neural: d.neural, url: d.url, events: d.events,
                  visited: d.visited, ...(d.stats || {})});
@@ -1593,7 +1698,7 @@ async function relayTick(){
       while (relayHits.length && relayHits[0] < Date.now()-1000) relayHits.shift();
       $$('r-fps').textContent = relayHits.length + ' fps · relay';
     }
-  } catch (e) { goOffline(); }
+  } catch (e) { renderEntry({live:false}); goOffline(); }
   finally { setTimeout(relayTick, document.visibilityState === 'hidden' ? 5000 : 1000); }
 }
 

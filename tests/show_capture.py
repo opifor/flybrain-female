@@ -248,6 +248,8 @@ def capture(port):
             checks.append(f'Betting panel at {width}px has an overlay and no page overflow.')
             panel.close()
 
+        check_entry(browser, origin, checks, errors)
+
         muted = browser.new_page(viewport=dict(width=1920,height=1080))
         muted.add_init_script(INSTRUMENT)
         muted.goto(origin+'/show.html?mute=1&relay='+origin)
@@ -315,6 +317,76 @@ def capture(port):
     (OUT/'flybrain-show-browser-checks.json').write_text(json.dumps(dict(checks=checks,errors=errors),indent=2),encoding='utf-8')
     print(f'{len(checks)} browser checks passed; 0 page errors')
     print(OUT/'flybrain-show-20s.webm')
+
+
+def check_entry(browser, origin, checks, errors):
+    from playwright.sync_api import expect
+
+    out = Path('build/shots')
+    out.mkdir(parents=True, exist_ok=True)
+    for width in [1280, 400]:
+        state = fixture()
+        state['live'] = True
+        page = browser.new_page(viewport=dict(width=width, height=1000))
+        page.on('pageerror', lambda e: errors.append(str(e)))
+        page.route('https://**/*', lambda route: route.abort())
+        page.route(origin + '/state', lambda route: route.fulfill(json=state))
+        page.goto(origin + '/index.html?relay=' + origin)
+        entry = page.locator('#entry')
+        expect(entry).to_be_visible()
+        assert page.evaluate("document.body.firstElementChild.id === 'entry'")
+        expect(page.locator('#entry-status')).to_have_text('live')
+        for name in ['doing', 'spikes', 'sugar', 'shock']:
+            expect(page.locator('#entry-' + name)).to_have_text('—')
+        expect(page.locator('#entry-feed li span')).to_have_text(['—'] * 3)
+        expect(page.locator('#entry-balance')).to_have_text('paper balance — usdc · — today')
+        blocks = [page.locator('#entry-' + name).bounding_box() for name in ['who', 'now', 'where']]
+        assert all(block and block['width'] > 100 for block in blocks)
+        if width == 1280:
+            assert blocks[0]['x'] < blocks[1]['x'] < blocks[2]['x']
+            assert entry.bounding_box()['height'] >= 1000
+        else:
+            assert blocks[0]['y'] < blocks[1]['y'] < blocks[2]['y']
+            assert page.evaluate('document.documentElement.scrollWidth <= 400')
+        links = page.locator('.entry-buttons a')
+        assert links.nth(0).get_attribute('href') == page.locator('.kick').get_attribute('href')
+        for index, target in [(1, 'betting'), (2, 'matches')]:
+            assert links.nth(index).get_attribute('href') == '#' + target
+            assert page.locator('#' + target).count() == 1
+        assert page.locator('#comparison .eyebrow').text_content() == 'the comparison'
+        assert page.locator('.entry-down').get_attribute('href') == '#film'
+        state['life'] = dict(now=dict(doing='looking at ETH 15m', room='paper room',
+                                     spikes=1312400, sugar_10m=3, shock_10m=1,
+                                     balance=106.2, today_delta=6.2),
+                             feed=[dict(at='07:02:11', text='eth 15m resolved · she won +5.20 · sugar'),
+                                   dict(at='07:01:40', text='she scrolled down 3 times on arxiv.org'),
+                                   dict(at='07:00:00', text='she entered the paper room'),
+                                   dict(at='06:59:00', text='older line')])
+        expect(page.locator('#entry-doing')).to_have_text('looking at ETH 15m')
+        expect(page.locator('#entry-room')).to_have_text('in the paper room')
+        expect(page.locator('#entry-spikes')).to_have_text('1,312,400')
+        expect(page.locator('#entry-sugar')).to_have_text('3')
+        expect(page.locator('#entry-shock')).to_have_text('1')
+        expect(page.locator('#entry-balance')).to_have_text('paper balance 106.20 usdc · +6.20 today')
+        expect(page.locator('#entry-feed li span')).to_have_text([e['text'] for e in state['life']['feed'][:3]])
+        expect(page.locator('#entry-feed time').first).to_have_text('07:02:11')
+        entry.screenshot(path=str(out / f'entry_{width}.png'))
+        state['live'] = False
+        expect(page.locator('#entry-status')).to_have_text('offline')
+        expect(page.locator('#entry-status')).not_to_have_class('entry-status on')
+        state['life']['now'].update(balance=None, today_delta=None, room='the web')
+        expect(page.locator('#entry-balance')).to_have_text('paper balance — usdc · — today')
+        expect(page.locator('#entry-room')).to_have_text('in the web')
+        state['life']['now'].update(balance=0, today_delta=-2.5, doing='<b>plain text</b>')
+        expect(page.locator('#entry-balance')).to_have_text('paper balance 0.00 usdc · -2.50 today')
+        expect(page.locator('#entry-doing')).to_have_text('<b>plain text</b>')
+        assert page.locator('#entry-doing b').count() == 0
+        del state['life']
+        expect(page.locator('#entry-doing')).to_have_text('—')
+        expect(page.locator('#entry-feed li span')).to_have_text(['—'] * 3)
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        checks.append(f'Entry at {width}px: three blocks, links, placeholders, live data, offline, and plain text.')
+        page.close()
 
 
 if __name__ == '__main__':
