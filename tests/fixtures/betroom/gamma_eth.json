@@ -1,0 +1,17 @@
+[
+ {
+  "id": "4488672",
+  "question": "Ethereum Up or Down - September 12, 9:30PM-9:45PM ET",
+  "slug": "eth-updown-15m-1789263000",
+  "outcomes": "[\"Up\", \"Down\"]",
+  "outcomePrices": "[\"0.485\", \"0.515\"]",
+  "clobTokenIds": "[\"27757304401160483604456265016601915471638650293456167657761351393198987328773\", \"114014954585505161243268053947240559538768645493855043888554178461478550427070\"]",
+  "endDate": "2026-09-13T01:45:00Z",
+  "liquidity": "11781.2711",
+  "closed": false,
+  "active": true,
+  "conditionId": "0x0c7e2b5327d7dd10477c624eb41c491c9952d7920903abfff07bb3bbdb70ea68",
+  "negRisk": false,
+  "orderMinSize": 5
+ }
+]

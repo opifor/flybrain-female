@@ -46,9 +46,10 @@ STORE = ROOT / "build" / "mb_gains.npz"
 class MushroomBody:
     """Dopamine-gated depression of KC to MBON synapses."""
 
-    def __init__(self, fb, lr=0.06, floor=0.25, recover=0.0008, trace_decay=0.55):
+    def __init__(self, fb, lr=0.06, floor=0.25, recover=0.0008, trace_decay=0.55, store=None):
         self.fb = fb
-        self.store = ROOT / "build" / f"mb_gains_{Path(fb.graph_path).stem}.npz"
+        self.explicit_store = store is not None
+        self.store = Path(store) if store is not None else ROOT / "build" / f"mb_gains_{Path(fb.graph_path).stem}.npz"
         self.lr = lr                  # how hard one dopamine event depresses
         self.floor = floor            # a synapse is never silenced completely
         self.recover = recover        # drift back toward 1.0, i.e. forgetting
@@ -97,6 +98,10 @@ class MushroomBody:
         self.load()
 
     # -- the loop ---------------------------------------------------------
+    def forget_trace(self):
+        """A lesson about one card must not reach the preceding card."""
+        self.trace.fill(0)
+
     def observe(self, fired):
         """
         Note which Kenyon cells just fired.
@@ -164,8 +169,9 @@ class MushroomBody:
                 self.store, gain=self.gain, pos=self.pos,
                 rewards=self.events["reward"], punishments=self.events["punish"],
                 at=time.time())
-        except Exception:
-            pass
+            return True
+        except (OSError, ValueError):
+            return False
 
     def load(self):
         """
@@ -175,7 +181,7 @@ class MushroomBody:
         mismatch is discarded rather than misapplied.
         """
         try:
-            store = self.store if self.store.exists() else STORE
+            store = self.store if self.explicit_store or self.store.exists() else STORE
             if not store.exists():
                 return False
             z = np.load(store)

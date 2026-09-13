@@ -1,0 +1,30 @@
+{
+ "captured_at": 1789263033.5405457,
+ "sources": {
+  "gamma_board": "https://gamma-api.polymarket.com/markets?closed=false&limit=100&order=volume24hr&ascending=false",
+  "gamma_btc": "https://gamma-api.polymarket.com/markets?slug=btc-updown-15m-1789263000",
+  "clob_midpoint": "https://clob.polymarket.com/midpoint?token_id=1948194057611182420792544630269220526881017120426733514803813812320854635206",
+  "gamma_eth": "https://gamma-api.polymarket.com/markets?slug=eth-updown-15m-1789263000",
+  "gamma_resolved": "https://gamma-api.polymarket.com/markets?closed=true&limit=100&order=endDate&ascending=false"
+ },
+ "projection": [
+  "id",
+  "question",
+  "slug",
+  "outcomes",
+  "outcomePrices",
+  "clobTokenIds",
+  "endDate",
+  "volume24hr",
+  "liquidity",
+  "closed",
+  "active",
+  "conditionId",
+  "category",
+  "negRisk",
+  "negRiskMarketID",
+  "orderMinSize",
+  "umaResolutionStatus"
+ ],
+ "description": "Recorded public responses projected to the listed fields. Tests that alter resolution fields say so explicitly."
+}

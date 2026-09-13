@@ -35,6 +35,7 @@ import argparse
 import asyncio
 import base64
 import io
+import ipaddress
 import json
 import os
 import random
@@ -145,6 +146,44 @@ def _page_of(url):
     return (u.scheme, (u.hostname or "").lower(), u.path.rstrip("/"))
 
 
+def betroom_share():
+    try:
+        value = float(load_env().get("FLY_BETROOM_SHARE", "0"))
+        return min(1.0, max(0.0, value)) if np.isfinite(value) else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def betroom_on():
+    return not PIN and betroom_share() > 0
+
+
+def betroom_url():
+    return f"http://127.0.0.1:{STATE.get('port') or os.environ.get('PORT') or 4660}/betroom"
+
+
+def is_betroom(url):
+    return str(url) in (betroom_url(), betroom_url() + "/")
+
+
+def this_machine(host):
+    h = str(host or "").lower().strip("[]")
+    if h == "localhost" or h.endswith(".localhost"):
+        return True
+    try:
+        address = ipaddress.ip_address(h)
+    except ValueError:
+        return False
+    address = address.ipv4_mapped if getattr(address, "ipv4_mapped", None) else address
+    return not address.is_global
+
+
+def next_place(rng, room_open=True):
+    if betroom_on() and room_open and rng.random() < betroom_share():
+        return betroom_url(), "the betting room"
+    return rng.choice(SEEDS), "a seed"
+
+
 def allowed_host(url):
     """Open mode drops the fence and leaves only the blocklist behind it."""
     if PIN:
@@ -152,6 +191,10 @@ def allowed_host(url):
             return _page_of(url) == _page_of(PIN)
         except Exception:
             return False
+    if betroom_on():
+        from urllib.parse import urlparse
+        if this_machine(urlparse(url).hostname):
+            return is_betroom(url)
     if OPEN:
         return True
     try:
@@ -434,17 +477,80 @@ def load_brain():
         fb = FlyBrain()
         STATE["brain"] = fb
         STATE["gains"], tag = load_gains(fb, roam=True)
+        if betroom_on():
+            import calibration
+            odor_gains = calibration.gains_for(fb, calibration.CHOSEN)
+            STATE["gains"] = odor_gains if STATE["gains"] is None else STATE["gains"] * odor_gains
         STATE["pilot"] = FlyPilot(fb, sim_steps=60)
         say(f"motor gains: {tag}")
         STATE["xy"] = soma_xy(fb)
-        STATE["mb"] = MushroomBody(fb)
-        STATE["mb"].store = OUT / f"mb_gains_{fb.graph_path.stem}.npz"
+        if betroom_on():
+            store = Path(load_env().get("FLY_STATE_DIR") or OUT) / "betroom" / f"mb_gains_{fb.graph_path.stem}.npz"
+            STATE["mb"] = MushroomBody(fb, store=store)
+        else:
+            STATE["mb"] = MushroomBody(fb)
+            STATE["mb"].store = OUT / f"mb_gains_{fb.graph_path.stem}.npz"
         st = STATE["mb"].stats()
         say(f"brain ready: {len(fb.bodies):,} neurons")
         say(f"mushroom body: {st['synapses']:,} KC->MBON synapses "
             f"({st['reward_side']:,} reward / {st['punish_side']:,} punish), "
             f"{st['depressed']:,} already depressed")
     return STATE["brain"], STATE["pilot"]
+
+
+def load_room():
+    if load_env().get("FLY_BETROOM_LIVE") == "1":
+        raise SystemExit("live betting is not built; this build is paper only")
+    if not betroom_on():
+        return None
+    if STATE.get("room") is None:
+        import betroom
+        import calibration
+        from olfaction import Nose
+        token = os.environ.get("FLY_INTENT_TOKEN")
+        if not token:
+            say("the betting room stays shut: no per-boot intent token")
+            return None
+        fb, pilot = load_brain()
+        nose = Nose(fb, equal_sniff=2.0)
+        nose.max_hz = calibration.SETTINGS[calibration.CHOSEN]["odour_max_hz"]
+        port = int(load_env().get("FLY_BETROOM_PORT", "4672"))
+        STATE["room"] = betroom.Room(fb, pilot, STATE["mb"], nose, STATE["gains"],
+                                      Path(load_env().get("FLY_STATE_DIR") or OUT),
+                                      f"http://127.0.0.1:{port}", token)
+    return STATE["room"]
+
+
+def open_room():
+    try:
+        return load_room()
+    except (OSError, ValueError) as exc:
+        say(f"the betting room stays shut: {exc}")
+        return None
+
+
+def betroom_state():
+    path = Path(load_env().get("FLY_STATE_DIR") or OUT) / "betroom" / "public" / "public.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+@app.get("/betroom")
+def betroom_page():
+    return FileResponse(str(ROOT / "web" / "betroom.html"))
+
+
+@app.get("/betroom/board.json")
+def betroom_board():
+    room = STATE.get("room")
+    return room.board() if room else {"cards": [], "updated": 0}
+
+
+@app.get("/betroom/public.json")
+def betroom_public():
+    return betroom_state()
 
 
 def soma_xy(fb):
@@ -597,7 +703,13 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                 await log(f"could not open: {str(exc)[:70]}")
                 return False
 
-        await goto(rng.choice(SEEDS), "seed")
+        room = open_room()
+
+        async def reset(why):
+            url, where = next_place(rng, room is not None)
+            return await goto(url, f"{why}: {where}")
+
+        await reset("seed")
 
         cx, cy = 640.0, 400.0
         px_, py_ = cx, cy
@@ -654,8 +766,18 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             raw = latest["jpg"]
             img = to_gray(raw)
 
-            dx, dy, click, hz, info = pilot.step(
-                img, cx, cy, gains=STATE["gains"], seed=rng.randrange(1 << 30), detail=True)
+            in_room = room is not None and is_betroom(page.url)
+            if room is not None and in_room != room.in_room:
+                if in_room:
+                    await room.enter(page)
+                else:
+                    room.leave()
+            seed_ = rng.randrange(1 << 30)
+            if in_room:
+                dx, dy, click, hz, info = await room.step(page, img, cx, cy, seed_)
+            else:
+                dx, dy, click, hz, info = pilot.step(
+                    img, cx, cy, gains=STATE["gains"], seed=seed_, detail=True)
             cx = float(np.clip(cx + dx, 8, 1272))
             cy = float(np.clip(cy + dy, 8, 792))
             stats["steps"] += 1
@@ -695,7 +817,7 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             # fired just now becomes eligible; when dopamine arrives below,
             # its synapse onto the addressed compartment is depressed.
             mb = STATE.get("mb")
-            if mb is not None:
+            if mb is not None and not in_room:
                 mb.observe(info.get("fired"))
                 mb.forget()
 
@@ -736,10 +858,12 @@ async def roam(steps_per_page=26, headful=False, seed=None):
             px_, py_ = cx, cy
 
             moment = live_state(stats, neural, hz, page.url, cx, cy)
+            if betroom_on():
+                moment["betroom"] = betroom_state()
             RELAY["state"], RELAY["state_n"] = moment, RELAY["state_n"] + 1
             await send(moment)
 
-            if click:
+            if click and not in_room:
                 under = await page.evaluate(UNDER_JS, [cx, cy])
                 ok, why = may_click(under)
                 if ok:
@@ -754,7 +878,7 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                     if page.url != before:
                         if BLOCK.search(page.url) or not allowed_host(page.url):
                             stats["blocked"] += 1
-                            if mb is not None:
+                            if mb is not None and not betroom_on():
                                 mb.dopamine(-1, 1.0)     # a wall
                                 mb.apply()
                             await log(f"landed somewhere blocked, going back")
@@ -764,23 +888,23 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                             if walls >= 3:
                                 walls = 0
                                 on_page = 0
-                                await goto(rng.choice(SEEDS), "stuck at a wall")
+                                await reset("stuck at a wall")
                             else:
                                 try:
                                     await page.go_back(timeout=15000)
                                 except Exception:
-                                    await goto(rng.choice(SEEDS), "bounced")
+                                    await reset("bounced")
                         else:
                             walls = 0
                             stats["hops"] += 1
-                            if mb is not None:
+                            if mb is not None and not betroom_on():
                                 mb.dopamine(+1, 1.0)     # somewhere new
                                 mb.apply()
                             title = (await page.title())[:70]
                             if CHALLENGE.search(title):
                                 stats["blocked"] += 1
                                 await log("a verification page, moving on")
-                                await goto(rng.choice(SEEDS), "bot check")
+                                await reset("bot check")
                                 continue
                             stats["visited"].append(
                                 {"url": page.url, "title": title,
@@ -795,20 +919,24 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                     stats["vetoes"] += 1
                     # on a pinned page there is nothing to reach for, so
                     # reaching is not a mistake she should learn from
-                    if mb is not None and not PIN:
+                    if mb is not None and not PIN and not betroom_on():
                         mb.dopamine(-1, 0.6)             # reached for a wall
                         mb.apply()
                     await log(f"did not click - {why}")
 
             # a fly that has run out of page gets put back on a seed
-            if on_page >= steps_per_page:
+            if on_page >= (120 if in_room else steps_per_page):
                 on_page = 0
                 cx, cy = 640.0, 400.0
                 # pinned, she has nowhere else to go; only reload if she is
                 # somehow not on her page any more
                 if not PIN or not allowed_host(page.url):
-                    await goto(rng.choice(SEEDS), "hop budget spent")
+                    if in_room:
+                        room.leave()
+                    await reset("hop budget spent")
 
+            if room is not None:
+                room.poll_events()
             publish(stats, raw, page.url, hz, neural)
             if mb is not None and stats["steps"] % 40 == 0:
                 mb.save()
@@ -842,6 +970,7 @@ def publish(stats, jpg, url, hz, neural=None):
             "hz": {k: round(v, 1) for k, v in hz.items()},
             "neural": neural,
             "stream": TUNNEL["url"],
+            **({"betroom": betroom_state()} if betroom_on() else {}),
             "updated": int(time.time()),
         }, indent=1)
         (OUT / "roam_state.json").write_text(payload)
@@ -923,6 +1052,8 @@ async def begin():
     a browser falls over - it waits a few seconds and starts a new life rather
     than sitting there waiting to be told.
     """
+    if load_env().get("FLY_BETROOM_LIVE") == "1":
+        raise SystemExit("live betting is not built; this build is paper only")
     if load_env().get("FLY_ALLOW_BROWSER") != "1":
         say("FLY_ALLOW_BROWSER is not 1 - not opening a browser")
         return
@@ -948,6 +1079,8 @@ async def begin():
 
 
 if __name__ == "__main__":
+    if load_env().get("FLY_BETROOM_LIVE") == "1":
+        raise SystemExit("live betting is not built; this build is paper only")
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=4660)
     ap.add_argument("--headful", action="store_true")

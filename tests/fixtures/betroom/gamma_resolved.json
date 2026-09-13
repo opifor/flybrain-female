@@ -1,0 +1,18 @@
+[
+ {
+  "id": "2846018",
+  "question": "Credible FDV above $100M one day after launch?",
+  "slug": "credible-fdv-above-100m-one-day-after-launch-20260708144505957",
+  "outcomes": "[\"Yes\", \"No\"]",
+  "outcomePrices": "[\"0\", \"1\"]",
+  "clobTokenIds": "[\"73807527500783050316762504004387976204708672286395072644316833324096965436278\", \"61928819116045226303328793498076394210833476860535203374962111437729744174791\"]",
+  "endDate": "2028-01-01T16:59:00Z",
+  "liquidity": "0",
+  "closed": true,
+  "active": true,
+  "conditionId": "0x0c481aa63ec629535d90cc083c6d92ebcbe7b79581faf83f46ca3624c4e4eae0",
+  "negRisk": false,
+  "orderMinSize": 5,
+  "umaResolutionStatus": "resolved"
+ }
+]

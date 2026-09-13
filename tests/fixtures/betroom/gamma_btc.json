@@ -1,0 +1,18 @@
+[
+ {
+  "id": "4488668",
+  "question": "Bitcoin Up or Down - September 12, 9:30PM-9:45PM ET",
+  "slug": "btc-updown-15m-1789263000",
+  "outcomes": "[\"Up\", \"Down\"]",
+  "outcomePrices": "[\"0.465\", \"0.535\"]",
+  "clobTokenIds": "[\"1948194057611182420792544630269220526881017120426733514803813812320854635206\", \"99126987094919723811114448305481032627750790598643561006481226105413721401655\"]",
+  "endDate": "2026-09-13T01:45:00Z",
+  "volume24hr": 214.42,
+  "liquidity": "14119.5572",
+  "closed": false,
+  "active": true,
+  "conditionId": "0xa1010754c2741390bdb9b471f25d912d055ad0c6525d4a739b10aff933e0c206",
+  "negRisk": false,
+  "orderMinSize": 5
+ }
+]
