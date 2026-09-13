@@ -137,7 +137,7 @@ export default {
       const cache = caches.default;
       const key = new Request(u.origin + '/api/kick');
       const hit = await cache.match(key);
-      if (hit) return hit;
+      if (hit) return Response.json(await hit.json(), { headers: { 'Cache-Control': 'no-store' } });
       let status = { live: null };
       try {
         const response = await fetch('https://kick.com/api/v2/channels/femalefly', {
@@ -149,11 +149,10 @@ export default {
         if (!channel || !Object.hasOwn(channel, 'livestream')) throw new Error('kick status missing');
         status = { live: channel.livestream !== null, checked: new Date().toISOString() };
       } catch (_) {}
-      const response = Response.json(status, {
-        headers: { 'Cache-Control': 'public, max-age=60' },
-      });
-      ctx.waitUntil(cache.put(key, response.clone()));
-      return response;
+      // The edge keeps it for a minute; a browser must never keep it, or a viewer sees "offline" for hours.
+      const stored = Response.json(status, { headers: { 'Cache-Control': 's-maxage=60' } });
+      ctx.waitUntil(cache.put(key, stored));
+      return Response.json(status, { headers: { 'Cache-Control': 'no-store' } });
     }
     if (u.pathname !== '/api/state' && u.pathname !== '/api/state/') return env.ASSETS.fetch(request);
     if (request.method !== 'GET') return new Response('method not allowed', { status: 405 });
