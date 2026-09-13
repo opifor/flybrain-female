@@ -27,6 +27,14 @@ const disclosure = document.getElementById("disclosure");
 for (const sentence of [declaration.commit_means, declaration.reward_source, ...declaration.chosen, ...declaration.measured]) {
   const p = document.createElement("p"); p.textContent = sentence; disclosure.appendChild(p);
 }
+if (declaration.how && declaration.how.length) {
+  const title = document.createElement('h2'); title.textContent = 'How she plays here';
+  const steps = document.createElement('ol');
+  for (const sentence of declaration.how) {
+    const step = document.createElement('li'); step.textContent = sentence; steps.appendChild(step);
+  }
+  disclosure.append(title, steps);
+}
 </script>
 </body>
 </html>

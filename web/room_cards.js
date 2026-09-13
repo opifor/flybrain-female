@@ -13,7 +13,9 @@ function drawCards(cards) {
     name.textContent = card.address ? card.address.slice(0, 4) + '...' + card.address.slice(-4) : card.name;
     if (card.address) node.title = card.address;
     const detail = document.createElement('div'); detail.className = 'detail';
-    detail.textContent = card.holding_days != null ? card.holding_days + ' days held / fixture' : card.room.commit_means;
+    detail.textContent = roomData.path === '/musicroom' ?
+      card.artist + ' / ' + card.license + ' / ' + Math.round(card.duration) + ' seconds' :
+      card.holding_days != null ? card.holding_days + ' days held / fixture' : card.room.commit_means;
     node.append(name, detail); return node;
   }));
 }
@@ -25,3 +27,33 @@ async function loadCards() {
   } catch (error) { drawCards([]); }
 }
 loadCards(); setInterval(loadCards, 2000);
+
+if (roomData.path === '/musicroom') {
+  const line = document.createElement('p'); line.textContent = 'now playing: nothing';
+  const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'none';
+  document.getElementById('cards').after(line, audio);
+  let playKey = null;
+  async function loadPlaying() {
+    try {
+      const response = await fetch('/musicroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
+      if (!response.ok) return;
+      const playing = (await response.json())?.now_playing;
+      const key = playing ? JSON.stringify([playing.track_id, playing.started_at]) : null;
+      if (key === playKey) return;
+      playKey = key;
+      audio.pause();
+      if (!playing) {
+        audio.removeAttribute('src'); audio.load(); line.textContent = 'now playing: nothing'; return;
+      }
+      line.textContent = 'now playing: ' + playing.title;
+      audio.onloadedmetadata = () => {
+        if (playKey !== key) return;
+        audio.currentTime = Math.max(0, Math.min(playing.duration, Date.now() / 1000 - playing.started_at));
+        audio.play().catch(() => { line.textContent = 'now playing: ' + playing.title + ' / press play to hear it'; });
+      };
+      audio.src = '/musicroom/track/' + encodeURIComponent(playing.track_id);
+      audio.load();
+    } catch (error) { /* The next reading brings the public clock back. */ }
+  }
+  loadPlaying(); setInterval(loadPlaying, 1000);
+}

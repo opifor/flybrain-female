@@ -579,6 +579,7 @@ def betroom_public():
 def register_rooms(betting):
     from hall import Hall
     from tiproom import Room as TipRoom
+    from musicroom import Room as MusicRoom, CATALOGUE
     from roomkit import Registry
     settings = load_env()
     registry = Registry()
@@ -588,10 +589,24 @@ def register_rooms(betting):
                       f"http://127.0.0.1:{int(settings.get('FLY_TIPROOM_PORT', '4673'))}",
                       betting.intent_token)
     registry.register(tipping.declaration, tipping.executor_url)
+    ear = None
+    catalogue_path = settings.get("FLY_MUSICROOM_CATALOGUE", CATALOGUE)
+    try:
+        if not Path(catalogue_path).is_file():
+            raise FileNotFoundError("music catalogue is absent")
+        from ear import FlyEar
+        ear = FlyEar(betting.fb)
+    except (ImportError, OSError, ValueError) as exc:
+        print(f"[musicroom] ear unavailable: {exc}", flush=True)
+    music = MusicRoom(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
+                     Path(settings.get("FLY_STATE_DIR") or OUT),
+                     f"http://127.0.0.1:{int(settings.get('FLY_MUSICROOM_PORT', '4674'))}",
+                     betting.intent_token, ear=ear, catalogue_path=catalogue_path)
+    registry.register(music.declaration, music.executor_url)
     hall = Hall(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
                 Path(settings.get("FLY_STATE_DIR") or OUT), betting.executor_url,
                 betting.intent_token, registry=registry)
-    STATE["rooms"] = {"/betroom": betting, "/tiproom": tipping, "/hall": hall}
+    STATE["rooms"] = {"/betroom": betting, "/tiproom": tipping, "/musicroom": music, "/hall": hall}
     STATE["hall"] = hall
 
 
@@ -642,6 +657,39 @@ def hall_public():
 def tiproom_public():
     room = STATE.get("rooms", {}).get("/tiproom")
     return room.read_book() if room else None
+
+
+@app.get("/musicroom")
+def musicroom_page():
+    return FileResponse(str(ROOT / "web" / "musicroom.html"))
+
+
+@app.get("/musicroom/board.json")
+def musicroom_board():
+    room = STATE.get("rooms", {}).get("/musicroom")
+    if room:
+        room.refresh_board()
+    return room.board() if room else {"cards": []}
+
+
+@app.get("/musicroom/public.json")
+def musicroom_public():
+    room = STATE.get("rooms", {}).get("/musicroom")
+    return room.read_book() if room else None
+
+
+@app.get("/musicroom/track/{id}")
+def musicroom_track(id: str):
+    from musicroom import catalogue, CATALOGUE
+    room = STATE.get("rooms", {}).get("/musicroom")
+    path = room.catalogue_path if room else load_env().get("FLY_MUSICROOM_CATALOGUE", CATALOGUE)
+    try:
+        track = next((row for row in catalogue(path) if row["id"] == id), None)
+        if track and Path(track["file"]).is_file():
+            return FileResponse(track["file"], media_type=track["mime"])
+    except (OSError, ValueError, KeyError):
+        pass
+    return Response(status_code=404)
 
 
 def soma_xy(fb):
@@ -746,7 +794,8 @@ async def roam(steps_per_page=26, headful=False, seed=None):
              "visited": [], "events": [], "firing": []}
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=not headful)
+        browser = await pw.chromium.launch(headless=not headful,
+            args=["--autoplay-policy=no-user-gesture-required"] if hall_on() else [])
         # No storage, no wallet, no extension, no downloads. A fresh context
         # with nothing in it: the fly cannot be logged in as anyone.
         ctx = await browser.new_context(

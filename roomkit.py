@@ -26,8 +26,15 @@ class Declaration:
     reward_source: str
     chosen: list
     measured: list
+    how: tuple[str, ...] = ()
 
     def validate(self):
+        if not isinstance(self.how, tuple) or (self.how and not 3 <= len(self.how) <= 8):
+            raise ValueError("how needs three to eight plain sentences")
+        if any(not isinstance(s, str) or not s.strip() or len(s) > 120 or
+               s != s.strip() or any(c in s for c in "\n\r<>") or s[-1] not in ".!?"
+               for s in self.how):
+            raise ValueError("how needs plain sentences of at most 120 characters")
         if not isinstance(self.reward_source, str) or not self.reward_source.strip():
             raise ValueError(f"{self.name}: reward_source is required; say where sugar and shock come from")
         if not self.name or not re.fullmatch(r"/[a-z][a-z0-9]*", self.path):

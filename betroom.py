@@ -10,6 +10,11 @@ DECLARATION = Declaration(
     commit_means="a bet",
     reward_source="Resolved wins deliver sugar and losses shock; a sale teaches the sign of its paper profit.",
     chosen=[DISCLOSURE],
+    how=("her eye settles on a card; a decision only starts once she has stayed on it for two rounds.",
+         "the card's question is turned into a smell, word by word, and fed to her olfactory neurons.",
+         "her mushroom body remembers whether that smell brought sugar or shock before.",
+         "while she stays, the drive it produces is summed; positive means YES, negative means NO, zero means she walks away.",
+         "the paper bookie takes the bet; when the market resolves, a win is sugar and a loss is shock, and she learns."),
     measured=["Stops and relative drive come from the female brain; this does not establish predictive skill."])
 
 

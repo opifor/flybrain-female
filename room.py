@@ -102,6 +102,9 @@ class Room:
     def smell_of(self, token):
         return None
 
+    def extra_drive(self, smell):
+        return self.nose.drive(smell) if smell else None
+
     async def _rects(self, page):
         raw = await page.evaluate(RECTS_JS)
         return [r for r in raw if r.get("token") in self.meta and
@@ -356,7 +359,7 @@ class Room:
         smell = self.smell_of(token) if token else None
         dx, dy, click, hz, info = self.pilot.step(
             img, cx, cy, gains=self.gains, seed=seed, detail=True,
-            extra_drive=(self.nose.drive(smell) if smell else None),
+            extra_drive=self.extra_drive(smell),
             extra_record=self.readout)
 
         self.mb.observe(info.get("fired"))

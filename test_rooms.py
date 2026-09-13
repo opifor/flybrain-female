@@ -53,6 +53,26 @@ def test_registration_requires_a_reward_source(reward):
     assert rooms.rooms == {}
 
 
+@pytest.mark.parametrize("how", [("one.",), tuple("sentence." for _ in range(9)),
+                                 ("x" * 120 + ".", "two.", "three."),
+                                 ("one\ntwo.", "two.", "three."),
+                                 ("<b>one</b>.", "two.", "three."),
+                                 ("no ending", "two.", "three."),
+                                 (None, "two.", "three.")])
+def test_how_requires_short_plain_sentences(how):
+    with pytest.raises(ValueError, match="how needs"):
+        replace(tiproom.DECLARATION, how=how).validate()
+
+
+def test_rooms_explain_their_own_play():
+    import musicroom
+    for declaration in (betroom.DECLARATION, tiproom.DECLARATION, musicroom.DECLARATION):
+        assert 3 <= len(declaration.public()["how"]) <= 8
+    assert "YES" in betroom.DECLARATION.how[3]
+    assert "fixture thanks" in tiproom.DECLARATION.how[-1]
+    assert "Johnston organs" in musicroom.DECLARATION.how[-2]
+
+
 def test_hall_hides_an_executor_that_does_not_answer(tmp_path):
     http = Health()
     room = make_room(hall.Hall, tmp_path, registry=registry(), http=http)
@@ -266,7 +286,7 @@ def test_hall_reset_and_exact_destinations(tmp_path):
         assert roam.allowed_host(url.replace("/hall", "/tiproom"))
         assert not roam.allowed_host(url + "/public.json")
         assert not roam.allowed_host(url + "?x=1")
-        assert set(roam.rooms_status()) == {"/hall", "/betroom", "/tiproom"}
+        assert set(roam.rooms_status()) == {"/hall", "/betroom", "/tiproom", "/musicroom"}
 
 
 def test_pages_carry_the_declarations_and_share_the_skeleton():

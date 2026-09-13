@@ -62,11 +62,23 @@ function start-bookie {
        -RedirectStandardError (Join-Path $root 'build\bookie.err.log')
 }
 
+function start-dj {
+  note "starting dj.py"
+  return Start-Process -FilePath $py -ArgumentList "dj.py" -WorkingDirectory $root -PassThru -WindowStyle Hidden `
+       -RedirectStandardOutput (Join-Path $root 'build\dj.out.log') `
+       -RedirectStandardError (Join-Path $root 'build\dj.err.log')
+}
+
 $b = start-bookie
+$dj = start-dj
 while ($true) {
   if ($b.HasExited) {
     note ("bookie.py exited with " + $b.ExitCode)
     $b = start-bookie
+  }
+  if ($dj.HasExited) {
+    note ("dj.py exited with " + $dj.ExitCode)
+    $dj = start-dj
   }
   note "starting roam.py"
   $p = Start-Process -FilePath $py -ArgumentList "roam.py" -WorkingDirectory $root -PassThru -WindowStyle Hidden `

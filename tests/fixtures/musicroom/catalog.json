@@ -1,0 +1,5 @@
+[
+  {"id":"111","title":"First Light","artist":"River","license":"CC BY 4.0","page":"https://commons.wikimedia.org/wiki/File:First_Light.ogg","file":"tests/fixtures/musicroom/first.ogg","mime":"audio/ogg","duration":90,"ear":null},
+  {"id":"222","title":"Afternoon","artist":"Field","license":"CC BY-SA 4.0","page":"https://commons.wikimedia.org/wiki/File:Afternoon.ogg","file":"tests/fixtures/musicroom/second.ogg","mime":"audio/ogg","duration":120,"ear":null},
+  {"id":"333","title":"Evening","artist":"Sky","license":"CC0","page":"https://commons.wikimedia.org/wiki/File:Evening.ogg","file":"tests/fixtures/musicroom/third.ogg","mime":"audio/ogg","duration":60,"ear":null}
+]

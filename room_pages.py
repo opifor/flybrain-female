@@ -5,6 +5,7 @@ from pathlib import Path
 import betroom
 import hall
 import tiproom
+import musicroom
 
 WEB = Path(__file__).parent / "web"
 
@@ -28,6 +29,8 @@ def pages():
 .card{align-self:center;justify-self:center;padding:22px;border-color:#aaaaaa}
 .name{font-size:22px;line-height:1.4;overflow-wrap:anywhere}
 body.tiproom .name{font-size:18px}
+body.musicroom .grid{grid-template-columns:repeat(3,368px);grid-auto-rows:300px}
+body.musicroom .card{width:100%;height:100%}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
 body.hall .grid{grid-template-columns:repeat(2,568px);grid-auto-rows:600px}
 body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:42px}
@@ -35,7 +38,8 @@ body.hall .name{font-size:42px;margin-top:120px}
 """
     return {"betroom": betting,
             **{name: page(declaration, '<div id="cards" class="grid"></div>', style, script)
-               for name, declaration in (("hall", hall.DECLARATION), ("tiproom", tiproom.DECLARATION))}}
+               for name, declaration in (("hall", hall.DECLARATION), ("tiproom", tiproom.DECLARATION),
+                                         ("musicroom", musicroom.DECLARATION))}}
 
 
 def main():

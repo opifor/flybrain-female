@@ -16,6 +16,8 @@ html,body{margin:0;background:var(--ground);color:var(--ink);font-family:ui-sans
 .card{align-self:center;justify-self:center;padding:22px;border-color:#aaaaaa}
 .name{font-size:22px;line-height:1.4;overflow-wrap:anywhere}
 body.tiproom .name{font-size:18px}
+body.musicroom .grid{grid-template-columns:repeat(3,368px);grid-auto-rows:300px}
+body.musicroom .card{width:100%;height:100%}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
 body.hall .grid{grid-template-columns:repeat(2,568px);grid-auto-rows:600px}
 body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:42px}
@@ -28,7 +30,7 @@ body.hall .name{font-size:42px;margin-top:120px}
 <div id="cards" class="grid"></div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "the tipping room", "path": "/tiproom", "cards": {"source": "eight fixture wallets with holding days", "refresh_seconds": 30}, "commit_means": "a tip of floor(abs(drive) times free paper balance in cents) to that wallet", "reward_source": "A fixture thanks event delivers sugar to the recorded cells; silence delivers nothing and there is no shock feed.", "chosen": ["People supplied eight fixture wallets; card area scales with holding days, capped at 365 days.", "The daily cap is 2500 cents and the lifetime per-address cap is 1000 cents; the cap is the safe's lock, not her decision.", "This room is paper only. There is no smell mapping yet."], "measured": ["The stop and relative drive come from the brain; fixture thanks is not a measured human response."]}</script>
+<script id="room-declaration" type="application/json">{"name": "the tipping room", "path": "/tiproom", "cards": {"source": "eight fixture wallets with holding days", "refresh_seconds": 30}, "commit_means": "a tip of floor(abs(drive) times free paper balance in cents) to that wallet", "reward_source": "A fixture thanks event delivers sugar to the recorded cells; silence delivers nothing and there is no shock feed.", "chosen": ["People supplied eight fixture wallets; card area scales with holding days, capped at 365 days.", "The daily cap is 2500 cents and the lifetime per-address cap is 1000 cents; the cap is the safe's lock, not her decision.", "This room is paper only. There is no smell mapping yet."], "measured": ["The stop and relative drive come from the brain; fixture thanks is not a measured human response."], "how": ["her eye settles on a wallet card for at least two rounds; this room adds no smell.", "her mushroom body supplies a drive, compared with the other cards she has seen in this visit.", "when she stops, either sign spends a share of her paper balance; zero spends nothing.", "the paper tipper rounds down to whole cents and refuses tips above its daily or wallet limit.", "a recorded fixture thanks brings sugar to the cells from that look; silence brings nothing."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);
@@ -45,7 +47,9 @@ function drawCards(cards) {
     name.textContent = card.address ? card.address.slice(0, 4) + '...' + card.address.slice(-4) : card.name;
     if (card.address) node.title = card.address;
     const detail = document.createElement('div'); detail.className = 'detail';
-    detail.textContent = card.holding_days != null ? card.holding_days + ' days held / fixture' : card.room.commit_means;
+    detail.textContent = roomData.path === '/musicroom' ?
+      card.artist + ' / ' + card.license + ' / ' + Math.round(card.duration) + ' seconds' :
+      card.holding_days != null ? card.holding_days + ' days held / fixture' : card.room.commit_means;
     node.append(name, detail); return node;
   }));
 }
@@ -58,10 +62,48 @@ async function loadCards() {
 }
 loadCards(); setInterval(loadCards, 2000);
 
+if (roomData.path === '/musicroom') {
+  const line = document.createElement('p'); line.textContent = 'now playing: nothing';
+  const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'none';
+  document.getElementById('cards').after(line, audio);
+  let playKey = null;
+  async function loadPlaying() {
+    try {
+      const response = await fetch('/musicroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
+      if (!response.ok) return;
+      const playing = (await response.json())?.now_playing;
+      const key = playing ? JSON.stringify([playing.track_id, playing.started_at]) : null;
+      if (key === playKey) return;
+      playKey = key;
+      audio.pause();
+      if (!playing) {
+        audio.removeAttribute('src'); audio.load(); line.textContent = 'now playing: nothing'; return;
+      }
+      line.textContent = 'now playing: ' + playing.title;
+      audio.onloadedmetadata = () => {
+        if (playKey !== key) return;
+        audio.currentTime = Math.max(0, Math.min(playing.duration, Date.now() / 1000 - playing.started_at));
+        audio.play().catch(() => { line.textContent = 'now playing: ' + playing.title + ' / press play to hear it'; });
+      };
+      audio.src = '/musicroom/track/' + encodeURIComponent(playing.track_id);
+      audio.load();
+    } catch (error) { /* The next reading brings the public clock back. */ }
+  }
+  loadPlaying(); setInterval(loadPlaying, 1000);
+}
+
 const declaration = JSON.parse(document.getElementById("room-declaration").textContent);
 const disclosure = document.getElementById("disclosure");
 for (const sentence of [declaration.commit_means, declaration.reward_source, ...declaration.chosen, ...declaration.measured]) {
   const p = document.createElement("p"); p.textContent = sentence; disclosure.appendChild(p);
+}
+if (declaration.how && declaration.how.length) {
+  const title = document.createElement('h2'); title.textContent = 'How she plays here';
+  const steps = document.createElement('ol');
+  for (const sentence of declaration.how) {
+    const step = document.createElement('li'); step.textContent = sentence; steps.appendChild(step);
+  }
+  disclosure.append(title, steps);
 }
 </script>
 </body>

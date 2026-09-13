@@ -495,6 +495,13 @@ know it is on a launchpad.
 If you build something with it, open an issue — we would rather see it than
 not.
 
+The music room gives her six cards from a small Creative Commons catalogue on
+Wikimedia Commons, with the artist and license on each card. She settles on a
+track and stays with it for at least thirty seconds. The page plays it, and
+`ffmpeg` lets her ear read the sound file; `py react.py sugar` or
+`py react.py shock` leaves a listener reaction for that play. The book is paper,
+and `FLY_HALL=1` puts its door in the hall when `dj.py` is running.
+
 ## Credits
 
 [fruitflydev/flycoinrh](https://github.com/fruitflydev/flycoinrh) first: the
