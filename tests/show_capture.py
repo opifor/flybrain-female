@@ -209,9 +209,9 @@ def check_gaze(page, checks):
         bounds = [a * edge + c * entry['args'][2] + x for edge in [left, left + entry['width']]]
         assert min(bounds) >= 56 and max(bounds) <= 424, entry
         if entry['args'][0].startswith('smells like'):
-            assert entry['args'][1:3] == [76, 358] and entry['width'] <= 328
+            assert entry['args'][1:3] == [76, 342] and entry['width'] <= 328
         elif not entry['font'].startswith('bold'):
-            assert entry['args'][2] == 322
+            assert entry['args'][2] == 306
     page.screenshot(path=str(STREAM_FRAME.with_name('gaze_frame.png')))
     page.wait_for_timeout(1250)
     page.evaluate('window.ink = []')
