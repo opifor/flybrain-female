@@ -433,6 +433,7 @@
       g.restore();
     }
     function draw(now) {
+      let flyLayer = null;
       if (destroyed) return;
       const dt = Math.min(0.1, (now - lastTime) / 1000); lastTime = now;
       g.setTransform(1,0,0,1,0,0); g.clearRect(0,0,canvas.width,canvas.height);
@@ -488,6 +489,8 @@
           }
           g.restore();
         }
+        // She is drawn last so no card overlay can cover her.
+        flyLayer = () => {
         const shock = moments.find(m => (m.kind === 'shock' || (m.settled && !m.win)) && now-m.at < 650);
         const hop = shock ? Math.sin(Math.PI*(now-shock.at)/650)*24 : 0;
         g.save(); g.translate(cursor.x-hop,cursor.y-hop*0.5);
@@ -499,6 +502,7 @@
         const orn = n.orn_hz ?? state.betting?.orn_hz, twitch = orn == null ? 0 : Math.sin(now/65)*clamp(number(orn)/100)*7;
         g.strokeStyle = '#fcb2ce'; g.lineWidth = 1.5; for (const side of [-1,1]) { g.beginPath(); g.moveTo(19,side*3); g.lineTo(29+twitch,side*(9+twitch)); g.stroke(); }
         g.restore();
+        };
         const entry = state.rooms?.['/hall']?.events?.at(-1);
         if (entry && Math.abs(Date.now() / 1000 - number(entry.at)) < 12) {
           g.fillStyle = '#0b0c10ee'; g.fillRect(24, 20, 680, 46);
@@ -508,6 +512,7 @@
         if (retina) drawRetina();
       }
       if (healthy && imageReady) drawGaze(now, dt);
+      if (flyLayer) flyLayer();
       g.restore();
       if (broadcast) drawBroadcast(now);
       if (probe) {
