@@ -18,15 +18,16 @@ from roomkit import Executor, WriteAhead, LedgerError, atomic_write, exact_body,
 
 WIDTH, HEIGHT, ROTATE_SECONDS = 1280, 620, 7200
 FIELDS = {"card_id", "drive", "seen_at", "look_id", "x", "y", "size"}
+SIZE_FLOOR, SIZE_FLOOR_EVER = 12, 6   # marks made under the old six-pixel rule stay valid on replay
 
 
-def check_body(body):
+def check_body(body, floor=SIZE_FLOOR):
     why = exact_body(body, FIELDS)
     if why:
         return why
     if not isinstance(body["card_id"], str) or body["card_id"] not in (*COLOURS, *BRUSHES):
         return "unknown card"
-    for key, low, high in (("x", 0, WIDTH - 1), ("y", 0, HEIGHT - 1), ("size", 12, 40)):
+    for key, low, high in (("x", 0, WIDTH - 1), ("y", 0, HEIGHT - 1), ("size", floor, 40)):
         value = body[key]
         try:
             valid = type(value) in (int, float) and math.isfinite(value) and low <= value <= high
@@ -104,7 +105,7 @@ class Book:
             self.marks, self.opened_at = [], e["at"]
             return
         if kind == "intent":
-            if check_body({k: e[k] for k in FIELDS}) or e["id"] != self.intents + 1 or e["look_id"] in self.look_ids:
+            if check_body({k: e[k] for k in FIELDS}, SIZE_FLOOR_EVER) or e["id"] != self.intents + 1 or e["look_id"] in self.look_ids:
                 raise LedgerError("invalid intent")
             self.intents = e["id"]
             self.look_ids.add(e["look_id"])
