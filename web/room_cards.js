@@ -1,6 +1,22 @@
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);
+let musicCards = [];
+let currentPlaying = null;
+function playingLine() {
+  const line = document.querySelector('#status p');
+  if (!line) return;
+  const card = musicCards.find(card => card.token === String(currentPlaying?.track_id));
+  line.textContent = currentPlaying ? 'now playing: ' +
+    [currentPlaying.title, card?.artist, card?.license].filter(Boolean).join(' · ') : 'now playing: nothing';
+}
 function drawCards(cards) {
+  if (roomData.path === '/musicroom') {
+    musicCards = cards;
+    playingLine();
+  }
+  if (roomData.path === '/hall') {
+    document.getElementById('status').textContent = 'door order: ' + cards.map(card => card.name).join(' · ');
+  }
   document.getElementById('cards').replaceChildren(...cards.map(card => {
     const node = document.createElement('div');
     node.className = 'card'; node.dataset.token = card.token;
@@ -30,14 +46,16 @@ loadCards(); setInterval(loadCards, 2000);
 
 if (roomData.path === '/musicroom') {
   const line = document.createElement('p'); line.textContent = 'now playing: nothing';
-  const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'none';
-  document.getElementById('cards').after(line, audio);
+  const audio = document.createElement('audio'); audio.preload = 'none';
+  document.getElementById('status').append(line, audio);
   let playKey = null;
   async function loadPlaying() {
     try {
       const response = await fetch('/musicroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
       if (!response.ok) return;
       const playing = (await response.json())?.now_playing;
+      currentPlaying = playing;
+      playingLine();
       const key = playing ? JSON.stringify([playing.track_id, playing.started_at]) : null;
       if (key === playKey) return;
       playKey = key;
@@ -45,11 +63,10 @@ if (roomData.path === '/musicroom') {
       if (!playing) {
         audio.removeAttribute('src'); audio.load(); line.textContent = 'now playing: nothing'; return;
       }
-      line.textContent = 'now playing: ' + playing.title;
       audio.onloadedmetadata = () => {
         if (playKey !== key) return;
         audio.currentTime = Math.max(0, Math.min(playing.duration, Date.now() / 1000 - playing.started_at));
-        audio.play().catch(() => { line.textContent = 'now playing: ' + playing.title + ' / press play to hear it'; });
+        audio.play().catch(() => { /* Playback can resume when the room permits sound. */ });
       };
       audio.src = '/musicroom/track/' + encodeURIComponent(playing.track_id);
       audio.load();

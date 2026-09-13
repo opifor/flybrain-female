@@ -12,7 +12,12 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 .grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
 .door{position:fixed;top:760px;left:56px;right:56px;height:40px;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;padding:5px 14px;color:var(--dim);font-size:20px;z-index:1}
+#status{position:fixed;top:700px;left:56px;right:56px;height:56px;box-sizing:border-box;background:var(--ground);font-size:20px;line-height:28px;overflow:hidden;z-index:1}
+#status p{margin:0}
+#status audio{display:none}
+#disclosure{position:absolute;top:800px}
 
+.grid{grid-auto-rows:320px;column-gap:32px;row-gap:8px}
 .question{font-size:24px;line-height:32px;height:168px;overflow:hidden;margin-left:30px}
 .category{position:absolute;top:16px;left:14px;width:18px;height:50px;border-radius:4px}
 .bar{height:16px;background:#2b3038;border-radius:8px;overflow:hidden;margin-top:14px}
@@ -26,6 +31,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 <body>
 <main id="room">
 <div id="fast" class="grid"></div>
+<div id="status" role="status"></div>
 <div id="door" class="door" data-token="/hall">the hall</div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>

@@ -12,6 +12,10 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 .grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
 .door{position:fixed;top:760px;left:56px;right:56px;height:40px;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;padding:5px 14px;color:var(--dim);font-size:20px;z-index:1}
+#status{position:fixed;top:700px;left:56px;right:56px;height:56px;box-sizing:border-box;background:var(--ground);font-size:20px;line-height:28px;overflow:hidden;z-index:1}
+#status p{margin:0}
+#status audio{display:none}
+#disclosure{position:absolute;top:800px}
 
 
 .grid{grid-template-columns:repeat(4,268px);grid-auto-rows:280px;gap:32px}
@@ -24,12 +28,14 @@ body.musicroom .card{width:100%;height:100%}
 body.hall .grid{grid-template-columns:repeat(2,568px);grid-auto-rows:600px}
 body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:42px}
 body.hall .name{font-size:42px;margin-top:120px}
+body.hall #status{white-space:nowrap;text-overflow:ellipsis}
 
 </style>
 </head>
 <body>
 <main id="room">
 <div id="cards" class="grid"></div>
+<div id="status" role="status"></div>
 
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
@@ -37,7 +43,23 @@ body.hall .name{font-size:42px;margin-top:120px}
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);
+let musicCards = [];
+let currentPlaying = null;
+function playingLine() {
+  const line = document.querySelector('#status p');
+  if (!line) return;
+  const card = musicCards.find(card => card.token === String(currentPlaying?.track_id));
+  line.textContent = currentPlaying ? 'now playing: ' +
+    [currentPlaying.title, card?.artist, card?.license].filter(Boolean).join(' · ') : 'now playing: nothing';
+}
 function drawCards(cards) {
+  if (roomData.path === '/musicroom') {
+    musicCards = cards;
+    playingLine();
+  }
+  if (roomData.path === '/hall') {
+    document.getElementById('status').textContent = 'door order: ' + cards.map(card => card.name).join(' · ');
+  }
   document.getElementById('cards').replaceChildren(...cards.map(card => {
     const node = document.createElement('div');
     node.className = 'card'; node.dataset.token = card.token;
@@ -67,14 +89,16 @@ loadCards(); setInterval(loadCards, 2000);
 
 if (roomData.path === '/musicroom') {
   const line = document.createElement('p'); line.textContent = 'now playing: nothing';
-  const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'none';
-  document.getElementById('cards').after(line, audio);
+  const audio = document.createElement('audio'); audio.preload = 'none';
+  document.getElementById('status').append(line, audio);
   let playKey = null;
   async function loadPlaying() {
     try {
       const response = await fetch('/musicroom/public.json', {cache:'no-store', signal:AbortSignal.timeout(4000)});
       if (!response.ok) return;
       const playing = (await response.json())?.now_playing;
+      currentPlaying = playing;
+      playingLine();
       const key = playing ? JSON.stringify([playing.track_id, playing.started_at]) : null;
       if (key === playKey) return;
       playKey = key;
@@ -82,11 +106,10 @@ if (roomData.path === '/musicroom') {
       if (!playing) {
         audio.removeAttribute('src'); audio.load(); line.textContent = 'now playing: nothing'; return;
       }
-      line.textContent = 'now playing: ' + playing.title;
       audio.onloadedmetadata = () => {
         if (playKey !== key) return;
         audio.currentTime = Math.max(0, Math.min(playing.duration, Date.now() / 1000 - playing.started_at));
-        audio.play().catch(() => { line.textContent = 'now playing: ' + playing.title + ' / press play to hear it'; });
+        audio.play().catch(() => { /* Playback can resume when the room permits sound. */ });
       };
       audio.src = '/musicroom/track/' + encodeURIComponent(playing.track_id);
       audio.load();

@@ -293,6 +293,7 @@ class Room:
         self._dwell = self._intent = None
         self._seen, self._smell, self.meta, self.refs = {}, {}, {}, {}
         self._held = set()
+        self._last_rects = []
         self._look_seq = self.last_seq = 0
         self.last_intents, self.last_dopamine = [], []
         self._said_no_book = False
@@ -367,6 +368,7 @@ class Room:
         self._collect_intent()
         self.refresh_board()
         rects = await self._rects(page)
+        self._last_rects = rects
         card = self._card_at(rects, cx, cy)
         token = card["token"] if card else None
         if token is not None and (self._dwell is None or self._dwell["token"] != token):
@@ -641,6 +643,8 @@ class Room:
         c = self.counters
         return {"room": self.declaration.public(), "in_room": bool(self.in_room), "visits": c["visits"], "looks": c["looks"],
                 "entered_at": self.entered_at, "last_exit": self.last_exit,
+                "rects": {r["token"]: {key: int(r[key]) for key in ("x", "y", "w", "h")}
+                          for r in self._last_rects},
                 "commits": c["commits"], "intents": c["intents"], "booked": c["booked"],
                 "refused": c["refused"], "dislikes": c["dislikes"], "busy": c["busy"],
                 "seen": len(self._seen), "nudges": c["nudges"],

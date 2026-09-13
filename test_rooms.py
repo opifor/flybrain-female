@@ -96,6 +96,30 @@ def test_only_rooms_have_the_hall_bar():
         assert ('<div id="door" class="door" data-token="/hall">the hall</div>' in text) == (name != "hall")
 
 
+@pytest.mark.parametrize("kind", ["hall", "betroom", "tiproom", "musicroom"])
+def test_last_round_rectangles_are_exported(tmp_path, kind):
+    import musicroom
+    cls = {"hall": hall.Hall, "betroom": betroom.Room,
+           "tiproom": tiproom.Room, "musicroom": musicroom.Room}[kind]
+    kwargs = {"registry": registry(), "http": Health()} if kind == "hall" else {}
+    room = make_room(cls, tmp_path, fetch_board=lambda: [], **kwargs)
+    room.refresh_board = lambda **kwargs: None
+    room.read_book = lambda: {}
+    assert room.state()["rects"] == {}
+    room.remember("card", {"name": "card"})
+    boxes = [{"token": "card", "x": 56.5, "y": 48.0, "w": 368.0, "h": 320.0}]
+    if kind != "hall":
+        boxes.append({"token": "/hall", "x": 56, "y": 760, "w": 1168, "h": 40})
+    asyncio.run(room.step(FakePage(boxes), IMG, 0, 0, 1))
+    expected = {box["token"]: {key: int(box[key]) for key in ("x", "y", "w", "h")} for box in boxes}
+    assert room.state()["rects"] == expected
+    assert all(type(value) is int for box in room.state()["rects"].values() for value in box.values())
+    with patch.dict(roam.STATE, {"rooms": {room.declaration.path: room}}):
+        assert roam.rooms_status()[room.declaration.path]["rects"] == expected
+    asyncio.run(room.step(FakePage([]), IMG, 0, 0, 2))
+    assert room.state()["rects"] == {}
+
+
 @pytest.mark.parametrize("reward", ["", " ", None])
 def test_registration_requires_a_reward_source(reward):
     rooms = roomkit.Registry()

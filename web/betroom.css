@@ -1,3 +1,4 @@
+.grid{grid-auto-rows:320px;column-gap:32px;row-gap:8px}
 .question{font-size:24px;line-height:32px;height:168px;overflow:hidden;margin-left:30px}
 .category{position:absolute;top:16px;left:14px;width:18px;height:50px;border-radius:4px}
 .bar{height:16px;background:#2b3038;border-radius:8px;overflow:hidden;margin-top:14px}
