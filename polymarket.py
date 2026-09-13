@@ -80,10 +80,13 @@ class Markets:
         self.fetch, self.clock = fetch, clock
 
     def market(self, market_id):
-        rows = self.fetch(GAMMA + "?" + urlencode({"id": market_id}))
-        for raw in rows:
-            if str(raw.get("id")) == str(market_id):
-                return raw
+        # Gamma leaves closed markets out of an id query unless asked for
+        # them, and a settled bet is exactly a closed market: ask twice.
+        for extra in ({}, {"closed": "true"}):
+            rows = self.fetch(GAMMA + "?" + urlencode({"id": market_id, **extra}))
+            for raw in rows:
+                if str(raw.get("id")) == str(market_id):
+                    return raw
         raise ValueError("market absent from Gamma")
 
     def midpoint(self, token_id):
