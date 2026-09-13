@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="../"><title>the hall · Female Flybrain</title>
+<link rel="icon" href="/fly.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Archivo:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>:root{--ground:#06070a;--plate:#0b0d12;--line:#1a1f28;--ink:#e2eaf1;--dim:#9dabb7;--rose:#ff79b0;--sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font:17px/1.7 var(--sans)}a{color:var(--rose)}header{padding:12px 5%;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}header a{text-decoration:none}nav{display:flex;gap:20px;flex-wrap:wrap}nav a{display:inline-flex;align-items:center;min-height:56px}main{max-width:1120px;margin:auto;padding:56px 24px 96px}h1{font:clamp(44px,8vw,80px)/1.1 "Instrument Serif",Georgia,serif;margin:24px 0}h2{font-size:23px;font-weight:500;line-height:1.3}p{margin:12px 0}.lede{max-width:780px;color:var(--dim);font-size:20px;margin-bottom:40px}.paper,.path,.badge,.pending{font:12px/1.7 var(--mono)}.paper{border:1px solid var(--rose);color:var(--rose);padding:4px 10px;border-radius:4px}.badge{color:#6fdca6}.pending{color:#f0bc5f}.rooms,.columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}article{padding:28px;background:var(--plate);border:1px solid var(--line);display:flex;flex-direction:column}article .button{margin-top:auto}.button,button{min-height:56px!important}.button{display:flex;align-items:center;padding:12px 0;text-underline-offset:5px}section{padding:20px 0;border-bottom:1px solid var(--line)}li{padding:6px 0}ol,ul{padding-left:24px}.counters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.counters dt{font:12px var(--mono);color:var(--dim)}dd{margin:8px 0;font-size:26px}table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:14px}th,td{padding:12px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-weight:400}main *{overflow-wrap:anywhere;min-width:0}#bet-stage{width:100%;aspect-ratio:16/10;background:var(--plate)}@media(max-width:650px){main{padding:32px 20px 60px}.rooms,.columns{grid-template-columns:1fr}.counters{grid-template-columns:repeat(3,minmax(0,1fr))}article{padding:22px}header{padding:12px 20px}nav{gap:18px}}
+</style></head><body>
+<header><a href="./">Female Flybrain · Her Rooms</a><nav aria-label="Main">
+<a href="rooms/">rooms</a><a href="./#live">brain</a><a href="./#story">story</a><a href="./#ca-text">$HER</a><a href="https://kick.com/femalefly">watch</a></nav></header>
+<main><span class="paper">paper</span><h1>the hall</h1><p class="lede">A real female fruit fly brain, 139,255 neurons, simulated live. She lives in a house of rooms and chooses where to go. She never speaks, the numbers do: every room's reward, rule and measure is written down.</p><div data-room="/hall"><p class="path">/hall</p>
+<section><h2>how she plays here</h2><ol><li>door order rotates every visit so no door owns the left.</li><li>she needs readings from another door before a stop can open this one.</li><li>entering a room brings her to that room's cards.</li><li>every room leads back here, by her door or by the clock.</li></ol></section>
+<div class="columns"><section><h2>what a person chose</h2><ul><li>The doors are the rooms people built. Which one she walks into is her stop.</li><li>door order rotates every visit so no door owns the left</li></ul></section>
+<section><h2>what is measured</h2><ul><li>Two readings and a descending-neuron stop open a door.</li><li>nudges: how often the page had to push her out of an empty margin</li></ul></section></div>
+<section><h2>where the cards come from</h2><p>registered rooms with healthy loopback executors. Refreshed every two seconds.</p>
+<h2>reward</h2><p>The hall delivers no sugar or shock; the entered room declares its own reward source.</p></section>
+<section><h2>her paper record</h2><p class="badge" data-live="badge">relay offline</p><dl class="counters"><div><dt>visits</dt><dd data-live="visits">—</dd></div><div><dt>looks</dt><dd data-live="looks">—</dd></div><div><dt>commits</dt><dd data-live="commits">—</dd></div><div><dt>nudges</dt><dd data-live="nudges">—</dd></div><div><dt>sugar</dt><dd data-live="sugar">—</dd></div><div><dt>shock</dt><dd data-live="shock">—</dd></div></dl>
+<p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
+<div data-live="book">Paper book unavailable.</div></section></div></main>
+<script>(() => {
+  'use strict';
+  const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
+  const number = value => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-US');
+  const time = value => {
+    if (value == null) return '—';
+    const date = new Date(typeof value === 'number' ? value * 1000 : value);
+    return Number.isNaN(date.getTime()) ? '—' : date.toISOString().slice(11, 16) + ' UTC';
+  };
+  const node = (tag, text) => { const el = document.createElement(tag); el.textContent = text; return el; };
+  let catalogue = new Map(), latest;
+  fetch('music/catalog.json').then(r => r.ok ? r.json() : []).then(rows => {
+    catalogue = new Map(rows.map(row => [String(row.id), row]));
+    if (latest) render(latest);
+  }).catch(() => {});
+  function table(headers, rows) {
+    const el = document.createElement('table'), head = document.createElement('tr');
+    for (const title of headers) { const th = node('th', title); th.scope = 'col'; head.append(th); }
+    const thead = document.createElement('thead'); thead.append(head); el.append(thead);
+    const body = document.createElement('tbody');
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      for (const value of row) { const td = document.createElement('td'); td.append(value instanceof Node ? value : document.createTextNode(String(value ?? '—'))); tr.append(td); }
+      body.append(tr);
+    }
+    el.append(body); return el;
+  }
+  function credits(play) {
+    const track = {...catalogue.get(String(play.track_id)), ...play};
+    const link = node('span', 'Commons link unavailable');
+    try {
+      const url = new URL(track.page);
+      if (url.protocol === 'https:' && url.hostname === 'commons.wikimedia.org') {
+        const a = node('a', 'Commons'); a.href = url.href; return [track.license || '—', a];
+      }
+    } catch (_) {}
+    return [track.license || '—', link];
+  }
+  function book(room, path) {
+    const b = room.book, out = document.createElement('div');
+    if (path === '/hall') {
+      const doors = b?.doors || room.doors;
+      out.append(node('p', 'door order: ' + (Array.isArray(doors) ? doors.map(d => typeof d === 'string' ? d : d.name || d.path).join(' → ') : 'unavailable')));
+      const entries = b?.entries || room.events || [];
+      out.append(table(['last entries', 'at'], entries.slice(-10).reverse().map(e => [e.text || e.path, time(e.at)])));
+      if (!entries.length) out.append(node('p', 'No entries available.'));
+    } else if (!b) out.append(node('p', 'Paper book unavailable.'));
+    else if (path === '/betroom') {
+      const rows = [];
+      for (const [key, status] of [['open_bets', 'open'], ['settled_bets', 'settled']]) {
+        for (const bet of (b[key] || []).slice(-10).reverse()) {
+          const pnl = bet.pnl_cents != null ? Number(bet.pnl_cents) / 100 : bet.payout_cents != null && bet.stake_cents != null ? (Number(bet.payout_cents) - Number(bet.stake_cents)) / 100 : null;
+          rows.push([status, bet.question || bet.market_id, bet.side, number(pnl)]);
+        }
+      }
+      out.append(table(['status', 'market', 'side', 'PnL · USDC'], rows));
+      if (!rows.length) out.append(node('p', 'No bets recorded.'));
+    } else if (path === '/musicroom') {
+      const rows = [];
+      if (b.now_playing) rows.push(['now playing', b.now_playing.title, ...credits(b.now_playing)]);
+      else out.append(node('p', 'Nothing playing.'));
+      for (const play of (b.plays || []).slice(-10).reverse()) rows.push([time(play.started_at), play.title, ...credits(play)]);
+      out.append(table(['play', 'track', 'license', 'source'], rows));
+      out.append(node('p', `listener reactions: ${number(b.reactions?.sugar)} sugar · ${number(b.reactions?.shock)} shock`));
+    } else out.append(node('p', 'Not open yet.'));
+    return out;
+  }
+  function render(state) {
+    latest = state;
+    const live = state?.live === true && (state.age == null || Number(state.age) < 15);
+    for (const block of document.querySelectorAll('[data-room]')) {
+      const path = block.dataset.room, room = live ? state.rooms?.[path] : null;
+      for (const field of block.querySelectorAll('[data-live]')) {
+        const key = field.dataset.live;
+        if (key === 'book') { field.replaceChildren(room ? book(room, path) : node('p', 'Paper book unavailable.')); continue; }
+        let value = '—';
+        if (key === 'badge') {
+          const seen = time(room?.last_exit?.at ?? room?.entered_at);
+          value = !live ? 'relay offline' : !room ? 'room unavailable' : room.in_room ? 'she is here' : seen !== '—' ? 'last seen ' + seen : 'not seen yet';
+        } else if (room && key === 'in_room') value = room.in_room ? 'yes' : 'no';
+        else if (room && key === 'last_exit') value = room.last_exit ? `${time(room.last_exit.at)} · ${room.last_exit.by || '—'}` : 'no exit recorded';
+        else if (room) value = number(room[key] ?? room.learning?.[key]);
+        field.textContent = value;
+      }
+    }
+  }
+  async function tick() {
+    try {
+      const response = await fetch(origin + '/state', {cache:'no-store', signal:AbortSignal.timeout(8000)});
+      if (!response.ok) throw new Error('relay unavailable');
+      render(await response.json());
+    } catch (_) { render(null); }
+    setTimeout(tick, 1000);
+  }
+  const stage = document.getElementById('bet-stage');
+  if (stage) window.mountShow(stage, {audio:false}).onState(render);
+  else tick();
+})();
+</script></body></html>

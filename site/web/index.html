@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
+.site-nav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:12px 24px;border-bottom:1px solid #1a1f28;font:14px var(--sans)}.site-nav nav{display:flex;flex-wrap:wrap;gap:20px}.site-nav a{display:inline-flex;align-items:center;min-height:56px;color:#ff79b0;text-decoration:none}
 :root{
   --ground:#06070a;
   --plate:#0b0d12;
@@ -594,6 +595,7 @@ function renderEntry(state){
 </script>
 </head>
 <body>
+<header class="site-nav"><a href="./">Female Flybrain · Her Rooms</a><nav aria-label="Main"><a href="rooms/">rooms</a><a href="#live">brain</a><a href="#story">story</a><a href="#ca-text">$HER</a><a href="https://kick.com/femalefly">watch</a></nav></header>
 <section id="entry" aria-label="Meet Female Flybrain">
   <div class="entry-grid">
     <div class="entry-block" id="entry-who">
@@ -626,7 +628,7 @@ function renderEntry(state){
       <nav class="entry-buttons" aria-label="Watch her">
         <a href="https://kick.com/femalefly">watch her live on kick</a>
         <a href="#betting">the paper room</a>
-        <a href="#matches">her matches</a>
+        <a href="rooms/">her rooms</a>
       </nav>
       <p class="entry-note">24/7 · she chooses where to go · you watch</p>
     </div>

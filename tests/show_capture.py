@@ -315,6 +315,7 @@ def capture(port):
     for path in (ROOT / 'site/web').iterdir():
         if path.is_file():
             shutil.copy2(path, static_dir / path.name)
+    shutil.copytree(ROOT / 'site/web/rooms', static_dir / 'rooms')
     music_dir = static_dir / 'music'
     music_dir.mkdir()
     subprocess.run(['ffmpeg', '-nostdin', '-y', '-v', 'error', '-f', 'lavfi', '-i',
@@ -432,6 +433,7 @@ def capture(port):
             panel.close()
 
         check_entry(browser, origin, checks, errors)
+        check_rooms(browser, origin, checks, errors)
 
         muted = browser.new_page(viewport=dict(width=1920,height=1080))
         muted.add_init_script(INSTRUMENT)
@@ -524,7 +526,7 @@ def check_entry(browser, origin, checks, errors):
         page.goto(origin + '/index.html?relay=' + origin)
         entry = page.locator('#entry')
         expect(entry).to_be_visible()
-        assert page.evaluate("document.body.firstElementChild.id === 'entry'")
+        assert page.evaluate("document.body.firstElementChild.classList.contains('site-nav') && document.body.firstElementChild.nextElementSibling.id === 'entry'")
         expect(page.locator('#entry-status')).to_have_text('live')
         for name in ['doing', 'spikes', 'sugar', 'shock']:
             expect(page.locator('#entry-' + name)).to_have_text('—')
@@ -540,9 +542,11 @@ def check_entry(browser, origin, checks, errors):
             assert page.evaluate('document.documentElement.scrollWidth <= 400')
         links = page.locator('.entry-buttons a')
         assert links.nth(0).get_attribute('href') == page.locator('.kick').get_attribute('href')
-        for index, target in [(1, 'betting'), (2, 'matches')]:
+        for index, target in [(1, 'betting')]:
             assert links.nth(index).get_attribute('href') == '#' + target
             assert page.locator('#' + target).count() == 1
+        assert links.nth(2).get_attribute('href') == 'rooms/'
+        assert page.locator('#matches').count() == 1
         assert page.locator('#comparison .eyebrow').text_content() == 'the comparison'
         assert page.locator('.entry-down').get_attribute('href') == '#film'
         state['life'] = dict(now=dict(doing='looking at ETH 15m', room='paper room',
@@ -651,6 +655,77 @@ def check_music(page, checks):
     page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'in the paper room')")
     assert not page.evaluate("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'Rain · River · CC BY 3.0')")
     checks.append('Music credits, shared master volume/mute, seek correction, muted playback, track changes, repeat plays, null, expiry, offline and room exit pass.')
+
+
+def check_rooms(browser, origin, checks, errors):
+    from playwright.sync_api import expect
+
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    for width in (1280, 400):
+        for slug in ('index', 'betting'):
+            state = fixture()
+            state['live'] = True
+            state['rooms']['/betroom'] = dict(
+                in_room=True, visits=1234, looks=56, commits=7, nudges=2,
+                learning=dict(sugar=3, shock=1), last_exit=dict(at=1789279200, by='door'),
+                book=dict(open_bets=[dict(question='<b>Rain?</b>', side='YES')],
+                          settled_bets=[dict(question='ETH up?', side='NO', pnl_cents=-125)]))
+            page = browser.new_page(viewport=dict(width=width, height=900))
+            page.on('pageerror', lambda error: errors.append(str(error)))
+            page.route(origin + '/state', lambda route: route.fulfill(json=state))
+            page.goto(f'{origin}/rooms/{slug}.html?relay={origin}')
+            room = page.locator('[data-room="/betroom"]')
+            expect(room.locator('[data-live="badge"]')).to_have_text('she is here')
+            if slug == 'betting':
+                for key, value in dict(visits='1,234', looks='56', commits='7', nudges='2', sugar='3', shock='1').items():
+                    expect(room.locator(f'[data-live="{key}"]')).to_have_text(value)
+                expect(room.locator('[data-live="book"]')).to_contain_text('-1.25')
+                expect(room.locator('[data-live="book"]')).to_contain_text('<b>Rain?</b>')
+                assert room.locator('td b').count() == 0
+                page.wait_for_function("document.querySelector('#bet-stage img').naturalWidth > 0")
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            if width == 1280:
+                page.screenshot(path=str(SHOTS / f'rooms_{slug}.png'), full_page=True)
+            state['rooms']['/betroom']['in_room'] = False
+            expect(room.locator('[data-live="badge"]')).to_have_text('last seen 06:00 UTC')
+            state['live'] = False
+            expect(room.locator('[data-live="badge"]')).to_have_text('relay offline')
+            if slug == 'betting':
+                expect(room.locator('[data-live="visits"]')).to_have_text('—')
+                expect(room.locator('[data-live="book"]')).to_have_text('Paper book unavailable.')
+            assert not errors, errors
+            page.close()
+            checks.append(f'Rooms {slug} at {width}px: live, exit, offline, safe text and no overflow.')
+    state = fixture()
+    state['live'] = True
+    state['rooms']['/musicroom'] = dict(in_room=True, book=dict(
+        now_playing=dict(track_id='123', title='Rain'),
+        plays=[dict(track_id='123', title='Rain', started_at=1789279200)],
+        reactions=dict(sugar=2, shock=0)))
+    state['rooms']['/hall'] = dict(in_room=False, events=[dict(text='entered music room', at=1789279200)])
+    for slug in ('music', 'hall'):
+        page = browser.new_page(viewport=dict(width=400, height=900))
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.route(origin + '/state', lambda route: route.fulfill(json=state))
+        page.route(origin + '/music/catalog.json', lambda route: route.fulfill(json=[MUSIC_TRACK]))
+        page.goto(f'{origin}/rooms/{slug}.html?relay={origin}')
+        record = page.locator('[data-live="book"]')
+        if slug == 'music':
+            expect(record).to_contain_text('CC BY 3.0')
+            expect(record).to_contain_text('now playing')
+            expect(record).to_contain_text('06:00 UTC')
+            assert record.locator('a').first.get_attribute('href') == MUSIC_TRACK['page']
+            state['rooms']['/musicroom']['book']['now_playing'] = None
+            expect(record).to_contain_text('Nothing playing.')
+        else:
+            expect(record).to_contain_text('entered music room')
+            expect(record).to_contain_text('door order: unavailable')
+            state['rooms']['/hall']['doors'] = [{'name': 'music room'}, {'name': 'the betting room'}]
+            expect(record).to_contain_text('door order: music room → the betting room')
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        assert not errors, errors
+        page.close()
+        checks.append(f'Rooms {slug}: paper history renders at 400px without overflow.')
 
 
 if __name__ == '__main__':
