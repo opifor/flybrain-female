@@ -341,7 +341,7 @@
       const life = state?.life, current = life?.now || {}, hour = life?.hour || {};
       const value = v => v == null ? '—' : String(v);
       const money = v => v == null ? '—' : number(v).toFixed(2);
-      const delta = v => v == null ? '—' : signed(number(v));
+      const delta = v => v == null ? '—' : Math.abs(number(v)) >= 1000 ? (number(v) >= 0 ? '+' : '-') + Math.round(Math.abs(number(v))).toLocaleString('en-US') : signed(number(v));
       function text(line, x, y, width, font = 22, color = '#e9edf3') {
         g.font = `${font}px ui-monospace,monospace`; g.fillStyle = color;
         let shown = value(line);

@@ -236,13 +236,15 @@ class Life:
         if room == "the web" and parts and parts.hostname in ("127.0.0.1", "localhost"):
             # Her own house answers on loopback; the path names the room she stands in.
             room = {"/hall": "hall", "/betroom": "paper room", "/tiproom": "tip room",
-                    "/musicroom": "music room"}.get(parts.path.rstrip("/"), "the web")
+                    "/musicroom": "music room", "/paintroom": "the paint room",
+                    "/gameroom": "game room"}.get(parts.path.rstrip("/"), "the web")
         if room == "the web" and entered:
             latest = max(entered, key=lambda e: e.get("at", 0))
             # A retained doorway event must not follow her onto an unrelated page.
             path = urlsplit(url).path if url else latest.get("path")
             if path == latest.get("path"):
-                room = {"/hall": "hall", "/tiproom": "tip room", "/musicroom": "music room"}.get(path, "the web")
+                room = {"/hall": "hall", "/tiproom": "tip room", "/musicroom": "music room",
+                        "/paintroom": "the paint room", "/gameroom": "game room"}.get(path, "the web")
         if game.get("in_room") or (parts and parts.path.rstrip("/") == "/gameroom"):
             room = "game room"
         if room != self.room:
