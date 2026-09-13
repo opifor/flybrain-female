@@ -334,3 +334,11 @@ def test_react_appends_for_the_public_track(tmp_path, now, monkeypatch):
         react.main()
     assert exc.value.code == 1
     assert len(ex.reactions_path.read_text().splitlines()) == 1
+
+
+def test_catalogue_ids_are_text(tmp_path):
+    import json
+    import musicroom
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps([{"id": 139129578, "title": "t", "artist": "a", "license": "CC0", "duration": 60.0, "file": "x.wav"}]), encoding="utf-8")
+    assert musicroom.catalogue(path)[0]["id"] == "139129578"

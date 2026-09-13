@@ -26,6 +26,9 @@ def catalogue(path=CATALOGUE):
     rows = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(rows, list):
         raise ValueError("the music catalogue must be a list")
+    # The Commons catalogue writes page ids as numbers; a track id travels as text.
+    for row in rows:
+        row["id"] = str(row["id"])
     return rows
 
 
