@@ -197,7 +197,7 @@
       if (!card || card.shelf !== 'fast' || !Number.isInteger(card.slot) || card.slot < 0 || card.slot > 5) return null;
       // Old settlements must not illuminate a different market that inherited the slot.
       if (!(state?.betting?.cards || []).some(c => c.market_id === card.market_id && c.slot === card.slot)) return null;
-      return {x:56 + card.slot % 3 * 400, y:48 + Math.floor(card.slot / 3) * 368, w:368, h:336};
+      return {x:56 + card.slot % 3 * 400, y:48 + Math.floor(card.slot / 3) * 328, w:368, h:320};
     }
     function accept(d) {
       const now = performance.now(); state = d; lastPoll = now;

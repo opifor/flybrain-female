@@ -203,7 +203,7 @@ def check_gaze(page, checks):
     drawing = page.evaluate("window.ink.filter(e => e.method === 'fillText' && (['NO','YES','refused'].includes(e.args[0]) || e.args[0].startsWith('smells like')))")
     assert drawing
     for entry in drawing:
-        assert entry['clip'] == [56, 48, 368, 336]
+        assert entry['clip'] == [56, 48, 368, 320]
         a, c, x = [entry['transform'][i] for i in [0, 4, 12]]
         left = entry['args'][1] - (entry['width'] / 2 if entry['align'] == 'center' else 0)
         bounds = [a * edge + c * entry['args'][2] + x for edge in [left, left + entry['width']]]
@@ -282,7 +282,7 @@ def check_geometry(context, origin, checks):
         page.wait_for_function("window.ink.some(e => e.method === 'arc' && e.args[2] === 18)")
         ring = page.evaluate("window.ink.findLast(e => e.method === 'arc' && e.args[2] === 18)")
         assert ring['args'][:3] == [398, 74, 18]
-        assert ring['clip'] == [56, 48, 368, 336]
+        assert ring['clip'] == [56, 48, 368, 320]
         cx, cy, radius = ring['args'][:3]
         rx, ry, rw, rh = ring['clip']
         assert rx <= cx - radius and cx + radius <= rx + rw
