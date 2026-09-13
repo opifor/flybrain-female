@@ -109,7 +109,7 @@ ul.plain li::before{content:"";position:absolute;left:0;top:9px;width:6px;height
 ul.plain li b{color:var(--ink);font-weight:600}
 
 footer{padding:44px 0 70px;color:var(--ink-dim);font-size:14.5px}
-footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
+footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:12px}
 .pill{
   display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-family:var(--mono);
   border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--ink-dim);
@@ -120,188 +120,6 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 @media (max-width:640px){.kick{display:inline-flex;margin:8px 0 0}}
 .pip.stale{background:var(--ink-faint)}
 
-
-/* ---------- the live panel ----------
-   One wide stage, three cards under it, everything else folded away. The
-   panel uses the page's own tokens so it reads as part of the page rather
-   than as a borrowed instrument. */
-.wrap.livew{max-width:1180px}
-.live{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--ink-dim)}
-.lage{font-family:var(--mono);font-size:11px;color:var(--ink-faint);margin-left:14px;letter-spacing:.06em}
-#r-url{color:inherit;border-bottom:1px dotted var(--ink-faint)}
-.lhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;
-  gap:6px 24px;padding:0 0 10px;font-size:11.5px;letter-spacing:.06em}
-.lwho{display:flex;align-items:baseline;gap:12px;min-width:0;flex:1 1 260px}
-/* the dot is grey until a frame has arrived; the class comes from the socket */
-.ldot{color:var(--ink-faint);letter-spacing:.14em;white-space:nowrap;
-  transition:color .3s}
-.ldot.on{color:var(--cyan)}
-.lwho #r-url{min-width:0;flex:1;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;color:var(--ink)}
-.lcount{color:var(--ink-faint);font-variant-numeric:tabular-nums;text-align:right}
-.lcount b{font-weight:400;color:var(--ink-dim)}
-/* the sound control sits on the header row; the slider only exists while on */
-.lsnd{display:flex;align-items:center;gap:10px;flex:0 0 auto}
-#snd{background:none;border:0;padding:0;cursor:pointer;font:inherit;
-  letter-spacing:.06em;color:var(--ink-faint);border-bottom:1px dotted var(--ink-faint)}
-#snd:hover,#snd.on{color:var(--cyan);border-bottom-color:var(--cyan)}
-#vol{width:72px;height:2px;margin:0;accent-color:var(--cyan)}
-#vol[hidden]{display:none}
-
-.lstage{position:relative;aspect-ratio:16/10;background:#000;overflow:hidden;
-  border:1px solid var(--cyan)}
-.lstage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
-  display:block}
-.lstage canvas{position:absolute;inset:0;width:100%;height:100%}
-.loff[hidden]{display:none}
-.loff{position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:6px;background:#000;
-  color:var(--ink-faint);letter-spacing:.14em;font-size:11px;text-align:center;
-  padding:24px}
-.loff .tdim{color:var(--ink-faint);opacity:.7;letter-spacing:.1em;font-size:10.5px}
-
-.lcards{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
-  border:1px solid var(--line);border-top:0}
-@media (max-width:720px){.lcards{grid-template-columns:1fr}}
-.lcard{background:var(--plate);padding:16px 18px 18px;display:grid;
-  grid-template-rows:auto 1fr auto;gap:10px;min-width:0}
-.lk{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
-  color:var(--ink-faint);font-weight:500}
-.lbig{font-family:var(--serif);font-size:40px;line-height:1;color:#eaf4fa;
-  font-variant-numeric:tabular-nums}
-.lbig small{font-family:var(--mono);font-size:11px;color:var(--ink-faint);
-  letter-spacing:.06em;margin-left:8px;vertical-align:baseline}
-.spark{width:100%;height:30px;display:block;margin-top:10px}
-.lsay{font-family:var(--sans);font-size:14.5px;line-height:1.55;color:var(--ink-dim);
-  margin:0;max-width:none}
-
-/* bars: label, track, value. Shared by the steering card and the details. */
-.tbars{display:grid;gap:8px;align-content:center}
-.trow{display:grid;grid-template-columns:56px 1fr 46px;gap:10px;align-items:center;
-  font-size:11px;letter-spacing:.06em}
-.trow .tn{color:var(--ink-dim);text-transform:uppercase}
-/* the bars are spans made by script, so they need a display to take a size */
-.trow .tt{display:block;height:8px;background:#11151c;border:1px solid var(--line);
-  overflow:hidden}
-.trow .tf{display:block;height:100%;background:var(--cyan);width:0%;
-  transition:width .2s linear}
-.trow .tv{text-align:right;color:var(--ink-faint);font-variant-numeric:tabular-nums}
-.lsteer .trow{grid-template-columns:56px 1fr 46px}
-.lsteer .trow .tt{height:14px}
-
-/* the log: newest first, six lines, the rest are in the DOM but not shown */
-.tlog{display:flex;flex-direction:column;gap:3px;font-size:13px;min-width:0;max-width:100%;overflow:hidden;
-  font-family:var(--sans);color:var(--ink-dim);min-height:120px;align-content:start}
-.tlog div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;min-width:0;max-width:100%}
-.tlog div:nth-child(n+7){display:none}
-.tlog .veto{color:var(--amber)}
-.tlog .blk{color:#ff8b7a}
-.tlog b{font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:400;
-  margin-right:10px;font-variant-numeric:tabular-nums}
-.tlog:empty::before{content:"nothing yet";color:var(--ink-faint);font-family:var(--mono);
-  font-size:11px;letter-spacing:.1em}
-
-.lmore{display:block;margin:14px 0 0;padding:0;background:none;border:0;cursor:pointer;
-  font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--ink-faint);border-bottom:1px solid var(--line)}
-.lmore:hover{color:var(--cyan);border-bottom-color:var(--cyan)}
-.ldetails[hidden]{display:none}
-.ldetails{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
-  border:1px solid var(--line);margin-top:14px}
-@media (max-width:720px){.ldetails{grid-template-columns:1fr}}
-.dblk{background:var(--plate);padding:14px 18px 16px;min-width:0}
-.tquad{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:10px}
-.tql{font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint)}
-.tqv{font-size:13px;color:var(--ink);margin-top:1px;font-variant-numeric:tabular-nums}
-.live .scatter{width:100%;height:96px;display:block;margin-top:10px;background:#000;
-  border:1px solid var(--line)}
-.tvis{display:grid;grid-template-columns:1fr 88px;gap:12px;margin-top:10px;
-  align-items:start}
-.tvis canvas{width:100%;height:96px;display:block;background:#000;
-  border:1px solid var(--line)}
-.tvismeta{display:grid;gap:8px}
-.dnote{font-size:11px;color:var(--ink-faint);margin-top:10px;line-height:1.55}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.chips span{font-size:10.5px;letter-spacing:.04em;padding:3px 8px;border:1px solid var(--line);
-  color:var(--ink-dim);background:var(--ground)}
-/* the second row is a silhouette of additions that are not decided yet */
-.chips.next{margin-top:6px;filter:blur(3px);opacity:.55;pointer-events:none}
-
-/* ---------- the rig ---------- */
-/* The side column is taller than a 16:10 screenshot, and a stretched grid row
-   left a black slab under the view. The view is centred in whatever height the
-   row ends up being, and the side column is tight enough that the leftover is
-   a thin band rather than a hole. */
-.rig{display:grid;grid-template-columns:1fr 300px;gap:1px;background:var(--line);
-  border:1px solid var(--line)}
-@media (max-width:820px){.rig{grid-template-columns:1fr}
-  .rigview{min-height:0}}
-.rigview{position:relative;background:#000;overflow:hidden;min-height:340px;
-  display:flex;align-items:center;justify-content:center}
-.rigview img{width:100%;max-height:100%;object-fit:contain;display:block}
-.rigview canvas{position:absolute;inset:0;width:100%;height:100%}
-.rigurl{position:absolute;left:0;right:0;bottom:0;padding:7px 12px;
-  background:rgba(6,7,10,.86);font-family:var(--mono);font-size:11.5px;
-  color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.roamoff[hidden]{display:none}
-.roamoff{position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;text-align:center;padding:26px;color:var(--ink-faint);
-  font-family:var(--mono);font-size:13px;line-height:1.7;background:#000}
-.rigside{background:var(--plate);display:grid;gap:1px;align-content:start}
-.rigblock{padding:13px 15px;border-bottom:1px solid var(--line)}
-.rk{font-family:var(--mono);font-size:10.5px;letter-spacing:.17em;
-  text-transform:uppercase;color:var(--ink-faint);font-weight:500}
-.bignum{font-family:var(--serif);font-size:34px;line-height:1.05;margin-top:6px;
-  color:#eaf4fa;font-variant-numeric:tabular-nums}
-.rsub{font-family:var(--mono);font-size:11px;color:var(--ink-dim);margin-top:2px}
-.rsub .dim,.dim{color:var(--ink-faint)}
-.quad{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-top:10px}
-.ql{font-family:var(--mono);font-size:10px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-faint)}
-.qv{font-family:var(--mono);font-size:14px;color:var(--ink);margin-top:2px;
-  font-variant-numeric:tabular-nums}
-.scatter{width:100%;height:84px;display:block;margin-top:14px;background:#04060a;
-  border:1px solid var(--line)}
-.bars{display:grid;gap:6px;margin-top:9px}
-.brow{display:grid;grid-template-columns:66px 1fr 46px;gap:9px;align-items:center;
-  font-family:var(--mono);font-size:11.5px}
-.brow .bn{color:var(--cyan)}
-.brow .bt{height:6px;background:#101821;border-radius:3px;overflow:hidden}
-.brow .bf{height:100%;background:var(--cyan);width:0%;transition:width .25s}
-.brow .bv{text-align:right;color:var(--ink-dim);font-variant-numeric:tabular-nums}
-.rigfoot{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
-  background:var(--line);border:1px solid var(--line);border-top:0}
-.rigfoot>div{background:var(--plate);padding:13px 16px}
-.fv{font-family:var(--serif);font-size:24px;line-height:1.1;margin-top:3px;
-  font-variant-numeric:tabular-nums}
-@media (max-width:640px){.rigfoot{grid-template-columns:repeat(2,1fr)}}
-.rigtrail{margin-top:22px}
-.roamtrail{display:grid;gap:6px;font-size:13.5px;margin-top:9px}
-.roamtrail span{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;display:block}
-
-/* ---------- the roam ---------- */
-.roam{border:1px solid var(--line);background:var(--plate);display:grid;
-  grid-template-columns:1fr 300px}
-@media (max-width:760px){.roam{grid-template-columns:1fr}}
-.roamview{position:relative;background:#000;aspect-ratio:16/10;overflow:hidden;
-  border-right:1px solid var(--line)}
-.roamview img{width:100%;height:100%;object-fit:contain;display:block}
-.roamview canvas{position:absolute;inset:0;width:100%;height:100%}
-.roamoff[hidden]{display:none}
-.roamoff{position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;text-align:center;padding:26px;color:var(--ink-faint);
-  font-family:var(--mono);font-size:13px;line-height:1.7}
-.roamside{padding:18px;display:grid;gap:18px;align-content:start}
-.roamstat{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.roamstat .n{font-family:var(--serif);font-size:24px;line-height:1.1}
-.roamstat .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;
-  text-transform:uppercase;color:var(--ink-faint)}
-.roamtrail{display:grid;gap:6px;font-size:13.5px}
-.roamtrail span{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;
-  white-space:nowrap;display:block}
-.roamurl{font-family:var(--mono);font-size:12px;color:var(--ink-dim);
-  word-break:break-all}
 
 /* ---------- contract address ----------
    The one thing most visitors came for, so it gets isolation: its own band,
@@ -333,49 +151,15 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 }
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-#matches .match{position:relative;border:1px solid var(--line);background:var(--plate);
-  padding:22px 24px;margin-top:24px;overflow-wrap:anywhere}
-#matches .match-tags{display:flex;justify-content:space-between;gap:12px;margin-bottom:20px}
-#matches .corner{position:static}
-#matches h3{font-family:var(--serif);font-size:clamp(28px,4vw,36px);font-weight:400;
-  line-height:1.15;margin:0 0 10px}
-#matches .match-picture{display:block;width:100%;height:auto;margin:24px 0}
-#matches .match-picture-link{display:block;border:0}
-#matches .match-brains{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
-#matches table{table-layout:fixed;font-size:14px}
-#matches caption{text-align:left;font-family:var(--mono);font-size:11.5px;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);padding-bottom:10px}
-#matches th{white-space:normal;letter-spacing:.06em;padding-right:10px}
-#matches th:first-child{width:42%}
-#matches td{padding-right:0}
-#matches .match-effect{display:block;color:var(--ink-dim);font-size:13px;margin-top:5px}
-#matches .match-links{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:14px;margin:18px 0}
-#matches .ldetails{grid-template-columns:1fr}
-#matches .dblk p{color:var(--ink-dim);font-size:15px}
-#matches .dblk p:last-child{margin-bottom:0}
-@media (max-width:720px){#matches .match-brains{grid-template-columns:1fr}
-  #matches .match{padding:18px 16px}}
-
-#betting .bet-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px}
-#betting .lstage{aspect-ratio:8/5}
-#betting .bet-summary{font-family:var(--mono);font-size:12px;margin-bottom:16px}
-#betting .bet-feed{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto;font-size:13px}
-#betting .bet-feed li{padding:10px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
-#betting details{margin-top:20px;color:var(--ink-dim)}
-#betting summary{cursor:pointer;font-family:var(--mono);font-size:12px}
-#betting details p{font-size:15px}
-@media(max-width:720px){#betting .bet-grid{grid-template-columns:1fr}}
-</style>
-<style>
-#entry{min-height:100svh;display:flex;flex-direction:column;justify-content:center;
-  padding:72px 32px 24px;gap:40px}
+#entry{display:flex;flex-direction:column;justify-content:center;
+  padding:14px 32px;gap:16px}
 .entry-grid{width:100%;max-width:1380px;margin:auto;display:grid;
   grid-template-columns:1fr 1.15fr 1fr;gap:32px;align-items:center}
 .entry-block{min-width:0;overflow-wrap:anywhere}
 #entry .eyebrow{color:var(--cyan)}
-.entry-portrait{width:112px;height:112px;object-fit:cover;border-radius:50%;
-  border:1px solid var(--line);display:block;margin-bottom:20px}
-#entry h2{font-size:38px;margin-bottom:18px}
+.entry-portrait{width:64px;height:64px;object-fit:cover;border-radius:50%;
+  border:1px solid var(--line);display:block;margin-bottom:12px}
+#entry h2{font-size:30px;margin-bottom:10px}
 .entry-copy p{font-size:15px;line-height:1.6;margin-bottom:10px}
 .entry-credit{font-family:var(--mono);font-size:11px;line-height:1.8;display:inline-block;margin-top:12px}
 .entry-current{background:var(--plate);border:1px solid var(--line);padding:24px}
@@ -387,7 +171,7 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 #entry-music svg{width:16px;height:20px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.5}
 #entry-music a{display:inline-block;margin-left:6px}
 #entry-room{color:var(--ink-dim);font-size:14px;margin-bottom:24px}
-.entry-tiles{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:8px;margin-bottom:20px}
+.entry-tiles{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:8px;margin-bottom:12px}
 .entry-tiles div{min-width:0;border-top:1px solid var(--line);padding-top:12px}
 .entry-tiles b{display:block;font-family:var(--mono);font-size:17px;font-weight:400}
 .entry-tiles small{font-family:var(--mono);font-size:10px;color:var(--ink-dim)}
@@ -404,11 +188,24 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
 .entry-note{font-size:11px;color:var(--ink-dim);margin:20px 0 0}
 .entry-down{align-self:center;display:flex;width:44px;height:44px;align-items:center;justify-content:center;border:0}
 .entry-down::after{content:"";width:12px;height:12px;border-right:1px solid var(--cyan);border-bottom:1px solid var(--cyan);transform:rotate(45deg)}
-@media(max-width:800px){#entry{padding:112px 24px 20px;gap:24px}
-  .entry-grid{grid-template-columns:1fr;gap:32px;max-width:480px}
+@media(max-width:800px){#entry{padding:24px;gap:16px}
+  .entry-grid{grid-template-columns:1fr;gap:20px;max-width:480px}
   .entry-current{padding:20px}.entry-buttons a{width:100%}}
+#live{padding:20px 24px 24px}
+.screen-wrap{max-width:480px;margin:auto}
+#live h2{font-size:28px;margin-bottom:10px}
+#her-stage{aspect-ratio:16/10;position:relative;background:#000;overflow:hidden}
+#screen-now{font-size:13px;margin:8px 0;overflow-wrap:anywhere}
+#entry-feed li{padding:4px 0;overflow-wrap:anywhere}
+@media(max-width:800px){.entry-portrait{float:left;margin:0 16px 8px 0}.entry-current{padding:16px}.entry-buttons{gap:8px}.entry-note{margin-top:10px}}
 </style>
 <script>
+function publicText(value){
+  return String(value).replace(/(?:https?:\/\/)?(?:127\.0\.0\.1|localhost)(?::\d+)?(?:\/[^\s<>]*)?/gi, address => {
+    try { return new URL(/^https?:/.test(address) ? address : 'http://' + address).pathname; }
+    catch (_) { return '/'; }
+  });
+}
 let entryMusicCredits = new Map(), entryMusicState;
 fetch('music/catalog.json').then(r => r.ok ? r.json() : []).then(rows => {
   entryMusicCredits = new Map(rows.map(row => [String(row.id), row]));
@@ -417,7 +214,7 @@ fetch('music/catalog.json').then(r => r.ok ? r.json() : []).then(rows => {
 function renderEntry(state){
   entryMusicState = state;
   const now = state.life?.now || {};
-  const text = (id, value) => { document.getElementById(id).textContent = value; };
+  const text = (id, value) => { document.getElementById(id).textContent = publicText(value); };
   const number = value => Number.isFinite(value) ? value.toLocaleString('en-US') : '\u2014';
   const money = value => Number.isFinite(value) ? value.toFixed(2) : '\u2014';
   const status = document.getElementById('entry-status');
@@ -429,6 +226,7 @@ function renderEntry(state){
   document.getElementById('entry-music').hidden = !playing;
   const credit = entryMusicCredits.get(String(playing?.track_id)) || {};
   text('entry-music-title', playing ? `${playing.title} · ${credit.artist || 'unknown artist'} · ${credit.license || 'license pending'}` : '');
+  text('screen-now', 'in the ' + (now.room || '\u2014').replace(/^the /, '') + ' · ' + (now.doing || '\u2014'));
   text('entry-room', 'in the ' + (now.room || '\u2014').replace(/^the /, ''));
   text('entry-spikes', number(now.spikes));
   text('entry-sugar', number(now.sugar_10m));
@@ -438,8 +236,8 @@ function renderEntry(state){
   const feed = Array.isArray(state.life?.feed) ? state.life.feed.slice(0, 3) : [];
   const rows = Array.from({length:3}, (_, i) => {
     const row = document.createElement('li'), at = document.createElement('time'), line = document.createElement('span');
-    at.textContent = feed[i]?.at || '\u2014';
-    line.textContent = feed[i]?.text || '\u2014';
+    at.textContent = publicText(feed[i]?.at || '\u2014');
+    line.textContent = publicText(feed[i]?.text || '\u2014');
     row.append(at, line);
     return row;
   });
@@ -460,7 +258,7 @@ function renderEntry(state){
         <p>she lives in a house of rooms and chooses where to go.</p>
         <p>she never speaks. the numbers do. every room is paper.</p>
       </div>
-      <a class="entry-credit" href="#comparison">sister build of FLYBRAIN · FlyWire FAFB v783</a>
+      <a class="entry-credit" href="/story.html#comparison">sister build of FLYBRAIN · FlyWire FAFB v783</a>
     </div>
     <div class="entry-block entry-current" id="entry-now">
       <div class="eyebrow">now</div>
@@ -474,236 +272,32 @@ function renderEntry(state){
         <div><b id="entry-shock">—</b><small>shock · 10 min</small></div>
       </div>
       <p id="entry-balance">paper balance — usdc · — today</p>
-      <ol id="entry-feed"><li><time>—</time><span>—</span></li><li><time>—</time><span>—</span></li><li><time>—</time><span>—</span></li></ol>
     </div>
     <div class="entry-block" id="entry-where">
       <div class="eyebrow">where</div>
       <nav class="entry-buttons" aria-label="Watch her">
         <a href="https://kick.com/femalefly">watch her live on kick</a>
-        <a href="#betting">the paper room</a>
-        <a href="rooms/">her rooms</a>
+        <a href="/rooms/betting">the paper room</a>
+        <a href="/rooms/">her rooms</a>
       </nav>
       <p class="entry-note">24/7 · she chooses where to go · you watch</p>
     </div>
   </div>
-  <a class="entry-down" href="#live" aria-label="Scroll to the live panel"></a>
 </section>
 
-<section id="live" style="padding-top:44px">
-  <div class="wrap livew">
-    <div class="eyebrow">live</div>
-    <h2>Where the fly is right now <a class="kick" href="https://kick.com/femalefly" target="_blank" rel="noopener">&#9679; watch on Kick</a></h2>
-    <p class="lede">A page goes in through 785 hex columns per eye, both eyes on one shared grid; 139,255 neurons integrate, and a cursor comes out. Every number on this panel is read out of the running simulation.</p>
-
-    <div class="live">
-      <div class="lhead">
-        <div class="lwho">
-          <span class="ldot" id="t-live">&#9679; LIVE</span>
-          <a id="r-url" href="#" target="_blank" rel="noopener">&mdash;</a>
-          <span class="lage" id="r-age" title="how old the frame on screen is, by the relay clock"></span>
-        </div>
-        <div class="lcount"><b id="r-hops">&mdash;</b> pages &middot; <b id="r-clicks">&mdash;</b> clicks &middot; <b id="r-scrolled">&mdash;</b> scrolls &middot; <b id="r-steps">&mdash;</b> brain steps &middot; <b id="r-vetoes">&mdash;</b> vetoed</div>
-        <div class="lsnd">
-          <button id="snd" type="button" aria-pressed="false">sound</button>
-          <input id="vol" type="range" min="0" max="1" step="0.01" value="0.5" aria-label="volume" hidden>
-        </div>
-      </div>
-
-      <div class="lstage">
-        <img id="r-img" alt="the page the fly is looking at">
-        <canvas id="r-cur"></canvas>
-        <div class="loff" id="r-off">THE FLY IS BETWEEN RUNS<br><span class="tdim">nothing is being streamed right now</span></div>
-      </div>
-
-      <div class="lcards">
-        <div class="lcard">
-          <div class="lk">Neurons firing</div>
-          <div>
-            <div class="lbig"><span id="n-firing">&mdash;</span><small>of 139,255</small></div>
-            <canvas id="n-spark" class="spark"></canvas>
-          </div>
-          <p class="lsay">How much of her brain is active this second.</p>
-        </div>
-        <div class="lcard lsteer">
-          <div class="lk">Steering</div>
-          <div id="n-steer" class="tbars"></div>
-          <p class="lsay">Left minus right is where the cursor goes; up against down is how she scrolls.</p>
-        </div>
-        <div class="lcard">
-          <div class="lk">What she just did</div>
-          <div id="r-events" class="tlog"></div>
-          <p class="lsay">Every click is checked before it lands and refused if it looks like a submit, a sign-in or a purchase (for now).</p>
-        </div>
-      </div>
-
-      <button class="lmore" id="live-more" type="button" aria-expanded="false" aria-controls="live-details">details</button>
-
-      <div class="ldetails" id="live-details" hidden>
-        <div class="dblk">
-          <div class="lk">Neural activity</div>
-          <div class="tquad">
-            <div><div class="tql">spikes/sec</div><div class="tqv" id="n-spikes">&mdash;</div></div>
-            <div><div class="tql">membrane</div><div class="tqv" id="n-mv">&mdash;</div></div>
-            <div><div class="tql">visual</div><div class="tqv" id="n-vis">&mdash;</div></div>
-            <div><div class="tql">motor</div><div class="tqv" id="n-mot">&mdash;</div></div>
-            <div><div class="tql">stream</div><div class="tqv" id="r-fps">&mdash;</div></div>
-          </div>
-        </div>
-        <div class="dblk">
-          <div class="lk">Firing neurons &middot; soma positions</div>
-          <canvas id="n-scatter" class="scatter"></canvas>
-        </div>
-        <div class="dblk">
-          <div class="lk">Vision, retina</div>
-          <div class="tvis">
-            <canvas id="n-retina"></canvas>
-            <div class="tvismeta">
-              <div><div class="tql">L1 on</div><div class="tqv" id="n-on">&mdash;</div></div>
-              <div><div class="tql">L2 off</div><div class="tqv" id="n-off">&mdash;</div></div>
-              <div><div class="tql">columns</div><div class="tqv" id="n-cols">&mdash;</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="dblk">
-          <div class="lk">Other descending neurons</div>
-          <div id="n-dn" class="tbars" style="margin-top:10px"></div>
-        </div>
-        <div class="dblk">
-          <div class="lk">Motor output</div>
-          <div id="n-out" class="tbars" style="margin-top:10px"></div>
-        </div>
-        <div class="dblk">
-          <div class="lk">Mushroom body &middot; learning</div>
-          <div class="tquad">
-            <div><div class="tql">depressed</div><div class="tqv" id="l-dep">&mdash;</div></div>
-            <div><div class="tql">mean gain</div><div class="tqv" id="l-gain">&mdash;</div></div>
-            <div><div class="tql">rewards</div><div class="tqv" id="l-rew">&mdash;</div></div>
-            <div><div class="tql">punishments</div><div class="tqv" id="l-pun">&mdash;</div></div>
-          </div>
-          <div class="dnote">KC to MBON synapses under dopamine. Depression only &mdash; that is the rule a fly actually uses.</div>
-        </div>
-        <div class="dblk">
-          <div class="lk">Where she may go</div>
-          <div class="chips"><span>en.wikipedia.org</span><span>commons.wikimedia.org</span><span>en.wikisource.org</span><span>en.wikiquote.org</span><span>openlibrary.org</span><span>gutenberg.org</span><span>xkcd.com</span><span>codex.flywire.ai</span><span>janelia.org</span><span>arxiv.org</span><span>biorxiv.org</span><span>ponsfamily.com</span><span>robinhoodchain.blockscout.com</span><span>femaleflybrain.com</span></div>
-          <div class="chips next" aria-hidden="true"><span>more to come</span><span>and more</span><span>soon</span><span>later</span><span>one day</span></div>
-          <p class="lsay" style="margin-top:10px">The list grows as she proves she can be trusted with more.</p>
-        </div>
-      </div>
-    </div>
-
-    <p style="margin-top:22px;color:var(--ink-dim);font-size:15px">No wallet, no keyboard, no downloads.</p>
+<section id="live" aria-label="Her screen">
+  <div class="screen-wrap">
+    <h2>her screen</h2>
+    <div id="her-stage"></div>
+    <p id="screen-now">in the — · —</p>
+    <ol id="entry-feed" aria-label="Her latest activity"></ol>
   </div>
 </section>
-
-<section id="betting">
-  <div class="wrap livew">
-    <div class="eyebrow">paper</div>
-    <h2>Her betting room</h2>
-    <p id="bet-status" role="status">Waiting for the relay.</p>
-    <div class="bet-grid">
-      <div class="lstage" id="bet-stage"><img id="bet-frame" alt="The page she is looking at"></div>
-      <div><div id="bet-summary" class="bet-summary">Paper book unavailable.</div><ol id="bet-feed" class="bet-feed" aria-label="Recent paper activity"></ol></div>
-    </div>
-    <p class="lsay" style="margin-top:22px">Her eye meets six market cards. Stops and relative readings can buy a paper bet or leave one early. Booked profit and loss teach the Kenyon cells recorded during that look.</p>
-    <details><summary>What is happening here</summary>
-<p>One open bet per market: the same reading cannot add to her bet. This is a rule of the room, chosen by people, not a decision of hers.</p>
-<p>She can leave a bet early: a stop on a card she holds, with the opposite reading, sells at the midpoint. Whether she sells is her reading; when she looks is her walk. Profit or loss teaches her the moment it is booked.</p>
-<p>CHOSEN by people: a person chose current BTC and ETH 5-minute markets and BTC, ETH, SOL and XRP 15-minute markets because they resolve in minutes, so her learning signal arrives while she is still in the room; refreshed every 30 seconds. Up means YES and Down means NO on the fast shelf. A market's smell is a human mapping from its question words to DoOR odorants, scaled toward total 2.0. The fly cannot read the words. The picture is for the viewers. Category colours, price bars and time-to-close edge brightness are human encodings.</p>
-<p>MEASURED: the connectome, the Kenyon cells that fire, their output synapses, DoOR receptor responses, Gamma market observations and CLOB midpoint quotes. CHOSEN: two readings before a stop can commit; drive is the dwell's mean relative leaning against other cards seen this visit. Like means YES, dislike means NO. Stake is floor(abs(drive) times free balance in cents). No cap, no floor, no price test in sizing.</p>
-<p>Paper only. No real orders. Midpoint fills ignore fees, spread, liquidity and minimum order size. A closed market with prices exactly 1/0 or 0/1 settles each bet. Wins deliver +1 dopamine and losses -1 to the recorded dwell's eligible Kenyon cells. Payouts round down to cents; the ledger records the remainder. Learning is partly shared across smells. The upstream coin calibration does not establish predictive skill for these markets or this female graph. Smell offsets, single-look noise and neighbouring cards remain in the reading.</p>
-    </details>
-  </div>
-</section>
-<script src="show.js" defer></script>
-<script src="betting.js" defer></script>
-
-<section id="matches">
-  <div class="wrap">
-    <h2>Matches</h2>
-    <p class="lede">One female brain, one male brain, the same rules. Every match is a preregistered protocol, run on both, published either way.</p>
-    <div id="match-cards" aria-live="polite"><p>Loading the records.</p></div>
-    <noscript><p>Read the <a href="matches/index.json">match records</a>.</p></noscript>
-  </div>
-  <script>
-  (async function(){
-    const host = document.getElementById('match-cards');
-    function element(tag, text, cls){
-      const el = document.createElement(tag);
-      if (text != null) el.textContent = text;
-      if (cls) el.className = cls;
-      return el;
-    }
-    function link(label, url){
-      const el = element('a', label); el.href = url; return el;
-    }
-    async function read(path){
-      const response = await fetch(path, {cache:'no-cache'});
-      if (!response.ok) throw new Error(path);
-      return response.json();
-    }
-    try {
-      const paths = await read('matches/index.json');
-      const cards = await Promise.all(paths.map(read));
-      host.replaceChildren();
-      if (!cards.length) host.append(element('p', 'No matches published yet.'));
-      cards.forEach((card, i) => {
-        const article = element('article', null, 'match');
-        const tags = element('div', null, 'match-tags');
-        tags.append(element('span', 'Match ' + (i + 1), 'corner'), element('time', card.date, 'corner'));
-        tags.lastChild.dateTime = card.date;
-        article.append(tags, element('h3', card.title), element('p', card.claim));
-        const picture = element('img', null, 'match-picture');
-        picture.src = card.picture; picture.alt = card.title;
-        const fullPicture = link('', card.picture);
-        fullPicture.className = 'match-picture-link';
-        fullPicture.append(picture); article.append(fullPicture);
-        const brains = element('div', null, 'match-brains');
-        for (const brain of card.brains){
-          const block = element('div');
-          const table = element('table');
-          table.append(element('caption', brain.name));
-          const head = element('thead'), header = element('tr');
-          for (const label of ['Prediction', 'Result']){
-            const th = element('th', label); th.scope = 'col'; header.append(th);
-          }
-          head.append(header); table.append(head);
-          const body = element('tbody');
-          for (const row of brain.predictions){
-            const tr = element('tr'), th = element('th', row.prediction);
-            th.scope = 'row'; th.title = row.statement;
-            const result = element('td', row.verdict);
-            result.append(element('span', row.effect, 'match-effect'),
-                          element('span', 'SE: ' + row.se, 'match-effect'));
-            tr.append(th, result); body.append(tr);
-          }
-          table.append(body); block.append(table);
-          const links = element('div', null, 'match-links');
-          for (const [label, url] of Object.entries(brain.links)) links.append(link(label, url));
-          block.append(links); brains.append(block);
-        }
-        article.append(brains, element('div', 'What it means', 'eyebrow'), element('p', card.meaning));
-        const protocol = element('div', null, 'match-links');
-        protocol.append(link(card.protocol, card.links.protocol)); article.append(protocol);
-        const button = element('button', 'Measured versus chosen', 'lmore');
-        button.type = 'button'; button.setAttribute('aria-expanded', 'false');
-        const details = element('div', null, 'ldetails');
-        details.id = 'match-details-' + i; details.hidden = true;
-        button.setAttribute('aria-controls', details.id);
-        const content = element('div', null, 'dblk');
-        for (const paragraph of card.measured) content.append(element('p', paragraph));
-        details.append(content);
-        button.addEventListener('click', () => {
-          details.hidden = !details.hidden;
-          button.setAttribute('aria-expanded', String(!details.hidden));
-        });
-        article.append(button, details); host.append(article);
-      });
-    } catch (error){
-      host.replaceChildren(element('p', 'The match records could not be loaded. Please try again.'));
-    }
-  })();
-  </script>
-</section>
+<script src="/show.js"></script>
+<script>
+window.paperShow = mountShow(document.getElementById('her-stage'), {audio:false});
+window.paperShow.onState(renderEntry);
+</script>
 
 <div class="cabar">
   <div class="wrap cain">
@@ -725,69 +319,6 @@ function renderEntry(state){
 
 <section>
   <div class="wrap">
-    <div class="eyebrow">what it is</div>
-    <h2>A real nervous system, not a metaphor</h2>
-    <p class="lede">This is the whole adult female <em style="font-family:var(--serif);font-style:italic">Drosophila melanogaster</em> brain from FlyWire FAFB v783. The connectome supplies the wiring; the simulation runs it.</p>
-    <p>FlyWire FAFB v783 was released under CC-BY by the FlyWire Consortium, Princeton University and the University of Cambridge: Dorkenwald et al. 2024 (Nature) and Schlegel et al. 2024 (Nature). We keep FlyWire's filtered export, at least five synapses per pair: 139,255 neurons and 3,641,142 signed connections. Transmitter labels are assigned by cell-type majority vote, changing 22,889 labels. The neurons run as leaky integrate-and-fire units: rest &minus;52&nbsp;mV, threshold &minus;45&nbsp;mV, 20&nbsp;ms tau.</p>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <div class="eyebrow">how it reaches the world</div>
-    <h2>It sees with a fly's eye and moves with a fly's legs</h2>
-    <p class="lede">A screenshot of a live web page is sampled through 785 hex columns per eye, both eyes on one shared grid: 783 left and 789 right L1 cells. All 139,255 neurons integrate. The descending neurons used have the same names and counts per side as in the male brain: DNa02 (1), DNa01 (1), MDN (4) and DNp09 (2).</p>
-    <div class="wires">
-      <div class="wire"><div class="cell">DNa02</div><div class="role">Left versus right. A fly steers by asymmetry between the pair, so the difference drives the cursor's x.</div></div>
-      <div class="wire"><div class="cell">DNa01</div><div class="role">Forward walking. Drives the cursor's y.</div></div>
-      <div class="wire"><div class="cell">MDN</div><div class="role">The Moonwalker neuron. Makes a fly walk backwards; here it reverses.</div></div>
-      <div class="wire"><div class="cell">DNp09</div><div class="role">Stopping. The female export has no MN9; she clicks from 24 proboscis motor neurons, with a threshold of 100 Hz.</div></div>
-    </div>
-  </div>
-</section>
-
-
-<section id="comparison">
-  <div class="wrap">
-    <div class="eyebrow">the comparison</div>
-    <h2>Same experiment, the other sex</h2>
-    <p class="lede">The same rig runs both brains. The dataset, retina and click source differ.</p>
-    <div class="cmp">
-      <dl class="card male">
-        <div class="who">Male</div>
-        <div class="cmp-row"><dt>Dataset</dt><dd>Janelia male CNS v1.0 (HHMI Janelia FlyEM, Cambridge Connectomics Group, Google Research), CC-BY</dd></div>
-        <div class="cmp-row"><dt>Neurons</dt><dd>165,122</dd></div>
-        <div class="cmp-row"><dt>Connections</dt><dd>10,228,000, at least 3 synapses per pair</dd></div>
-        <div class="cmp-row"><dt>Hex columns per eye</dt><dd>892</dd></div>
-        <div class="cmp-row"><dt>Retina</dt><dd>892 columns</dd></div>
-        <div class="cmp-row"><dt>Descending neurons used, per side</dt><dd>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</dd></div>
-        <div class="cmp-row"><dt>Click neuron</dt><dd>MN9, threshold 330 Hz</dd></div>
-        <div class="cmp-row"><dt>Simulation step time</dt><dd>0.33 s</dd></div>
-        <div class="cmp-row"><dt>Offline form score</dt><dd>2 of 3 fields</dd></div>
-        <div class="cmp-row"><dt>Live form score</dt><dd>not published</dd></div>
-      </dl>
-      <dl class="card female">
-        <div class="who">Female</div>
-        <div class="cmp-row"><dt>Dataset</dt><dd>FlyWire FAFB v783 (FlyWire Consortium, Princeton University, University of Cambridge), CC-BY</dd></div>
-        <div class="cmp-row"><dt>Neurons</dt><dd>139,255</dd></div>
-        <div class="cmp-row"><dt>Connections</dt><dd>3,641,142 signed, filtered export with at least 5 synapses per pair</dd></div>
-        <div class="cmp-row"><dt>Hex columns per eye</dt><dd>785</dd></div>
-        <div class="cmp-row"><dt>Retina</dt><dd>both eyes on one shared grid, 783 left L1 and 789 right L1 cells</dd></div>
-        <div class="cmp-row"><dt>Descending neurons used, per side</dt><dd>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</dd></div>
-        <div class="cmp-row"><dt>Click neuron</dt><dd>no MN9 in the export; 24 proboscis motor neurons, threshold 100 Hz</dd></div>
-        <div class="cmp-row"><dt>Simulation step time</dt><dd>0.12 s, same code, smaller graph</dd></div>
-        <div class="cmp-row"><dt>Offline form score</dt><dd>2 of 3 fields</dd></div>
-        <div class="cmp-row"><dt>Live form score</dt><dd>1 of 3 fields, ticker</dd></div>
-      </dl>
-    </div>
-    <p style="margin-top:22px">The descending motor side is identical by name and count in both brains. The fixes that made her walk were two constants and one relabelling, all in the repo, all measurable with <code>compare.py</code> and <code>measure.py</code>.</p>
-  </div>
-</section>
-
-
-
-<section>
-  <div class="wrap">
     <div class="eyebrow">on-chain</div>
     <h2>$HER</h2>
     <p class="lede">Launched by the female fly, from her own wallet, on Robinhood Chain. Until then this table is empty and says so.</p>
@@ -799,21 +330,6 @@ function renderEntry(state){
       <tr><th>Chain</th><td class="num">Robinhood Chain · id 4663</td></tr>
     </table></div>
     <p style="margin-top:22px"><a id="t-link" href="https://www.ponsfamily.com/launchpad">open on the launchpad</a></p>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <div class="eyebrow">what is not real, stated plainly</div>
-    <h2>The parts that aren't the fly</h2>
-    <ul class="plain">
-      <li><b>The fly does not fill the whole form.</b> She fills 2 of 3 fields offline and typed the ticker herself live, 1 of 3. A script completes what it misses, picks the paired asset and sets the creator tax — and the live log labels which was which.</li>
-      <li><b>It cannot read.</b> 785 columns per eye is roughly a 28&times;28 pixel view per eye. Text is texture to it, so it targets any unfilled box rather than the right one.</li>
-      <li><b>Light mode blinds the male rig.</b> The male rig filled 0 of 3 on a light page and 2 of 3 on a dark one; the female scores 2 of 3 offline and 1 of 3 live on the dark launchpad.</li>
-      <li><b>It has no goals.</b> A fly brain has no language and no plan. It cannot read a page, form a view about a coin, or write a note. Releasing it means nobody is steering, not that it decided anything.</li>
-      <li><b>The reward signal is invented.</b> The circuit, the plasticity site and the direction of the rule are all real and measured. What a fly is rewarded <em style="font-style:italic">by</em> is sugar, not by reaching a web page &mdash; novelty stands in for it here, and that is a choice a person made.</li>
-      <li><b>It roams inside a fence.</b> An allowlist keeps it on Robinhood Chain and pons. That is a choice, not a limit of the fly &mdash; one environment variable takes the fence down, and an unfenced random clicker on a public stream is a bad idea for reasons that have nothing to do with the brain.</li>
-    </ul>
   </div>
 </section>
 
@@ -946,447 +462,8 @@ async function tick(){
 })();
 
 
-/* ---------------------------------------------------------------------------
-   The roam feed.
-
-   The fly needs a real browser, so it runs on a machine rather than in a
-   serverless function. FLY_FEED points at wherever that machine publishes;
-   with nothing set, a visitor on localhost sees their own rig and everyone
-   else sees the panel say so rather than a broken image.
---------------------------------------------------------------------------- */
-/* The fly publishes its latest frame and summary to a public object store,
-   overwriting the same two paths. The page reads them straight from there, so
-   nothing about this feed depends on the machine the fly runs on being
-   reachable from the internet. */
-const BLOB = 'https://vyxkhfq5bah8fgid.public.blob.vercel-storage.com/roam';
-const LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const FEED = window.FLY_FEED || BLOB;
-/* The relay origin (e.g. 'https://live.example.com'): the rig posts there and
-   the page polls it through the CDN, so no viewer ever reaches the rig. Empty
-   means socket mode. ?relay= overrides it for testing a local relay. */
-const RELAY_ORIGIN = 'https://live.femaleflybrain.com';
-const RELAY = new URLSearchParams(location.search).get('relay') || RELAY_ORIGIN;
-
-const rc = document.getElementById('r-cur');
-const rg = rc.getContext('2d');
-let rcur = {x:0.5, y:0.5}, rtar = {x:0.5, y:0.5}, rwing = 0, roamOn = false;
-
-function rsize(){
-  const b = rc.getBoundingClientRect(), d = Math.min(devicePixelRatio||1,2);
-  rc.width = Math.max(2,b.width*d); rc.height = Math.max(2,b.height*d);
-}
-addEventListener('resize', rsize); rsize();
-
-function rdraw(){
-  const W = rc.width, H = rc.height;
-  rg.clearRect(0,0,W,H);
-  if (roamOn) {
-    rcur.x += (rtar.x - rcur.x)*0.2; rcur.y += (rtar.y - rcur.y)*0.2;
-    const x = rcur.x*W, y = rcur.y*H, s = Math.min(W,H)*0.03;
-    rwing += 0.5;
-    rg.save(); rg.translate(x,y);
-    rg.fillStyle = 'rgba(255,121,176,0.95)';
-    rg.beginPath(); rg.ellipse(0,0,s*0.62,s*0.42,0,0,7); rg.fill();
-    rg.beginPath(); rg.ellipse(s*0.62,-s*0.06,s*0.30,s*0.28,0,0,7); rg.fill();
-    rg.fillStyle = 'rgba(255,121,176,0.35)';
-    for (const sg of [1,-1]){
-      rg.beginPath();
-      rg.ellipse(-s*0.22, sg*(s*0.42+Math.abs(Math.sin(rwing))*s*0.16),
-                 s*0.72, s*0.20, sg*0.5, 0, 7);
-      rg.fill();
-    }
-    rg.restore();
-  }
-  requestAnimationFrame(rdraw);
-}
-rdraw();
-
-/* the DNa02 pair is the steering card; the other descending neurons fold
-   into the details, all six share one map so the readout loop is unchanged */
-const STEER_ROWS = [['steer_L','left'],['steer_R','right'],['up','up'],['down','down']];
-const DN_ROWS = [['fwd_L','DNa01 L'],['fwd_R','DNa01 R'],
-                 ['back','MDN'],['stop','DNp09']];
-const OUT_ROWS = [['turn_l','turn L'],['turn_r','turn R'],['forward','forward'],
-                  ['reverse','reverse'],['click','click']];
-const $$ = id => document.getElementById(id);
-
-function makeBars(host, rows){
-  const map = {};
-  for (const [key, name] of rows){
-    const el = document.createElement('div');
-    el.className = 'trow';
-    el.innerHTML = '<span class="tn"></span><span class="tt"><span class="tf"></span></span><span class="tv">0</span>';
-    el.querySelector('.tn').textContent = name;
-    host.appendChild(el);
-    map[key] = {f: el.querySelector('.tf'), v: el.querySelector('.tv')};
-  }
-  return map;
-}
-const dnBars  = Object.assign(makeBars($$('n-steer'), STEER_ROWS), makeBars($$('n-dn'), DN_ROWS));
-const outBars = makeBars($$('n-out'), OUT_ROWS);
-
-function fitCanvas(c){
-  const r = c.getBoundingClientRect(), d = Math.min(devicePixelRatio||1, 2);
-  c.width = Math.max(2, r.width*d); c.height = Math.max(2, r.height*d);
-  return d;
-}
-
-/* Every dot is a neuron that fired in the last window, drawn at the soma
-   coordinate it was measured at in the EM volume. */
-const sc = $$('n-scatter'), sg = sc.getContext('2d');
-let points = [];
-/* The retina: hex columns at their real positions, brightness = drive rate. */
-const rt = $$('n-retina'), rtg = rt.getContext('2d');
-let cols = [];
-/* Firing population over the last minute or so. */
-const sp = $$('n-spark'), pg = sp.getContext('2d');
-let hist = [];
-
-function paintPanels(){
-  let d = fitCanvas(sc);
-  sg.fillStyle = '#000'; sg.fillRect(0,0,sc.width,sc.height);
-  for (const [x,y] of points){
-    sg.fillStyle = 'rgba(255,121,176,' + (0.3+Math.random()*0.55).toFixed(2) + ')';
-    sg.fillRect(4 + x*(sc.width-8), 4 + (1-y)*(sc.height-8), 1.3*d, 1.3*d);
-  }
-
-  d = fitCanvas(rt);
-  rtg.fillStyle = '#000'; rtg.fillRect(0,0,rt.width,rt.height);
-  for (const [u,v,hz] of cols){
-    rtg.fillStyle = 'rgba(255,121,176,' + Math.max(0.05, Math.min(1,hz)).toFixed(2) + ')';
-    rtg.fillRect(3 + u*(rt.width-6), 3 + v*(rt.height-6), 2.2*d, 2.2*d);
-  }
-
-  d = fitCanvas(sp);
-  pg.fillStyle = '#0b0d12'; pg.fillRect(0,0,sp.width,sp.height);
-  if (hist.length > 1){
-    const mx = Math.max.apply(null, hist), mn = Math.min.apply(null, hist);
-    const rng = Math.max(1, mx-mn);
-    pg.strokeStyle = '#ff79b0'; pg.lineWidth = 1.2*d; pg.beginPath();
-    hist.forEach(function(v,i){
-      const x = (i/(hist.length-1))*sp.width;
-      const y = sp.height - 3 - ((v-mn)/rng)*(sp.height-6);
-      i ? pg.lineTo(x,y) : pg.moveTo(x,y);
-    });
-    pg.stroke();
-  }
-  requestAnimationFrame(paintPanels);
-}
-paintPanels();
-
-const nf0 = v => v==null ? '—' : Number(v).toLocaleString('en-US');
-let lastEvents = '';
-
-function renderState(d){
-  $$('r-off').hidden = true;
-  roamOn = true;
-  for (const k of ['hops','clicks','steps','vetoes','scrolled']){
-    const el = $$('r-'+k); if (el && d[k] != null) el.textContent = nf0(d[k]);
-  }
-  if (d.url){ const u = $$('r-url'); u.textContent = d.url.replace(/^https?:\/\//, ''); u.href = d.url; }
-  $$('t-live').classList.add('on');
-  for (const id of ['p-vision','p-motor','p-sim','p-net']){ const p = $$(id); if (p) p.classList.add('on'); }
-
-  const n = d.neural;
-  if (n){
-    $$('n-firing').textContent = nf0(n.firing);
-    $$('n-spikes').textContent = nf0(n.spikes_per_sec);
-    $$('n-mv').textContent = n.mean_mv + ' mV';
-    $$('n-vis').textContent = nf0(n.visual);
-    $$('n-mot').textContent = nf0(n.motor);
-    // up is the DNa01 pair walking forward (up the page), down is MDN walking back
-    const dn = n.dn || {};
-    const dnv = {...dn, up: ((dn.fwd_L || 0) + (dn.fwd_R || 0)) / 2, down: dn.back || 0};
-    for (const k in dnBars){
-      const v = dnv[k] || 0;
-      dnBars[k].v.textContent = v.toFixed(0);
-      dnBars[k].f.style.width = Math.min(100, v/4.5) + '%';
-    }
-    for (const k in outBars){
-      const v = (n.out && n.out[k]) || 0;
-      outBars[k].v.textContent = v.toFixed(2);
-      outBars[k].f.style.width = Math.min(100, v*100) + '%';
-    }
-    if (n.scatter) points = n.scatter;
-    if (n.history) hist = n.history;
-    if (n.learning){
-      const L = n.learning;
-      $$('l-dep').textContent  = nf0(L.depressed) + ' / ' + nf0(L.synapses);
-      $$('l-gain').textContent = L.mean_gain;
-      $$('l-rew').textContent  = nf0(L.rewards);
-      $$('l-pun').textContent  = nf0(L.punishments);
-    }
-    if (n.vision){
-      cols = n.vision.cols || [];
-      $$('n-on').textContent  = n.vision.on_hz + ' Hz';
-      $$('n-off').textContent = n.vision.off_hz + ' Hz';
-      $$('n-cols').textContent = nf0(n.vision.columns);
-    }
-  }
-
-  const ev = JSON.stringify(d.events || []);
-  if (d.events && ev !== lastEvents){
-    lastEvents = ev;
-    const host = $$('r-events');
-    host.innerHTML = '';
-    for (const e of d.events.slice().reverse().slice(0, 6)){
-      const row = document.createElement('div');
-      if (/did not click|veto/.test(e.m)) row.className = 'veto';
-      else if (/blocked/.test(e.m)) row.className = 'blk';
-      const b = document.createElement('b');
-      b.textContent = e.t;
-      const sp2 = document.createElement('span');
-      sp2.textContent = e.m;
-      row.appendChild(b); row.appendChild(sp2);
-      host.appendChild(row);
-    }
-    fxEvents(d.events);
-  }
-  fxState(d);
-}
-
-/* The details area is folded by default so the panel reads at a glance; the
-   readouts in it keep updating while hidden. */
-(function(){
-  const btn = $$('live-more'), box = $$('live-details');
-  if (!btn || !box) return;
-  btn.addEventListener('click', function(){
-    const open = box.hidden;
-    box.hidden = !open;
-    btn.setAttribute('aria-expanded', String(open));
-    btn.textContent = open ? 'hide details' : 'details';
-  });
-})();
-
-function goOffline(){
-  roamOn = false; points = []; cols = []; hist = [];
-  fxOffline();
-  $$('r-img').removeAttribute('src');
-  $$('r-off').hidden = false;
-  $$('t-live').classList.remove('on');
-  for (const id of ['p-vision','p-motor','p-sim','p-net']){ const p = $$(id); if (p) p.classList.remove('on'); }
-}
-
-/* ---- the live socket --------------------------------------------------
-   Object storage is not a stream. When the fly has a tunnel open, the page
-   talks to it directly and gets a frame the moment the page repaints plus
-   cursor positions as it travels between decisions. The polled feed stays as
-   the fallback for when there is no tunnel. */
-let sock = null, sockUrl = null;
-const frames = [];
-
-function openSocket(url){
-  if (!url || url === sockUrl) return;
-  sockUrl = url;
-  try { if (sock) sock.close(); } catch (e) {}
-  sock = new WebSocket(url.replace(/^http/, 'ws') + '/ws');
-  sock.onmessage = function(ev){
-    const m = JSON.parse(ev.data);
-    if (m.type === 'view'){
-      $$('r-img').src = 'data:image/jpeg;base64,' + m.jpg;
-      rtar = {x: m.cx/1280, y: m.cy/800};
-      frames.push(Date.now());
-      while (frames.length && frames[0] < Date.now()-1000) frames.shift();
-      $$('r-fps').textContent = frames.length + ' fps · socket';
-    } else if (m.type === 'cursor'){
-      rtar = {x: m.cx/1280, y: m.cy/800};
-    } else if (m.type === 'frame'){
-      renderState({neural: m.neural, url: m.url, events: m.events,
-                   visited: m.visited, ...(m.stats || {})});
-    }
-  };
-  sock.onclose = function(){ sock = null; sockUrl = null; };
-  sock.onerror = function(){ try { sock.close(); } catch (e) {} };
-}
-
-let tickN = 0;
-/* Discovery, then the socket.
-   The fly's tunnel address is random and changes every run, so live.json in
-   the public repo says where it is. Everything after that - frames, the
-   neural readout, the event stream - arrives on the socket itself. There is
-   no object store in the path any more: pushing two frames a second to one
-   suspended it on operation count and every read started answering 403. */
-async function findStream(){
-  // ?stream=http://host:port points the page at a rig directly, for
-  // watching a local run before anything is published
-  const local = new URLSearchParams(location.search).get('stream');
-  if (local) return local;
-  try {
-    /* Read from the repo, not from this deployment: the fly writes the
-       address there and this page is only redeployed when someone deploys
-       it. The minute-keyed query keeps the CDN copy from going stale. */
-    const src = 'https://raw.githubusercontent.com/opifor/flybrain-female/main/site/web/live.json';
-    const r = await fetch(src + '?t=' + Math.floor(Date.now()/60000));
-    if (!r.ok) return null;
-    const d = await r.json();
-    if (!d.stream) return null;
-    if (d.at && (Date.now()/1000 - d.at) > 21600) return null;   // stale address
-    return d.stream;
-  } catch (e) { return null; }
-}
-
-async function roamTick(){
-  if (sock && sock.readyState === 1) return;      // already watching
-  const url = await findStream();
-  if (url) openSocket(url); else goOffline();
-}
-
-/* ---- the relay ----------------------------------------------------------
-   Same state as the socket's frame message, read once a second from the
-   relay instead. The frame is fetched only when its seq moved, and the
-   cursor comes from the state itself. A hidden tab polls every 5 s. */
-let relaySeq = -1, relayHits = [];
-
-async function relayTick(){
-  try {
-    const r = await fetch(RELAY + '/state', {cache: 'no-store'});
-    if (!r.ok) throw new Error(r.status);
-    const d = await r.json();
-    renderEntry(d);
-    if (!d.live){ goOffline(); return; }
-    renderState({neural: d.neural, url: d.url, events: d.events,
-                 visited: d.visited, ...(d.stats || {})});
-    if (d.cursor) rtar = {x: d.cursor.x, y: d.cursor.y};
-    // a recording could not print its own age; this one is read off the relay
-    $$('r-age').textContent = 'frame ' + Math.max(0, d.age|0) + ' s old · ' + new Date().toISOString().slice(11,19) + ' UTC';
-    if (d.seq !== relaySeq){
-      relaySeq = d.seq;
-      $$('r-img').src = RELAY + '/frame.jpg?s=' + d.seq;
-      relayHits.push(Date.now());
-      while (relayHits.length && relayHits[0] < Date.now()-1000) relayHits.shift();
-      $$('r-fps').textContent = relayHits.length + ' fps · relay';
-    }
-  } catch (e) { renderEntry({live:false}); goOffline(); }
-  finally { setTimeout(relayTick, document.visibilityState === 'hidden' ? 5000 : 1000); }
-}
-
-/* ---- sound ----------------------------------------------------------------
-   Off until asked: browsers refuse audio before a gesture, and silence is the
-   right default. Nothing is built until the first click. Everything below is
-   driven by the same state the panel renders, so there is no second clock. */
-const fx = window.__fx = {ctx: null, master: null, on: false, plucks: 0, updates: 0};
-const sndBtn = $$('snd'), volIn = $$('vol');
-let fxVol = 0.5, fxScrolled = null, fxUrl = null, fxEvKey = null;
-try { const v = parseFloat(localStorage.getItem('fly-vol')); if (v >= 0 && v <= 1) fxVol = v; } catch (e) {}
-volIn.value = fxVol;
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-function soundOn(){
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const master = ctx.createGain(); master.gain.value = 0;
-  const pan = ctx.createStereoPanner();
-  const tone = ctx.createGain();                       // taken down when the fly is between runs
-  const trem = ctx.createGain(); trem.gain.value = 0.7;
-  const filt = ctx.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 200; filt.Q.value = 2;
-  const lfo = ctx.createOscillator(); lfo.frequency.value = 0.5;
-  const lfoG = ctx.createGain(); lfoG.gain.value = 0.3;
-  lfo.connect(lfoG).connect(trem.gain); lfo.start();
-  for (const [type, det] of [['sine', -6], ['triangle', 6]]){
-    const o = ctx.createOscillator(); o.type = type; o.frequency.value = 110; o.detune.value = det;
-    o.connect(filt); o.start();
-  }
-  filt.connect(trem).connect(tone).connect(pan).connect(master).connect(ctx.destination);
-  // one second of noise, reused for every scroll swell
-  const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-  const ch = noise.getChannelData(0);
-  for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-  Object.assign(fx, {ctx, master, pan, tone, filt, lfo, noise});
-}
-
-function fxPing(freq, dur, level, at){
-  if (!fx.on) return;
-  const {ctx, master} = fx, t = ctx.currentTime + (at || 0);
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.frequency.value = freq;
-  g.gain.setValueAtTime(level, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g).connect(master);
-  o.start(t); o.stop(t + dur + 0.02);
-}
-
-function fxSwell(){
-  if (!fx.on) return;
-  const {ctx, master, noise} = fx, t = ctx.currentTime;
-  const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
-  src.buffer = noise; bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.2;
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(0.06, t + 0.12);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-  src.connect(bp).connect(g).connect(master);
-  src.start(t); src.stop(t + 0.3);
-}
-
-function fxState(d){
-  const wasUrl = fxUrl, wasScrolled = fxScrolled;
-  fxUrl = d.url || fxUrl; fxScrolled = d.scrolled;
-  if (!fx.on) return;
-  fx.updates++;
-  const {ctx, filt, lfo, pan, tone} = fx, t = ctx.currentTime, n = d.neural || {};
-  const f = clamp((n.firing || 0) / 8000, 0, 1);
-  filt.frequency.setTargetAtTime(200 + 2200 * f, t, 0.4);
-  lfo.frequency.setTargetAtTime(0.5 + 5.5 * f, t, 0.4);
-  const dn = n.dn || {};
-  pan.pan.setTargetAtTime(clamp(((dn.steer_R || 0) - (dn.steer_L || 0)) / 300, -0.8, 0.8), t, 0.4);
-  tone.gain.setTargetAtTime(1, t, 0.3);
-  if (wasScrolled != null && d.scrolled > wasScrolled) fxSwell();
-  if (wasUrl && d.url && d.url !== wasUrl){ fxPing(440, 0.14, 0.05); fxPing(660, 0.18, 0.05, 0.11); }
-}
-
-/* The relay sends the whole recent event list; only the lines after the last
-   one already heard are new. The key is tracked while sound is off too, so
-   turning it on does not replay the backlog. */
-function fxEvents(list){
-  let i = fxEvKey ? list.length : 0;
-  while (i > 0 && list[i - 1].t + list[i - 1].m !== fxEvKey) i--;
-  const fresh = fxEvKey ? list.slice(i) : list;
-  if (list.length) fxEvKey = list[list.length - 1].t + list[list.length - 1].m;
-  for (const e of fresh){
-    if (/did not click/.test(e.m)) fxPing(220, 0.12, 0.06);
-    else if (/click on|clicked/.test(e.m)){ fx.plucks++; fxPing(880, 0.09, 0.05); }
-  }
-}
-
-function fxOffline(){
-  if (!fx.ctx) return;
-  const t = fx.ctx.currentTime;
-  fx.tone.gain.cancelScheduledValues(t);
-  fx.tone.gain.setValueAtTime(fx.tone.gain.value, t);
-  fx.tone.gain.linearRampToValueAtTime(0, t + 1);
-}
-
-function fxRamp(level, secs){
-  const g = fx.master.gain, t = fx.ctx.currentTime;
-  g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
-  g.linearRampToValueAtTime(level, t + secs);
-}
-
-sndBtn.addEventListener('click', function(){
-  if (!fx.ctx) soundOn();
-  fx.on = !fx.on;
-  sndBtn.textContent = fx.on ? 'sound on' : 'sound';
-  sndBtn.classList.toggle('on', fx.on);
-  sndBtn.setAttribute('aria-pressed', String(fx.on));
-  volIn.hidden = !fx.on;
-  if (fx.on) fx.ctx.resume().then(() => fxRamp(fxVol * 0.25, 0.6));
-  else { fxRamp(0, 0.4); setTimeout(() => { if (!fx.on) fx.ctx.suspend(); }, 450); }
-});
-volIn.addEventListener('input', function(){
-  fxVol = parseFloat(volIn.value);
-  try { localStorage.setItem('fly-vol', String(fxVol)); } catch (e) {}
-  if (fx.on) fxRamp(fxVol * 0.25, 0.15);
-});
-document.addEventListener('visibilitychange', function(){
-  if (!fx.ctx) return;
-  if (document.visibilityState === 'hidden') fx.ctx.suspend();
-  else if (fx.on) fx.ctx.resume();
-});
-
-if (RELAY) relayTick();
-else { roamTick(); setInterval(roamTick, 15000); }
-
 tick();
 setInterval(tick, 15000);
-
 </script>
 </body>
 </html>

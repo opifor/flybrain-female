@@ -76,7 +76,8 @@ def build(graph, output):
     index = (ROOT / 'site/web/index.html').read_text(encoding='utf-8')
     nav = re.search(r'<header class="site-nav">.*?</header>', index).group()
     nav = nav.replace('href="#live"', 'href="brain.html"').replace('href="#story"', 'href="story.html"').replace('href="#ca-text"', 'href="index.html#ca-text"')
-    page = '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Her brain · Female Flybrain</title><link rel="stylesheet" href="rooms.css"></head><body>' + nav + '<main>' + content
+    font = re.search(r'<link rel="stylesheet" href="https://fonts.googleapis.com[^>]+>', index).group()
+    page = '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Her brain · Female Flybrain</title><link rel="stylesheet" href="rooms.css">' + font + '</head><body>' + nav + '<main>' + content
     page += '<footer><p>Connectome data: FlyWire FAFB v783, released CC-BY by the FlyWire Consortium, Princeton University and the University of Cambridge. Dorkenwald et al. 2024 (Nature) and Schlegel et al. 2024 (Nature).</p></footer></main></body></html>\n'
     Path(output).write_text(page, encoding='utf-8')
     print(summary)

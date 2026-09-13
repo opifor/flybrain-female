@@ -235,6 +235,22 @@ td.num{font-variant-numeric:tabular-nums;color:#eaf4fa}
 #launch table{table-layout:fixed}
 #launch th{width:112px;white-space:normal}
 #launch td{overflow-wrap:anywhere}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+  border:1px solid var(--line)}
+.card{background:var(--plate);margin:0;padding:0 20px 8px;
+  box-shadow:inset 0 2px 0 var(--accent)}
+.card.male{--accent:#6ba2bd}
+.card.female{--accent:var(--cyan)}
+.card .who{font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;font-weight:500;color:var(--accent);
+  padding:16px 0 12px;border-bottom:1px solid var(--line)}
+.cmp-row{padding:13px 0;border-bottom:1px solid var(--line)}
+.cmp-row:last-child{border-bottom:0}
+.cmp-row dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+.cmp-row dd{margin:4px 0 0;font-family:var(--serif);font-size:22px;line-height:1.25;
+  color:#eaf4fa;font-variant-numeric:tabular-nums;text-wrap:pretty}
+@media (max-width:720px){.cmp{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -317,6 +333,41 @@ td.num{font-variant-numeric:tabular-nums;color:#eaf4fa}
   </div>
 </section>
 </main>
+<section id="comparison">
+  <div class="wrap">
+    <div class="eyebrow">sister builds</div>
+    <h2>Sister builds</h2>
+    <p class="lede">The same rig runs both brains. The dataset, retina and click source differ.</p>
+    <div class="cmp">
+      <dl class="card male">
+        <div class="who">Male</div>
+        <div class="cmp-row"><dt>Dataset</dt><dd>Janelia male CNS v1.0 (HHMI Janelia FlyEM, Cambridge Connectomics Group, Google Research), CC-BY</dd></div>
+        <div class="cmp-row"><dt>Neurons</dt><dd>165,122</dd></div>
+        <div class="cmp-row"><dt>Connections</dt><dd>10,228,000, at least 3 synapses per pair</dd></div>
+        <div class="cmp-row"><dt>Hex columns per eye</dt><dd>892</dd></div>
+        <div class="cmp-row"><dt>Retina</dt><dd>892 columns</dd></div>
+        <div class="cmp-row"><dt>Descending neurons used, per side</dt><dd>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</dd></div>
+        <div class="cmp-row"><dt>Click neuron</dt><dd>MN9, threshold 330 Hz</dd></div>
+        <div class="cmp-row"><dt>Simulation step time</dt><dd>0.33 s</dd></div>
+        <div class="cmp-row"><dt>Offline form score</dt><dd>2 of 3 fields</dd></div>
+        <div class="cmp-row"><dt>Live form score</dt><dd>not published</dd></div>
+      </dl>
+      <dl class="card female">
+        <div class="who">Female</div>
+        <div class="cmp-row"><dt>Dataset</dt><dd>FlyWire FAFB v783 (FlyWire Consortium, Princeton University, University of Cambridge), CC-BY</dd></div>
+        <div class="cmp-row"><dt>Neurons</dt><dd>139,255</dd></div>
+        <div class="cmp-row"><dt>Connections</dt><dd>3,641,142 signed, filtered export with at least 5 synapses per pair</dd></div>
+        <div class="cmp-row"><dt>Hex columns per eye</dt><dd>785</dd></div>
+        <div class="cmp-row"><dt>Retina</dt><dd>both eyes on one shared grid, 783 left L1 and 789 right L1 cells</dd></div>
+        <div class="cmp-row"><dt>Descending neurons used, per side</dt><dd>DNa02 (1), DNa01 (1), MDN (4), DNp09 (2)</dd></div>
+        <div class="cmp-row"><dt>Click neuron</dt><dd>no MN9 in the export; 24 proboscis motor neurons, threshold 100 Hz</dd></div>
+        <div class="cmp-row"><dt>Simulation step time</dt><dd>0.12 s, same code, smaller graph</dd></div>
+        <div class="cmp-row"><dt>Offline form score</dt><dd>2 of 3 fields</dd></div>
+        <div class="cmp-row"><dt>Live form score</dt><dd>1 of 3 fields, ticker</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
 <script>
 /* ---------------------------------------------------------------------------
    The film.

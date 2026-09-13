@@ -422,16 +422,16 @@ def capture(port):
             panel.add_init_script(INSTRUMENT)
             panel.on('pageerror', lambda e: errors.append(str(e)))
             panel.route('https://**/*', lambda route: route.abort())
-            panel.goto(origin+'/index.html?relay='+origin+'#betting')
-            panel.locator('#bet-stage canvas').wait_for()
-            panel.wait_for_function("document.getElementById('bet-frame').naturalWidth===1280")
+            panel.goto(origin+'/index.html?relay='+origin+'#live')
+            panel.locator('#her-stage canvas').wait_for()
+            panel.wait_for_function("document.querySelector('#her-stage img').naturalWidth===1280")
             panel.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'smells like: earth · rain')")
-            panel.locator('#betting').scroll_into_view_if_needed()
+            panel.locator('#live').scroll_into_view_if_needed()
             panel.wait_for_timeout(700)
             assert panel.evaluate('document.documentElement.scrollWidth <= innerWidth'), width
-            assert panel.locator('#bet-stage canvas').bounding_box()['width'] > 100
+            assert panel.locator('#her-stage canvas').bounding_box()['width'] > 100
             panel.screenshot(path=str(SHOTS / f'flybrain-show-panel-{width}.png'))
-            checks.append(f'Betting panel at {width}px has an overlay and no page overflow.')
+            checks.append(f'Her screen at {width}px has an overlay and no page overflow.')
             panel.close()
 
         check_entry(browser, origin, checks, errors)
@@ -523,7 +523,7 @@ def check_entry(browser, origin, checks, errors):
         state = fixture()
         state.pop('life', None)
         state['live'] = True
-        page = browser.new_page(viewport=dict(width=width, height=1000))
+        page = browser.new_page(viewport=dict(width=width, height=800))
         page.on('pageerror', lambda e: errors.append(str(e)))
         page.route('https://**/*', lambda route: route.abort())
         page.route(origin + '/state', lambda route: route.fulfill(json=state))
@@ -541,25 +541,18 @@ def check_entry(browser, origin, checks, errors):
         assert all(block and block['width'] > 100 for block in blocks)
         if width == 1280:
             assert blocks[0]['x'] < blocks[1]['x'] < blocks[2]['x']
-            assert entry.bounding_box()['height'] >= 1000
+            assert 300 <= entry.bounding_box()['height'] <= 500
         else:
             assert blocks[0]['y'] < blocks[1]['y'] < blocks[2]['y']
             assert page.evaluate('document.documentElement.scrollWidth <= 400')
         links = page.locator('.entry-buttons a')
-        assert links.nth(0).get_attribute('href') == page.locator('.kick').get_attribute('href')
-        for index, target in [(1, 'betting')]:
-            assert links.nth(index).get_attribute('href') == '#' + target
-            assert page.locator('#' + target).count() == 1
-        assert links.nth(2).get_attribute('href') == 'rooms/'
-        assert page.locator('#matches').count() == 1
-        assert page.locator('#comparison .eyebrow').text_content() == 'the comparison'
-        assert page.locator('.entry-down').get_attribute('href') == '#live'
+        assert links.nth(0).get_attribute('href') == 'https://kick.com/femalefly'
+        assert links.nth(1).get_attribute('href') == '/rooms/betting'
+        assert links.nth(2).get_attribute('href') == '/rooms/'
+        assert page.locator('#betting, #matches, #comparison').count() == 0
         assert page.locator('.film, #story, .step').count() == 0
         assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
             '/rooms/', '/brain.html', '/story.html', '/#ca-text', '/watch.html']
-        page.locator('.entry-down').click()
-        page.wait_for_function("location.hash === '#live' && Math.abs(document.querySelector('#live').getBoundingClientRect().top) < 2")
-        page.evaluate('window.scrollTo(0, 0)')
         state['life'] = dict(now=dict(doing='looking at ETH 15m', room='paper room',
                                      spikes=1312400, sugar_10m=3, shock_10m=1,
                                      balance=106.2, today_delta=6.2),
@@ -575,7 +568,20 @@ def check_entry(browser, origin, checks, errors):
         expect(page.locator('#entry-balance')).to_have_text('paper balance 106.20 usdc · +6.20 today')
         expect(page.locator('#entry-feed li span')).to_have_text([e['text'] for e in state['life']['feed'][:3]])
         expect(page.locator('#entry-feed time').first).to_have_text('07:02:11')
-        entry.screenshot(path=str(out / f'entry_{width}.png'))
+        expect(page.locator('#screen-now')).to_have_text('in the paper room · looking at ETH 15m')
+        page.wait_for_function("document.querySelector('#her-stage img').naturalWidth === 1280")
+        bottom = page.locator('#live').evaluate('(el) => el.getBoundingClientRect().bottom')
+        assert bottom <= (960 if width == 1280 else 2400), bottom
+        assert page.locator('#her-stage canvas').count() > 0
+        page.screenshot(path=str(out / f'index_calm_{width}.png'), full_page=True)
+        state['life']['feed'][0]['text'] = 'entered http://127.0.0.1:4660/betroom'
+        state['life']['feed'][1]['text'] = 'left http://localhost:4660/musicroom'
+        expect(page.locator('#entry-feed li span').first).to_have_text('entered /betroom')
+        expect(page.locator('#entry-feed li span').nth(1)).to_have_text('left /musicroom')
+        assert not re.search(r'127\.0\.0\.1|localhost', page.locator('body').inner_text(), re.I)
+        state['life']['feed'][0]['text'] = 'x' * 300
+        expect(page.locator('#entry-feed li span').first).to_have_text('x' * 300)
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         state['rooms']['/musicroom'] = dict(in_room=True, book=dict(now_playing=dict(track_id='123', title='<b>Rain</b>')))
         expect(page.locator('#entry-music-title')).to_have_text('<b>Rain</b> · River · CC BY 3.0')
         expect(page.locator('#entry-music')).to_be_visible()
@@ -623,7 +629,8 @@ def check_story(browser, origin, checks, errors):
             '0x4c4c015e9b1be50084e6ad697dfbfbaf0316a595ded30996357b0c1f285f0021',
             '60,428,098', '0xc88f1622748007b441f2f2b8d07562ad2ad93681 (her wallet)',
             'GOOGL', '1.00%', '0.000897 ETH'])
-        assert page.locator('#comparison').count() == 0
+        expect(page.locator('#comparison h2')).to_have_text('Sister builds')
+        assert page.locator('#comparison .cmp-row').count() == 20
         assert page.locator('#next a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
             'rooms/', 'https://kick.com/femalefly']
         page.wait_for_function('window.__filmFrame === 0')
@@ -730,7 +737,7 @@ def check_rooms(browser, origin, checks, errors):
                 in_room=True, visits=1234, looks=56, commits=7, nudges=2,
                 learning=dict(sugar=3, shock=1), last_exit=dict(at=1789279200, by='door'),
                 book=dict(open_bets=[dict(question='<b>Rain?</b>', side='YES')],
-                          settled_bets=[dict(question='ETH up?', side='NO', pnl_cents=-125)]))
+                          settled_bets=[dict(question='Ethereum Up or Down - September 13, 1:25AM-1:30AM ET', side='NO', pnl_cents=-125)]))
             page = browser.new_page(viewport=dict(width=width, height=900))
             page.on('pageerror', lambda error: errors.append(str(error)))
             page.route(origin + '/state', lambda route: route.fulfill(json=state))
@@ -743,6 +750,9 @@ def check_rooms(browser, origin, checks, errors):
                 expect(room.locator('[data-live="book"]')).to_contain_text('-1.25')
                 expect(room.locator('[data-live="book"]')).to_contain_text('<b>Rain?</b>')
                 assert room.locator('td b').count() == 0
+                if width == 400:
+                    heights = room.locator('tbody tr').evaluate_all('(rows) => rows.map(row => row.getBoundingClientRect().height)')
+                    assert heights and max(heights) < 120, heights
                 page.wait_for_function("document.querySelector('#bet-stage img').naturalWidth > 0")
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             if width == 1280:
@@ -806,6 +816,9 @@ def check_brain(browser, origin, checks, errors):
             page.route(origin + '/state', lambda route: route.fulfill(json=state))
             page.goto(f'{origin}/{slug}.html?relay={origin}')
             expect(page.locator('h1')).to_be_visible()
+            font = page.locator('link[href*="fonts.googleapis.com/css2"]')
+            assert font.count() == 1
+            assert all(name in font.get_attribute('href') for name in ('Instrument+Serif', 'Archivo', 'IBM+Plex+Mono'))
             if slug == 'watch':
                 expect(page.locator('#watch-now')).to_have_text(state['life']['now']['doing'])
                 expect(page.locator('#watch-room')).to_have_text('In ' + state['life']['now']['room'])
