@@ -326,6 +326,7 @@ def check_entry(browser, origin, checks, errors):
     out.mkdir(parents=True, exist_ok=True)
     for width in [1280, 400]:
         state = fixture()
+        state.pop('life', None)
         state['live'] = True
         page = browser.new_page(viewport=dict(width=width, height=1000))
         page.on('pageerror', lambda e: errors.append(str(e)))
