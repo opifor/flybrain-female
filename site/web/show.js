@@ -72,6 +72,7 @@
     const broadcast = layout === 'broadcast' || (size?.width === 1920 && size?.height === 1080);
     const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
     const forcedMute = new URLSearchParams(location.search).get('mute') === '1';
+    const probe = new URLSearchParams(location.search).get('probe') === '1';
     const musicAudio = document.createElement('audio');
     musicAudio.hidden = true; musicAudio.preload = 'auto';
     musicAudio.muted = !audio || forcedMute;
@@ -123,7 +124,6 @@
     if (!img) { img = document.createElement('img'); container.append(img); }
     img.alt = 'The page she is looking at'; img.crossOrigin = 'anonymous';
     Object.assign(img.style, {position:'absolute', inset:'0', width:'100%', height:'100%', objectFit:'contain'});
-    if (broadcast) Object.assign(img.style, {width:'66.6666667%', height:'74.0740741%'});
     const canvas = document.createElement('canvas'), g = canvas.getContext('2d');
     canvas.setAttribute('aria-label', 'Her brain, path and paper bets');
     Object.assign(canvas.style, {position:'absolute', inset:'0', width:'100%', height:'100%', pointerEvents:'none'});
@@ -140,8 +140,9 @@
     const retinaButton = button('what she sees');
     let retina = false; retinaButton.setAttribute('aria-pressed', 'false');
     retinaButton.onclick = () => { retina = !retina; retinaButton.setAttribute('aria-pressed', String(retina)); };
-    let hint, muteButton, muted = forcedMute;
-    function unlock() {
+    let hint, hintTimer, muteButton, muted = forcedMute, gestured = false;
+    function unlock(event) {
+      if (event) { gestured = true; if (hint) hint.hidden = true; }
       if (!sound || muted) return;
       sound.start().then(ok => { if (ok && hint) hint.hidden = true; syncMusic(); }).catch(() => {});
     }
@@ -152,6 +153,11 @@
       volume.setAttribute('aria-label', 'Master volume'); volume.style.cssText = 'width:64px;accent-color:#ff79b0';
       volume.oninput = () => sound.volume(Number(volume.value)); controls.append(volume);
       hint = document.createElement('span'); hint.textContent = 'click for sound'; hint.style.cssText = 'font:11px ui-monospace,monospace;color:#d9c7cf'; controls.append(hint);
+      if (broadcast) {
+        container.append(hint); hint.hidden = true;
+        hint.style.cssText += ';position:absolute;right:8px;bottom:8px;z-index:3;background:#101116dd;border:1px solid #4a3a44;border-radius:3px;padding:5px 8px;cursor:pointer';
+        hintTimer = setTimeout(() => { hint.hidden = gestured || sound.running; }, 3000);
+      }
       document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock); unlock();
     }
     const sample = document.createElement('canvas'), sg = sample.getContext('2d', {willReadFrequently:true});
@@ -170,7 +176,23 @@
       const r = container.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
       canvas.width = Math.max(1, Math.round(r.width * d)); canvas.height = Math.max(1, Math.round(r.height * d));
     }); observer.observe(container);
+    function roomPath() {
+      try {
+        const url = new URL(state?.url, 'http://127.0.0.1');
+        return ['127.0.0.1', 'localhost'].includes(url.hostname) ? url.pathname.replace(/\/$/, '') : null;
+      } catch (_) { return null; }
+    }
+    function currentRoom() {
+      const path = roomPath();
+      return state?.rooms?.[path] || (path === '/betroom' ? state?.betting : null);
+    }
     function rect(e) {
+      const room = currentRoom(), token = String(e.token ?? e.track_id ?? e.market_id);
+      if (room?.rects != null) {
+        const r = room.rects[token];
+        return r && [r.x, r.y, r.w, r.h].every(Number.isFinite) && r.w > 0 && r.h > 0 ? r : null;
+      }
+      if (roomPath() !== '/betroom') return null;
       const card = cards.get(String(e.market_id));
       if (!card || card.shelf !== 'fast' || !Number.isInteger(card.slot) || card.slot < 0 || card.slot > 5) return null;
       // Old settlements must not illuminate a different market that inherited the slot.
@@ -192,11 +214,11 @@
       if (!live) { trail = []; moments = []; return; }
       if (d.cursor) { target = {x:clamp(number(d.cursor.x)) * 1280, y:clamp(number(d.cursor.y)) * 800}; if (!cursor) cursor = {...target}; }
       for (const c of d.betting?.cards || []) cards.set(String(c.market_id), c);
-      const intent = d.betting?.last_intent;
-      const nextIntent = intent ? `${intent.at}:${intent.token}` : null;
+      const intent = currentRoom()?.last_intent ?? (roomPath() === '/betroom' ? d.betting?.last_intent : null);
+      const nextIntent = intent ? `${roomPath()}:${intent.at}:${intent.token}` : null;
       if (nextIntent && nextIntent !== intentKey) {
         // A saved receipt should not stamp again when someone joins the stream.
-        if (intentKey !== undefined) decision = {...intent, side:String(intent.side).toLowerCase(), started:now};
+        if (intentKey !== undefined) decision = {...intent, path:roomPath(), side:String(intent.side).toLowerCase(), started:now};
         intentKey = nextIntent;
       } else if (intentKey === undefined) intentKey = null;
       for (const e of [...(d.betroom?.open_bets || []), ...(d.betroom?.settled_bets || [])]) records.set(String(e.id ?? e.look_id), e);
@@ -253,7 +275,6 @@
       }
     }
     function drawBroadcast(now) {
-      g.setTransform(canvas.width / 1920, 0, 0, canvas.height / 1080, 0, 0);
       g.fillStyle = '#090a0c'; g.fillRect(1280, 0, 640, 1080); g.fillRect(0, 800, 1280, 280);
       g.fillStyle = '#292d35';
       g.fillRect(1280, 0, 1, 1080); g.fillRect(1304, 200, 592, 1); g.fillRect(1304, 470, 592, 1);
@@ -360,14 +381,19 @@
       text(`femaleflybrain.com · UTC ${new Date().toISOString().slice(11, 19)}`, 664, 1031, 592);
     }
     function drawGaze(now, dt) {
-      if (!state.betting?.in_room) return;
-      const gaze = state.betting.gaze;
-      const currentKey = gaze ? `${gaze.token}:${gaze.since}` : null;
+      const path = roomPath(), room = currentRoom();
+      if (!room?.in_room && !(path === '/betroom' && state.betting?.in_room)) return;
+      const gaze = room?.gaze ?? (path === '/betroom' ? state.betting?.gaze : null);
+      if (path === '/musicroom' && music) {
+        const r = rect({track_id:music.track_id});
+        if (r) { g.fillStyle = '#ff79b01a'; g.fillRect(r.x, r.y, r.w, r.h); }
+      }
+      const currentKey = gaze ? `${path}:${gaze.token}:${gaze.since}` : null;
       if (currentKey !== gazeKey) { gazeKey = currentKey; gazeProgress = 0; gazeDrive = 0; }
       const ease = 1 - Math.exp(-dt * 12);
       function ring(r, progress) {
         g.strokeStyle = '#ff79b0'; g.lineWidth = 2;
-        g.beginPath(); g.arc(r.x + 26, r.y + 44, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); g.stroke();
+        g.beginPath(); g.arc(r.x + r.w - 26, r.y + 26, 18, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); g.stroke();
       }
       if (gaze) {
         gazeProgress += (clamp(number(gaze.steps) / Math.max(1, number(gaze.needed))) - gazeProgress) * ease;
@@ -390,7 +416,7 @@
           g.restore();
         }
       }
-      if (!decision || now - decision.started >= 1200) return;
+      if (!decision || decision.path !== path || now - decision.started >= 1200) return;
       const r = rect({market_id:decision.token}), age = now - decision.started;
       if (!r || !['yes', 'no'].includes(decision.side)) return;
       g.save();
@@ -402,7 +428,7 @@
         g.textAlign = 'center'; g.font = 'bold 72px ui-sans-serif,system-ui,sans-serif';
         g.fillStyle = decision.side === 'yes' ? '#ff79b0' : '#8b93a1'; g.fillText(decision.side.toUpperCase(), 0, 0);
       } else {
-        g.fillStyle = '#818a97'; g.font = '18px ui-monospace,monospace'; g.fillText('refused', r.x + 18, r.y + 320);
+        g.fillStyle = '#818a97'; g.font = '18px ui-monospace,monospace'; g.fillText('refused', r.x + 18, r.y + r.h - 16);
       }
       g.restore();
     }
@@ -413,7 +439,14 @@
       const w = img.naturalWidth || 1280, h = img.naturalHeight || 800, scale = Math.min(canvas.width / w, canvas.height / h);
       const fw = w * scale, fh = h * scale, ox = (canvas.width-fw)/2, oy = (canvas.height-fh)/2;
       g.setTransform(fw/1280,0,0,fh/800,ox,oy);
-      if (broadcast) g.setTransform(canvas.width / 1920, 0, 0, canvas.height / 1080, 0, 0);
+      if (broadcast) {
+        const s = Math.min(canvas.width / 1920, canvas.height / 1080);
+        const x = (canvas.width - 1920 * s) / 2, y = (canvas.height - 1080 * s) / 2;
+        g.setTransform(s, 0, 0, s, x, y);
+        const box = canvas.getBoundingClientRect();
+        Object.assign(img.style, {inset:'auto', left:`${x * box.width / canvas.width}px`, top:`${y * box.height / canvas.height}px`,
+          width:`${1280 * s * box.width / canvas.width}px`, height:`${800 * s * box.height / canvas.height}px`});
+      }
       g.save();
       if (broadcast) { g.beginPath(); g.rect(0, 0, 1280, 800); g.clip(); }
       const healthy = live && now - lastPoll < 15000;
@@ -430,9 +463,9 @@
         trail.push({x:cursor.x,y:cursor.y,at:now,hue,light:40+firing*35}); trail = trail.filter(p => now-p.at < 2600);
         g.lineWidth = 3; g.lineCap = 'round';
         for (let i=1;i<trail.length;i++) { const p = trail[i]; g.strokeStyle = `hsla(${p.hue},85%,${p.light}%,${(1-(now-p.at)/2600)*0.65})`; g.beginPath(); g.moveTo(trail[i-1].x,trail[i-1].y); g.lineTo(p.x,p.y); g.stroke(); }
-        if (state.betting?.in_room) for (const e of state.betroom?.open_bets || []) { const r = rect(e); if (r) chip(r.x+r.w-22,r.y+22); }
+        if (roomPath() === '/betroom' && state.betting?.in_room) for (const e of state.betroom?.open_bets || []) { const r = rect(e); if (r) chip(r.x+r.w-22,r.y+22); }
         for (const m of moments) {
-          const age = (now-m.at)/1000, p = clamp(age/0.8), r = state.betting?.in_room ? rect(m.e) : null;
+          const age = (now-m.at)/1000, p = clamp(age/0.8), r = roomPath() === '/betroom' && state.betting?.in_room ? rect(m.e) : null;
           const tx = r ? r.x+r.w-22 : m.from.x, ty = r ? r.y+22 : m.from.y;
           g.save(); g.globalAlpha = clamp((2.2-age)/0.6);
           if (m.kind === 'buy' && r && age < 1) {
@@ -472,17 +505,21 @@
           g.fillStyle = '#e9edf3'; g.font = '20px ui-monospace,monospace';
           g.fillText(entry.text, 40, 50);
         }
-        drawGaze(now, dt);
         if (retina) drawRetina();
       }
+      if (healthy && imageReady) drawGaze(now, dt);
       g.restore();
       if (broadcast) drawBroadcast(now);
+      if (probe) {
+        g.fillStyle = '#00ffff';
+        for (const [x, y] of [[0,0], [1280,0], [0,800], [1280,800]]) g.fillRect(x - 2, y - 2, 4, 4);
+      }
       raf = requestAnimationFrame(draw);
     }
     poll(); raf = requestAnimationFrame(draw);
     return {
       onState(fn) { listeners.add(fn); if (state) fn(state); return () => listeners.delete(fn); },
-      destroy() { destroyed = true; clearTimeout(timer); cancelAnimationFrame(raf); observer.disconnect(); musicAudio.pause(); musicAudio.removeAttribute('src'); musicAudio.load(); musicAudio.remove(); sound?.destroy(); document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); canvas.remove(); controls.remove(); img.onload = img.onerror = null; },
+      destroy() { destroyed = true; clearTimeout(timer); clearTimeout(hintTimer); hint?.remove(); cancelAnimationFrame(raf); observer.disconnect(); musicAudio.pause(); musicAudio.removeAttribute('src'); musicAudio.load(); musicAudio.remove(); sound?.destroy(); document.removeEventListener('pointerdown',unlock); document.removeEventListener('keydown',unlock); canvas.remove(); controls.remove(); img.onload = img.onerror = null; },
     };
   };
 })();

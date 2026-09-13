@@ -191,7 +191,7 @@ INSTRUMENT = """(() => {
 
 def check_gaze(page, checks):
     labels = "['NO','YES','smells like: earth · rain'].every(t => window.ink.some(e => e.method === 'fillText' && e.args[0] === t))"
-    arc = "e.method === 'arc' && e.args[0] === 82 && e.args[1] === 92 && e.args[2] === 30 && e.stroke === '#ff79b0'"
+    arc = "e.method === 'arc' && e.args[0] === 398 && e.args[1] === 74 && e.args[2] === 18 && e.stroke === '#ff79b0'"
     stamp = "e.method === 'fillText' && e.args[0] === 'YES' && e.font.startsWith('bold 72px')"
     page.wait_for_function(labels)
     page.wait_for_function(f"window.ink.some(e => {arc} && e.args[4] > -Math.PI / 2 && e.args[4] < Math.PI / 2)")
@@ -234,6 +234,128 @@ def check_gaze(page, checks):
     page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'smells like nothing she knows')")
     DATA['gaze'] = gaze
     checks.append('Gaze arc, scale and smell render; only a new booked receipt stamps; refusals, silence and empty smells stay distinct.')
+
+
+def check_geometry(context, origin, checks):
+    from playwright.sync_api import expect
+
+    page = context.new_page()
+    errors = []
+    page.on('pageerror', lambda error: errors.append(str(error)))
+    state = fixture()
+    page.route(origin + '/state', lambda route: route.fulfill(json=state))
+    for width, height in [(1920,1080), (1440,900), (1280,800), (1024,768),
+                          (768,1024), (400,800), (2560,1440)]:
+        page.set_viewport_size(dict(width=width, height=height))
+        page.goto(origin + '/show.html?probe=1&relay=' + origin)
+        page.wait_for_function("""() => {
+          const canvas = document.querySelector('canvas'), box = canvas.getBoundingClientRect();
+          const d = Math.min(devicePixelRatio || 1, 2);
+          return document.querySelector('img').naturalWidth === 1280 &&
+            canvas.width === Math.round(box.width * d) && canvas.height === Math.round(box.height * d);
+        }""")
+        page.evaluate('window.ink = []')
+        try:
+            page.wait_for_function("window.ink.filter(e => e.fill === '#00ffff').length >= 4")
+        except Exception as error:
+            raise AssertionError((width, height, page.url, errors,
+                                  page.evaluate('window.ink.slice(-8)'))) from error
+        result = page.evaluate("""() => {
+          const canvas = document.querySelector('canvas'), box = canvas.getBoundingClientRect();
+          return {frame:document.querySelector('img').getBoundingClientRect().toJSON(),
+            marks:window.ink.filter(e => e.fill === '#00ffff').slice(-4).map(e => {
+              const t = e.transform;
+              return [(t[0] * (e.args[0]+2) + t[12]) * box.width/canvas.width + box.x,
+                      (t[5] * (e.args[1]+2) + t[13]) * box.height/canvas.height + box.y];
+            })};
+        }""")
+        scale = min(width / 1920, height / 1080)
+        x, y = (width - 1920 * scale) / 2, (height - 1080 * scale) / 2
+        frame = result['frame']
+        for actual, expected in zip([frame['x'], frame['y'], frame['width'], frame['height']],
+                                    [x, y, 1280 * scale, 800 * scale]):
+            assert abs(actual - expected) <= 1, (width, height, result)
+        for mark, corner in zip(result['marks'], [(frame['left'], frame['top']),
+                (frame['right'], frame['top']), (frame['left'], frame['bottom']),
+                (frame['right'], frame['bottom'])]):
+            assert max(abs(a-b) for a, b in zip(mark, corner)) <= 1, result
+        page.wait_for_function("window.ink.some(e => e.method === 'arc' && e.args[2] === 18)")
+        ring = page.evaluate("window.ink.findLast(e => e.method === 'arc' && e.args[2] === 18)")
+        assert ring['args'][:3] == [398, 74, 18]
+        assert ring['clip'] == [56, 48, 368, 336]
+        cx, cy, radius = ring['args'][:3]
+        rx, ry, rw, rh = ring['clip']
+        assert rx <= cx - radius and cx + radius <= rx + rw
+        assert ry <= cy - radius and cy + radius <= ry + rh
+        if width == 1440:
+            page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[1] === 1416 && e.args[2] === 550 && e.alpha === 1)")
+            page.screenshot(path=str(SHOTS / 'show_fit_1440x900.png'))
+    state['url'] = '/musicroom'
+    arena = context.new_page()
+    arena.set_viewport_size(dict(width=1280, height=800))
+    arena.route('**/musicroom/board.json', lambda route: route.fulfill(json=dict(cards=[
+        dict(token=str(i), name='Rain' if i == 4 else 'Quiet water', artist='River',
+             license='CC BY 3.0', duration=60) for i in range(6)])))
+    arena.route('**/musicroom/public.json', lambda route: route.fulfill(json={}))
+    arena.route(origin + '/musicroom', lambda route: route.fulfill(
+        body=(ROOT / 'web/musicroom.html').read_bytes(), content_type='text/html'))
+    arena.goto(origin + '/musicroom')
+    arena.locator('.card').nth(5).wait_for()
+    music_frame = arena.screenshot(type='jpeg', quality=90)
+    arena.close()
+    page.route(origin + '/frame.jpg*', lambda route: route.fulfill(body=music_frame, content_type='image/jpeg'))
+    state['betting']['in_room'] = False
+    state['rooms']['/musicroom'] = dict(in_room=True,
+        rects={'123': dict(x=456, y=380, w=368, h=300)},
+        gaze={**DATA['gaze'], 'token': '123'},
+        book=dict(now_playing=dict(track_id='123', title='Rain',
+                                  started_at=time.time(), duration=60)))
+    page.set_viewport_size(dict(width=1440, height=900))
+    page.reload()
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'NO' && e.args[2] === 618)")
+    drawing = page.evaluate("window.ink.filter(e => e.method === 'fillText' && ['NO','YES'].includes(e.args[0]))")
+    assert drawing
+    for entry in drawing:
+        assert entry['clip'] == [456, 380, 368, 300]
+        assert entry['args'][2] == 618
+        assert 456 <= entry['args'][1] <= 824 - entry['width']
+    assert page.evaluate("window.ink.some(e => e.method === 'arc' && e.args[0] === 798 && e.args[1] === 406 && e.args[2] === 18 && e.clip.join() === '456,380,368,300')")
+    highlight = page.evaluate("window.ink.findLast(e => e.method === 'fillRect' && e.args.join() === '456,380,368,300')")
+    assert highlight and highlight['fill'].startswith('rgba(255, 121, 176,'), highlight
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[1] === 1416 && e.args[2] === 550 && e.alpha === 1)")
+    page.screenshot(path=str(SHOTS / 'show_music_gaze.png'))
+    def reload_room():
+        page.reload()
+        page.evaluate('() => { window.paperShow.onState(d => window.received = d); }')
+        page.wait_for_function("url => window.received?.url === url && document.querySelector('img').naturalWidth === 1280", arg=state['url'])
+        page.evaluate('window.ink = []')
+        page.wait_for_function("window.ink.some(e => e.fill === '#00ffff')")
+
+    state['url'] = 'https://example.org/musicroom'
+    reload_room()
+    assert not page.evaluate("window.ink.some(e => e.method === 'arc' && e.args[2] === 18)")
+    state['url'] = 'http://localhost:4660/betroom/'
+    state['betting']['in_room'] = True
+    state['rooms']['/betroom'] = dict(in_room=True, rects={'0': dict(x=156, y=148, w=368, h=336)})
+    reload_room()
+    page.wait_for_function("window.ink.some(e => e.method === 'arc' && e.args[0] === 498 && e.args[1] === 174)")
+    state['rooms']['/betroom']['rects'] = {}
+    reload_room()
+    assert not page.evaluate("window.ink.some(e => e.method === 'arc' && e.args[2] === 18)")
+    assert not errors, errors
+    page.close()
+    recovery = context.new_page()
+    recovery.add_init_script("AudioContext.prototype.resume = function() { return new Promise(() => {}); };")
+    recovery.goto(origin + '/show.html?relay=' + origin)
+    hint = recovery.get_by_text('click for sound', exact=True)
+    expect(hint).to_be_hidden()
+    expect(hint).to_be_visible(timeout=5000)
+    hint.click()
+    expect(hint).to_be_hidden()
+    recovery.goto(origin + '/show.html?mute=1&relay=' + origin)
+    assert recovery.get_by_text('click for sound', exact=True).count() == 0
+    recovery.close()
+    checks.append('Geometry: seven viewports, frame corners, clipped ring, music gaze and playing highlight; blocked sound recovery and forced mute pass.')
 
 
 def check_broadcast(page, checks, errors):
@@ -341,6 +463,7 @@ def capture(port):
                                       record_video_dir=str(OUT / 'flybrain-show-video'),
                                       record_video_size=dict(width=1920, height=1080))
         context.add_init_script(INSTRUMENT)
+        check_geometry(context, origin, checks)
         page = context.new_page()
         errors = []
         page.on('pageerror', lambda e: errors.append(str(e)))
