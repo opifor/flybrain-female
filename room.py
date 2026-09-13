@@ -286,6 +286,7 @@ class Room:
         self.counters = dict.fromkeys(("visits", "looks", "commits", "intents", "booked",
                                       "refused", "dislikes", "busy", "sugar", "shock", "nudges"), 0)
         self._margin_steps = 0
+        self.walk_to = None
         self._board = {"cards": [], "updated": 0}
         self._board_busy = False
         self._board_error = None
@@ -422,6 +423,18 @@ class Room:
             dx, dy, click = 60 * tx / distance, 60 * ty / distance, False
             self.counters["nudges"] += 1
             self._margin_steps = 0
+        # A room may ask the page to walk her to a card she has not met yet (the
+        # hall does, so a door never goes unseen). Same rule, same counter.
+        if self.walk_to is not None:
+            goal = next((r for r in rects if r.get("token") == self.walk_to), None)
+            if goal is None or (goal["x"] <= cx <= goal["x"] + goal["w"] and
+                                goal["y"] <= cy <= goal["y"] + goal["h"]):
+                self.walk_to = None
+            else:
+                tx, ty = goal["x"] + goal["w"] / 2 - cx, goal["y"] + goal["h"] / 2 - cy
+                distance = (tx * tx + ty * ty) ** 0.5 or 1.0
+                dx, dy, click = 60 * tx / distance, 60 * ty / distance, False
+                self.counters["nudges"] += 1
 
         info[self.declaration.path.strip("/")] = {"token": token, "drive": drive,
                             "dwell_steps": int(self._dwell["steps"]) if self._dwell else 0}

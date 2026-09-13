@@ -25,6 +25,7 @@ class Hall(RoomWalk):
     def __init__(self, *args, registry, **kwargs):
         self.registry = registry
         self.destination = None
+        self._blind = 0
         self.entered = []
         super().__init__(*args, **kwargs)
         if self.public.exists():
@@ -56,7 +57,17 @@ class Hall(RoomWalk):
         if drive is None:
             self._note_intent(self._now(), card["token"], "none", None, "no reference",
                               "the fly has looked at no other card in this visit")
+            # Two blind stops on the same door: the hall walks her to a door she
+            # has not looked at, so the choice is made between doors, not by habit.
+            self._blind += 1
+            if self._blind >= 2:
+                unseen = [d["token"] for d in doors
+                          if d["token"] != card["token"] and d["token"] not in self._seen]
+                if unseen:
+                    self.walk_to = unseen[0]
+                self._blind = 0
             return
+        self._blind = 0
         self.destination = door["path"]
 
     def record_entry(self, path):
