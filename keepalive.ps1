@@ -69,9 +69,21 @@ function start-dj {
        -RedirectStandardError (Join-Path $root 'build\dj.err.log')
 }
 
+function start-dealer {
+  note "starting dealer.py"
+  return Start-Process -FilePath $py -ArgumentList "dealer.py" -WorkingDirectory $root -PassThru -WindowStyle Hidden `
+       -RedirectStandardOutput (Join-Path $root 'build\dealer.out.log') `
+       -RedirectStandardError (Join-Path $root 'build\dealer.err.log')
+}
+
+$dealer = start-dealer
 $b = start-bookie
 $dj = start-dj
 while ($true) {
+  if ($dealer.HasExited) {
+    note ("dealer.py exited with " + $dealer.ExitCode)
+    $dealer = start-dealer
+  }
   if ($b.HasExited) {
     note ("bookie.py exited with " + $b.ExitCode)
     $b = start-bookie

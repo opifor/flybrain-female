@@ -60,6 +60,17 @@
       }
       out.append(table(['status', 'market', 'side', 'PnL · USDC'], rows));
       if (!rows.length) out.append(node('p', 'No bets recorded.'));
+    } else if (path === '/gameroom') {
+      out.append(node('p', 'new hour, new rule'));
+      out.append(node('p', 'sweet this hour: ' + (b.sweet_words || []).join(', ')));
+      out.append(node('p', 'The other eight words are sour. She only sees the words.'));
+      const score = row => `${number(row.picks)} picks, ${number(row.sweet)} sweet, ${number(row.sour)} sour, ` +
+        (row.hit_rate == null ? 'no hit rate yet' : number(Math.round(row.hit_rate * 100)) + '% hit rate');
+      if (b.this_hour) out.append(node('p', 'this hour: ' + score(b.this_hour)));
+      out.append(node('h3', 'last six hours'));
+      const history = document.createElement('ul');
+      for (const row of b.history || []) history.append(node('li', time(row.hour * 3600) + ': ' + score(row)));
+      out.append(history);
     } else if (path === '/musicroom') {
       const rows = [];
       if (b.now_playing) rows.push(['now playing', b.now_playing.title, ...credits(b.now_playing)]);

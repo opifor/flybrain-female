@@ -12,7 +12,7 @@ spec.loader.exec_module(pages)
 
 def test_rooms_pages(tmp_path):
     pages.generate(tmp_path)
-    assert sorted(p.name for p in tmp_path.iterdir()) == ['betting.html', 'hall.html', 'index.html', 'music.html', 'tips.html']
+    assert sorted(p.name for p in tmp_path.iterdir()) == ['betting.html', 'game.html', 'hall.html', 'index.html', 'music.html', 'tips.html']
     index = (tmp_path / 'index.html').read_text(encoding='utf-8')
     positions = []
     for slug, declaration in pages.ROOMS:
@@ -20,7 +20,7 @@ def test_rooms_pages(tmp_path):
         for sentence in declaration.how:
             assert sentence in text
         assert declaration.reward_source in text
-        if slug in ('betting', 'music', 'hall'):
+        if slug in ('betting', 'music', 'hall', 'game'):
             assert text.count('<h2>her screen right now</h2>') == 1
             assert "whatever room she is in appears here; the record above is this room's" in text
             assert text.count('id="bet-stage"') == 1

@@ -6,6 +6,7 @@ import betroom
 import hall
 import tiproom
 import musicroom
+import gameroom
 
 WEB = Path(__file__).parent / "web"
 
@@ -38,6 +39,11 @@ body.musicroom .grid{grid-template-columns:repeat(4,280px);grid-auto-rows:200px;
 body.musicroom .card{width:100%;height:100%;padding:14px}
 body.musicroom .name{font-size:20px;line-height:1.3}
 body.musicroom .detail{margin-top:12px;line-height:1.3;overflow-wrap:anywhere}
+body.gameroom .grid{grid-template-columns:repeat(4,280px);grid-auto-rows:200px;gap:16px}
+body.gameroom .card{width:100%;height:100%;padding:14px;display:flex;align-items:center;justify-content:center}
+body.gameroom .name{font-size:28px}
+body.gameroom .detail{display:none}
+body.gameroom .card.resting{background:#303030;color:#777;border-color:#444}
 .detail{color:#9aa7b8;font-size:16px;margin-top:24px}
 body.hall .grid{grid-template-columns:repeat(4,268px);grid-auto-rows:200px;column-gap:32px;row-gap:16px}
 body.hall .card{width:100%;height:100%;border-color:#9aa7b8;padding:16px}
@@ -48,7 +54,8 @@ body.hall #status{white-space:nowrap;text-overflow:ellipsis}
     return {"betroom": betting,
             **{name: page(declaration, '<div id="cards" class="grid"></div>', style, script)
                for name, declaration in (("hall", hall.DECLARATION), ("tiproom", tiproom.DECLARATION),
-                                         ("musicroom", musicroom.DECLARATION))}}
+                                         ("musicroom", musicroom.DECLARATION),
+                                         ("gameroom", gameroom.DECLARATION))}}
 
 
 def main():

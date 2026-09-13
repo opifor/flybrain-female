@@ -612,6 +612,13 @@ def register_rooms(betting):
                 Path(settings.get("FLY_STATE_DIR") or OUT), betting.executor_url,
                 betting.intent_token, registry=registry)
     STATE["rooms"] = {"/betroom": betting, "/tiproom": tipping, "/musicroom": music, "/hall": hall}
+    from gameroom import Room as GameRoom
+    game = GameRoom(betting.fb, betting.pilot, betting.mb, betting.nose, betting.gains,
+                    Path(settings.get("FLY_STATE_DIR") or OUT),
+                    f"http://127.0.0.1:{int(settings.get('FLY_GAMEROOM_PORT', '4678'))}",
+                    betting.intent_token)
+    registry.register(game.declaration, game.executor_url)
+    STATE["rooms"]["/gameroom"] = game
     STATE["hall"] = hall
 
 
@@ -680,6 +687,25 @@ def musicroom_board():
 @app.get("/musicroom/public.json")
 def musicroom_public():
     room = STATE.get("rooms", {}).get("/musicroom")
+    return room.read_book() if room else None
+
+
+@app.get("/gameroom")
+def gameroom_page():
+    return FileResponse(str(ROOT / "web" / "gameroom.html"))
+
+
+@app.get("/gameroom/board.json")
+def gameroom_board():
+    room = STATE.get("rooms", {}).get("/gameroom")
+    if room:
+        room.refresh_board()
+    return room.board() if room else {"cards": []}
+
+
+@app.get("/gameroom/public.json")
+def gameroom_public():
+    room = STATE.get("rooms", {}).get("/gameroom")
     return room.read_book() if room else None
 
 

@@ -9,9 +9,11 @@ import hall
 import betroom
 import musicroom
 import tiproom
+import gameroom
 
 ROOMS = [('hall', hall.DECLARATION), ('betting', betroom.DECLARATION),
          ('music', musicroom.DECLARATION), ('tips', tiproom.DECLARATION)]
+ROOMS.append(('game', gameroom.DECLARATION))
 WEB = ROOT / 'site' / 'web'
 LEDE = ('A real female fruit fly brain, 139,255 neurons, simulated live. '
         'She lives in a house of rooms and chooses where to go. '
@@ -73,7 +75,7 @@ def generate(destination=WEB / 'rooms'):
 <section class="room-card record"><h2>her record</h2>{badge}<dl class="counters">{counters}</dl>
 <p>in room: <span data-live="in_room">—</span></p><p>last exit: <span data-live="last_exit">—</span></p>
 <div data-live="book">Book unavailable.</div></section></div>'''
-        arena = slug in ('betting', 'music', 'hall')
+        arena = slug in ('betting', 'music', 'hall', 'game')
         if arena:
             body += ('<section><h2>her screen right now</h2>'
                      "<p>whatever room she is in appears here; the record above is this room's</p>"

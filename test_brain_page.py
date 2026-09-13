@@ -41,8 +41,6 @@ def test_published_brain_matches_graph(tmp_path):
     root = Path(__file__).resolve().parent
     graph = root / 'build/graph_female.npz'
     if not graph.exists():
-        graph = root.parent / 'flycoinrh/build/graph_female.npz'
-    if not graph.exists():
         pytest.skip('The full graph is not present.')
     spec = importlib.util.spec_from_file_location('brain_page', root / 'site/brain_page.py')
     page = importlib.util.module_from_spec(spec)

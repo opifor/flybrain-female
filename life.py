@@ -148,6 +148,17 @@ class Life:
         cards, url = betting.get("cards", []), state.get("url", "")
         self.cards = list({c.get("market_id"): c for c in self.cards + cards}.values())[-200:]
         host = domain(url)
+        game = state.get("rooms", {}).get("/gameroom") or {}
+        game_book = game.get("book") or {}
+        if game_book.get("hour") is not None and self._fresh("game.hour", game_book["hour"]):
+            self._line("game.hour", "new rule, new sweet cards", now,
+                       key=f"game-hour:{game_book['hour']}")
+        for taste in game_book.get("tastes", []):
+            key = f"game-taste:{game_book.get('book')}:{taste['seq']}"
+            if self._fresh("game.taste", key) and key not in self.rows:
+                self._line("game.taste", f"she tasted {taste['card_id']} \u00b7 {taste['taste']}", taste["at"],
+                           {"sugar" if taste["taste"] == "sweet" else "shock": 1}, key=key,
+                           hidden=self.first and taste["at"] < now - 600)
         music = state.get("rooms", {}).get("/musicroom") or {}
         music_book = music.get("book") or {}
         playing = music_book.get("now_playing")
@@ -216,6 +227,8 @@ class Life:
             path = urlsplit(url).path if url else latest.get("path")
             if path == latest.get("path"):
                 room = {"/hall": "hall", "/tiproom": "tip room", "/musicroom": "music room"}.get(path, "the web")
+        if game.get("in_room") or (parts and parts.path.rstrip("/") == "/gameroom"):
+            room = "game room"
         if room != self.room:
             self._line("room.enter", f"she walked into the {room.removeprefix('the ')}", now)
         self.room = room
