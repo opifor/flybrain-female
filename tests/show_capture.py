@@ -1,5 +1,6 @@
 """Capture the viewer with a local relay fixture, without running the arena brain."""
 import argparse
+import os
 import json
 import math
 import re
@@ -49,7 +50,8 @@ LIFE = dict(
     feed=[dict(at='07:02:11', kind='bet.won', text='eth 15m won +5.20 · sugar'),
           dict(at='07:01:40', kind='page.scroll', text='she scrolled down on arxiv.org'),
           dict(at='07:00:12', kind='bet.fill', text='she bought ETH up')])
-STREAM_FRAME = Path(r'build\shots\stream_frame3.png')
+SHOTS = Path(os.environ.get('FLY_SHOTS', ROOT / 'build' / 'shots'))
+STREAM_FRAME = SHOTS / 'stream_frame.png'
 
 
 def fixture():
@@ -509,7 +511,7 @@ def capture(port):
 def check_entry(browser, origin, checks, errors):
     from playwright.sync_api import expect
 
-    out = Path('build/shots')
+    out = SHOTS
     out.mkdir(parents=True, exist_ok=True)
     for width in [1280, 400]:
         state = fixture()
