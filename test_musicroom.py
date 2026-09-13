@@ -69,7 +69,7 @@ def test_room_reads_the_public_playback_clock(tmp_path, now):
     ex.intent(body(now))
     room.refresh_board(force=True)
     assert room.now_playing == ex.ledger.book.public()["now_playing"]
-    now[0] += 89.999
+    now[0] += 29.999
     assert not room.can_commit("222", now[0])
     now[0] += .001
     assert room.can_commit("222", now[0])
@@ -95,7 +95,7 @@ def test_play_is_durable_and_duplicate_look_cannot_start_again(tmp_path, now, mo
     assert observed[-1][0] == 0 and json.loads(observed[-1][1])["kind"] == "fill"
     assert ex.intent(body(now))[0] == 409
     assert executor(tmp_path, now).ledger.book.public() == ex.ledger.book.public()
-    now[0] += 89
+    now[0] += 29
     assert ex.intent(body(now, "222", "too-soon"))[1]["reason"] == "still playing"
     now[0] += 1
     assert ex.intent(body(now, "111", "same"))[1]["reason"] == "already playing"
@@ -149,12 +149,12 @@ def test_sugar_and_shock_teach_the_fill_look_once(tmp_path, now):
 def test_only_current_and_previous_plays_receive_reactions(tmp_path, now, caplog):
     ex = executor(tmp_path, now)
     ex.intent(body(now))
-    now[0] += 90
+    now[0] += 30
     ex.intent(body(now, "222", "second"))
     reactions(ex, now, {}, {"track_id": "unknown"})
     assert [e["track_id"] for e in ex.resolve_once()] == ["111"]
     assert "ignored" in caplog.text
-    now[0] += 90
+    now[0] += 30
     ex.intent(body(now, "333", "third"))
     reactions(ex, now, {}, {"track_id": "222", "kind": "shock"})
     assert [e["track_id"] for e in ex.resolve_once()] == ["222"]
@@ -342,3 +342,22 @@ def test_catalogue_ids_are_text(tmp_path):
     path = tmp_path / "catalog.json"
     path.write_text(json.dumps([{"id": 139129578, "title": "t", "artist": "a", "license": "CC0", "duration": 60.0, "file": "x.wav"}]), encoding="utf-8")
     assert musicroom.catalogue(path)[0]["id"] == "139129578"
+
+
+@pytest.fixture(autouse=True)
+def thirty_second_rule(monkeypatch):
+    # The walks above were written against a thirty-second minimum; the house
+    # rule is ninety now, and one test below covers that number on its own.
+    monkeypatch.setattr(dj, "MIN_PLAY_S", 30)
+    monkeypatch.setattr(musicroom, "MIN_PLAY_S", 30)
+
+
+def test_the_house_rule_is_ninety_seconds(tmp_path, now, monkeypatch):
+    monkeypatch.setattr(dj, "MIN_PLAY_S", 90)
+    monkeypatch.setattr(musicroom, "MIN_PLAY_S", 90)
+    ex = executor(tmp_path, now)
+    ex.intent(body(now))
+    now[0] += 60
+    assert ex.intent(body(now, "222", "sixty"))[1]["reason"] == "still playing"
+    now[0] += 30
+    assert ex.intent(body(now, "222", "ninety"))[1]["status"] == "booked"
