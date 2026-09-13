@@ -400,6 +400,24 @@ def test_a_removed_directory_comes_back(tmp_path):
     assert (tmp_path / "life" / "feed.jsonl").exists()
 
 
+@pytest.mark.parametrize("by,sentence", [
+    ("door", "she chose the door and left the music room"),
+    ("clock", "the music room closed after ten minutes"),
+])
+def test_room_exit_sentences_and_repeated_observations(tmp_path, by, sentence):
+    life = Life(tmp_path)
+    state = moment(rooms={"/musicroom": {"last_exit": {"by": by, "at": 100}}})
+    block = life.observe(state, 100)
+    assert texts(block, "room.exit." + by) == [sentence]
+    before = life.path.read_bytes()
+    life.observe(state, 101)
+    assert life.path.read_bytes() == before
+    life = Life(tmp_path)
+    assert texts(life.observe(state, 102), "room.exit." + by) == [sentence]
+    state["rooms"]["/musicroom"]["last_exit"]["at"] = 103
+    assert texts(life.observe(state, 103), "room.exit." + by) == [sentence, sentence]
+
+
 def test_loopback_paths_name_her_rooms(tmp_path):
     life = Life(tmp_path)
     state = moment(url="http://127.0.0.1:4660/hall")

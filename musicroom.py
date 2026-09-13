@@ -12,7 +12,8 @@ DECLARATION = Declaration(
            "refresh_seconds": 60},
     commit_means="she plays the track on the card she settled on",
     reward_source="listeners: sugar and shock reactions written to the room's reactions file (paper; the stream will carry them later)",
-    chosen=["People chose the catalogue search terms, the 30-second minimum and the six-card board."],
+    chosen=["People chose the catalogue search terms, the 30-second minimum and the six-card board.",
+            "a ten-minute room clock and a door in every room"],
     measured=["Her dwell, her mushroom-body drive and her Johnston-organ hearing rates while a track plays are measured.",
               "nudges: how often the page had to push her out of an empty margin"],
     how=("her eye settles on a music card for at least two rounds before she can choose it.",
@@ -20,7 +21,8 @@ DECLARATION = Declaration(
          "when she stops with a nonzero drive, the paper DJ starts that track; either sign can play it.",
          "she stays with a track for at least thirty seconds and cannot restart it while it is playing.",
          "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.",
-         "a listener's sugar or shock teaches the cells recorded when she chose that play."))
+         "a listener's sugar or shock teaches the cells recorded when she chose that play.",
+         "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."))
 
 
 def catalogue(path=CATALOGUE):
@@ -67,6 +69,8 @@ class Room(RoomWalk):
         return self._smell[token]
 
     def can_commit(self, token, at):
+        if token == "/hall":
+            return True
         self.now_playing = self.read_book().get("now_playing")
         playing = self.now_playing
         return not playing or (at - playing["started_at"] >= 30 and playing["track_id"] != token)

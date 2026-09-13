@@ -73,7 +73,7 @@ class Room:
         raise NotImplementedError("a room needs a board source")
 
     def can_commit(self, token, at):
-        return not self.refs.get(token)
+        return token == "/hall" or not self.refs.get(token)
 
     def intent_body(self, token, drive, at, look_id):
         raise NotImplementedError("a room needs a commit meaning")
@@ -122,6 +122,11 @@ class Room:
                               "the fly has looked at no other card in this visit")
             return
         if drive == 0:
+            return
+        if token == "/hall":
+            self.destination = "/hall"
+            self.last_exit = {"by": "door", "at": at}
+            self._note_intent(at, token, "door", drive, "left")
             return
         if self._intent is not None:
             self.counters["busy"] += 1
@@ -275,6 +280,9 @@ class Room:
         self.brain_id = digest.hexdigest()
         self._claimed = set()
         self.in_room = False
+        self.destination = None
+        self.entered_at = None
+        self.last_exit = None
         self.counters = dict.fromkeys(("visits", "looks", "commits", "intents", "booked",
                                       "refused", "dislikes", "busy", "sugar", "shock", "nudges"), 0)
         self._margin_steps = 0
@@ -294,6 +302,8 @@ class Room:
         self.public_events = []
         self._lock = threading.Lock()
         self._load_room()
+        if self.declaration.path != "/hall":
+            self.remember("/hall", {"name": "the hall", "question": "the hall", "title": "the hall"})
 
     @property
     def mode(self):
@@ -337,6 +347,8 @@ class Room:
 
     async def enter(self, page):
         self.in_room = True
+        self.entered_at = self._now()
+        self.destination = None
         self.counters["visits"] += 1
         self._margin_steps = 0
         self._dwell = None
@@ -615,6 +627,7 @@ class Room:
                    "drive": self._drive_of(d), "dwell_steps": int(d["steps"])}
         c = self.counters
         return {"room": self.declaration.public(), "in_room": bool(self.in_room), "visits": c["visits"], "looks": c["looks"],
+                "entered_at": self.entered_at, "last_exit": self.last_exit,
                 "commits": c["commits"], "intents": c["intents"], "booked": c["booked"],
                 "refused": c["refused"], "dislikes": c["dislikes"], "busy": c["busy"],
                 "seen": len(self._seen), "nudges": c["nudges"],

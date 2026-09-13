@@ -169,6 +169,17 @@ class Life:
                     self._line("music.react", f"a listener sent {kind} for {title}", now, {kind: added})
             self.music_reactions[str(track_id)] = dict(counts)
         entries = state.get("rooms", {}).get("/hall", {}).get("events", [])
+        for path, visiting in state.get("rooms", {}).items():
+            exit_record = visiting.get("last_exit") or {}
+            by, at = exit_record.get("by"), exit_record.get("at")
+            if (by in ("door", "clock") and at is not None and
+                    self._fresh("room.exit", {"path": path, "at": at})):
+                name = {"/betroom": "paper room", "/tiproom": "tip room",
+                        "/musicroom": "music room"}.get(path, path.strip("/"))
+                text = (f"she chose the door and left the {name}" if by == "door" else
+                        f"the {name} closed after ten minutes")
+                self._line("room.exit." + by, text, at, key=f"room-exit:{path}:{at}",
+                           hidden=self.first and at < now - 600)
         entered = [e for e in entries if e.get("kind") == "entered"]
         room = "paper room" if betting.get("in_room") else "the web"
         if music.get("in_room"):

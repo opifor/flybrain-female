@@ -11,6 +11,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ground);color:va
 #room{width:1280px;margin:auto;padding:48px 56px;box-sizing:border-box}
 .grid{display:grid;grid-template-columns:repeat(3,368px);grid-auto-rows:336px;gap:32px}
 .card{box-sizing:border-box;background:var(--card);border:3px solid #30343b;border-radius:12px;padding:14px;position:relative;overflow:hidden}
+.door{position:fixed;top:760px;left:56px;right:56px;height:40px;box-sizing:border-box;background:var(--card);border:1px solid #30343b;border-radius:12px;padding:5px 14px;color:var(--dim);font-size:20px;z-index:1}
 
 
 .grid{grid-template-columns:repeat(4,268px);grid-auto-rows:280px;gap:32px}
@@ -29,9 +30,10 @@ body.hall .name{font-size:42px;margin-top:120px}
 <body>
 <main id="room">
 <div id="cards" class="grid"></div>
+<div id="door" class="door" data-token="/hall">the hall</div>
 <section id="disclosure" style="margin-top:48px;color:#818a97;font-size:14px"></section>
 </main>
-<script id="room-declaration" type="application/json">{"name": "music room", "path": "/musicroom", "cards": {"source": "a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license", "refresh_seconds": 60}, "commit_means": "she plays the track on the card she settled on", "reward_source": "listeners: sugar and shock reactions written to the room's reactions file (paper; the stream will carry them later)", "chosen": ["People chose the catalogue search terms, the 30-second minimum and the six-card board."], "measured": ["Her dwell, her mushroom-body drive and her Johnston-organ hearing rates while a track plays are measured.", "nudges: how often the page had to push her out of an empty margin"], "how": ["her eye settles on a music card for at least two rounds before she can choose it.", "the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.", "when she stops with a nonzero drive, the paper DJ starts that track; either sign can play it.", "she stays with a track for at least thirty seconds and cannot restart it while it is playing.", "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.", "a listener's sugar or shock teaches the cells recorded when she chose that play."]}</script>
+<script id="room-declaration" type="application/json">{"name": "music room", "path": "/musicroom", "cards": {"source": "a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license", "refresh_seconds": 60}, "commit_means": "she plays the track on the card she settled on", "reward_source": "listeners: sugar and shock reactions written to the room's reactions file (paper; the stream will carry them later)", "chosen": ["People chose the catalogue search terms, the 30-second minimum and the six-card board.", "a ten-minute room clock and a door in every room"], "measured": ["Her dwell, her mushroom-body drive and her Johnston-organ hearing rates while a track plays are measured.", "nudges: how often the page had to push her out of an empty margin"], "how": ["her eye settles on a music card for at least two rounds before she can choose it.", "the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.", "when she stops with a nonzero drive, the paper DJ starts that track; either sign can play it.", "she stays with a track for at least thirty seconds and cannot restart it while it is playing.", "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.", "a listener's sugar or shock teaches the cells recorded when she chose that play.", "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."]}</script>
 <script>
 const roomData = JSON.parse(document.getElementById('room-declaration').textContent);
 document.body.className = roomData.path.slice(1);

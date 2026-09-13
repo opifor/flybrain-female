@@ -13,14 +13,16 @@ DECLARATION = Declaration(
     reward_source="A fixture thanks event delivers sugar to the recorded cells; silence delivers nothing and there is no shock feed.",
     chosen=["People supplied eight fixture wallets; card area scales with holding days, capped at 365 days.",
             f"The daily cap is {TIP_DAILY_CAP_CENTS} cents and the lifetime per-address cap is {TIP_ADDRESS_CAP_CENTS} cents; the cap is the safe's lock, not her decision.",
-            "This room is paper only. There is no smell mapping yet."],
+            "This room is paper only. There is no smell mapping yet.",
+            "a ten-minute room clock and a door in every room"],
     measured=["The stop and relative drive come from the brain; fixture thanks is not a measured human response.",
               "nudges: how often the page had to push her out of an empty margin"],
     how=("her eye settles on a wallet card for at least two rounds; this room adds no smell.",
          "her mushroom body supplies a drive, compared with the other cards she has seen in this visit.",
          "when she stops, either sign spends a share of her paper balance; zero spends nothing.",
          "the paper tipper rounds down to whole cents and refuses tips above its daily or wallet limit.",
-         "a recorded fixture thanks brings sugar to the cells from that look; silence brings nothing."))
+         "a recorded fixture thanks brings sugar to the cells from that look; silence brings nothing.",
+         "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."))
 
 
 def wallets():
@@ -42,5 +44,7 @@ class Room(RoomWalk):
         return {"address": token, "drive": float(drive), "seen_at": at, "look_id": look_id}
 
     def can_commit(self, token, at):
+        if token == "/hall":
+            return True
         booked = {e["look_id"] for e in self.read_book().get("tips", [])}
         return all(look in booked for look in self.refs.get(token, []))

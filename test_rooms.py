@@ -45,6 +45,57 @@ def make_room(cls, tmp_path, **kwargs):
                spawn=lambda fn, *args: fn(*args), **kwargs)
 
 
+@pytest.mark.parametrize("kind", ["betroom", "tiproom", "musicroom"])
+def test_room_door_uses_the_same_dwell_and_never_calls_executor(tmp_path, kind):
+    import musicroom
+    cls = {"betroom": betroom.Room, "tiproom": tiproom.Room, "musicroom": musicroom.Room}[kind]
+    room = make_room(cls, tmp_path, fetch_board=lambda: [])
+    room.read_book = lambda: {"now_playing": {"track_id": "song", "started_at": room._now()}}
+    room.spawn = lambda *args: pytest.fail("the door must not contact the executor")
+    room.refresh_board = lambda **kwargs: None
+    page = FakePage([{"token": "/hall", "x": 56, "y": 760, "w": 1168, "h": 40}])
+    asyncio.run(room.enter(page))
+    assert room.state()["entered_at"] == 1700000000
+    assert room.state()["last_exit"] is None
+    assert room.can_commit("/hall", room._now())
+    room._seen["other"] = (1.0, 0.0)
+    room.pilot.fired[None] = room.fb.fired
+    room.pilot.click = True
+    asyncio.run(room.step(page, IMG, 640, 780, 1))
+    assert room.destination is None
+    asyncio.run(room.step(page, IMG, 640, 780, 2))
+    assert room.destination == "/hall"
+    assert room.state()["last_exit"] == {"by": "door", "at": 1700000000}
+    assert room.last_intents[-1]["side"] == "door"
+    assert room._intent is None
+    room.leave()
+    room.clock = lambda: 1700000010
+    asyncio.run(room.enter(page))
+    assert room.destination is None
+    assert room.entered_at == 1700000010
+
+
+def test_room_clock_closes_at_ten_minutes_only_while_visiting(tmp_path):
+    room = make_room(tiproom.Room, tmp_path, fetch_board=lambda: [])
+    assert roam.room_clock(room, 1700000600) is None
+    asyncio.run(room.enter(FakePage([])))
+    assert roam.room_clock(room, room.entered_at + 599.999) is None
+    assert room.destination is None and room.last_exit is None
+    assert roam.room_clock(room, room.entered_at + 600) == "clock"
+    assert room.destination == "/hall"
+    assert room.state()["last_exit"] == {"by": "clock", "at": 1700000600}
+    room.leave()
+    assert roam.room_clock(room, 1700000700) is None
+    hallway = make_room(hall.Hall, tmp_path, registry=registry(), http=Health())
+    asyncio.run(hallway.enter(FakePage([])))
+    assert roam.room_clock(hallway, hallway.entered_at + 600) is None
+
+
+def test_only_rooms_have_the_hall_bar():
+    for name, text in room_pages.pages().items():
+        assert ('<div id="door" class="door" data-token="/hall">the hall</div>' in text) == (name != "hall")
+
+
 @pytest.mark.parametrize("reward", ["", " ", None])
 def test_registration_requires_a_reward_source(reward):
     rooms = roomkit.Registry()
@@ -69,8 +120,8 @@ def test_rooms_explain_their_own_play():
     for declaration in (betroom.DECLARATION, tiproom.DECLARATION, musicroom.DECLARATION):
         assert 3 <= len(declaration.public()["how"]) <= 8
     assert "YES" in betroom.DECLARATION.how[3]
-    assert "fixture thanks" in tiproom.DECLARATION.how[-1]
-    assert "Johnston organs" in musicroom.DECLARATION.how[-2]
+    assert "fixture thanks" in tiproom.DECLARATION.how[-2]
+    assert "Johnston organs" in musicroom.DECLARATION.how[-3]
 
 
 def test_hall_hides_an_executor_that_does_not_answer(tmp_path):

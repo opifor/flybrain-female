@@ -14,7 +14,8 @@ DECLARATION = Declaration(
               "nudges: how often the page had to push her out of an empty margin"],
     how=("door order rotates every visit so no door owns the left.",
          "she needs readings from another door before a stop can open this one.",
-         "entering a room brings her to that room's cards."))
+         "entering a room brings her to that room's cards.",
+         "every room leads back here, by her door or by the clock."))
 
 
 class Hall(RoomWalk):

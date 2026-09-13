@@ -770,6 +770,18 @@ async def screenshot(page):
     return raw
 
 
+ROOM_STAY_MAX_S = 600
+
+
+def room_clock(room, now):
+    if (room.in_room and room.declaration.path != "/hall" and
+            room.entered_at is not None and now - room.entered_at >= ROOM_STAY_MAX_S):
+        room.last_exit = {"by": "clock", "at": now}
+        room.destination = "/hall"
+        return "clock"
+    return None
+
+
 def to_gray(raw, w=None, h=None):
     from PIL import Image
     im = Image.open(io.BytesIO(raw)).convert("L")
@@ -926,23 +938,33 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                     room.leave()
             seed_ = rng.randrange(1 << 30)
             if in_room:
-                dx, dy, click, hz, info = await room.step(page, img, cx, cy, seed_)
-                if hall_on() and room is STATE.get("hall") and room.destination:
+                reason = room_clock(room, time.time())
+                if reason:
+                    dx, dy, click, hz, info = 0, 0, False, {}, {}
+                else:
+                    dx, dy, click, hz, info = await room.step(page, img, cx, cy, seed_)
+                if room.destination:
                     destination = room.destination
-                    room.destination = None
-                    if await goto(betroom_url().replace("/betroom", destination), "a door stop"):
-                        room.record_entry(destination)
-                        await log(room.entered[-1]["text"])
+                    if await goto(betroom_url().replace("/betroom", destination), reason or "a door stop"):
+                        if room is STATE.get("hall"):
+                            room.record_entry(destination)
+                            await log(room.entered[-1]["text"])
+                        room.destination = None
                         room.leave()
                         on_page = 0
                         cx, cy = 640.0, 400.0
+                        dx, dy = 0, 0
+                if reason:
+                    await asyncio.sleep(0.05)
+                    continue
             else:
                 dx, dy, click, hz, info = pilot.step(
                     img, cx, cy, gains=STATE["gains"], seed=seed_, detail=True)
             cx = float(np.clip(cx + dx, 8, 1272))
             cy = float(np.clip(cy + dy, 8, 792))
             stats["steps"] += 1
-            on_page += 1
+            if not in_room:
+                on_page += 1
 
             # Strong walking must move the page before the hop budget erases
             # vertical progress; weaker walking still scrolls at the edge.
@@ -1090,14 +1112,12 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                     await log(f"did not click - {why}")
 
             # a fly that has run out of page gets put back on a seed
-            if on_page >= (120 if in_room else steps_per_page):
+            if not in_room and on_page >= steps_per_page:
                 on_page = 0
                 cx, cy = 640.0, 400.0
                 # pinned, she has nowhere else to go; only reload if she is
                 # somehow not on her page any more
                 if not PIN or not allowed_host(page.url):
-                    if in_room:
-                        room.leave()
                     await reset("hop budget spent")
 
             for listening in STATE.get("rooms", {}).values() if hall_on() else ([room] if room else []):

@@ -13,7 +13,9 @@ WEB = Path(__file__).parent / "web"
 def page(declaration, cards, style, script):
     text = (WEB / "room.html").read_text(encoding="utf-8")
     values = {"title": declaration.name, "declaration": json.dumps(declaration.public()).replace("<", "\\u003c"),
-              "cards": cards, "style": style, "script": script}
+              "cards": cards, "style": style, "script": script,
+              "door": '' if declaration.path == "/hall" else
+                      '<div id="door" class="door" data-token="/hall">the hall</div>'}
     for key, value in values.items():
         text = text.replace("{{" + key + "}}", value)
     return text
