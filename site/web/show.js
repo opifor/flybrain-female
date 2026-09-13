@@ -58,7 +58,8 @@
     };
   }
 
-  window.mountShow = function mountShow(container, {audio = false, size} = {}) {
+  window.mountShow = function mountShow(container, {audio = false, size, layout} = {}) {
+    const broadcast = layout === 'broadcast' || (size?.width === 1920 && size?.height === 1080);
     const origin = new URLSearchParams(location.search).get('relay') || 'https://live.femaleflybrain.com';
     const forcedMute = new URLSearchParams(location.search).get('mute') === '1';
     const sound = audio && !forcedMute ? makeSound() : null;
@@ -68,6 +69,7 @@
     if (!img) { img = document.createElement('img'); container.append(img); }
     img.alt = 'The page she is looking at'; img.crossOrigin = 'anonymous';
     Object.assign(img.style, {position:'absolute', inset:'0', width:'100%', height:'100%', objectFit:'contain'});
+    if (broadcast) Object.assign(img.style, {width:'66.6666667%', height:'74.0740741%'});
     const canvas = document.createElement('canvas'), g = canvas.getContext('2d');
     canvas.setAttribute('aria-label', 'Her brain, path and paper bets');
     Object.assign(canvas.style, {position:'absolute', inset:'0', width:'100%', height:'100%', pointerEvents:'none'});
@@ -100,6 +102,8 @@
     const sample = document.createElement('canvas'), sg = sample.getContext('2d', {willReadFrequently:true});
     let pixels = null, state = null, live = false, sequence = null, trail = [], moments = [], cursor = null, target = null;
     let timer, raf, destroyed = false, lastTime = performance.now(), lastPoll = 0, imageReady = false;
+    const whoStart = performance.now();
+    let feed = [], previousFeed = [], feedAt = 0;
     const seen = new Set(), cards = new Map(), records = new Map(), listeners = new Set();
     img.onload = () => {
       imageReady = true; sample.width = img.naturalWidth; sample.height = img.naturalHeight;
@@ -119,6 +123,12 @@
     }
     function accept(d) {
       const now = performance.now(); state = d; lastPoll = now;
+      if (broadcast) {
+        const next = d?.life?.feed?.slice(0, 14) || [];
+        if (JSON.stringify(next) !== JSON.stringify(feed)) {
+          previousFeed = feed; feed = next; feedAt = now;
+        }
+      }
       live = d?.live === true && number(d.age) < 15;
       sound?.state(d, live);
       for (const f of listeners) f(d);
@@ -178,6 +188,88 @@
         hex(x + u * 300, y + v * 210, 6, light);
       }
     }
+    function drawBroadcast(now) {
+      g.setTransform(canvas.width / 1920, 0, 0, canvas.height / 1080, 0, 0);
+      g.fillStyle = '#090a0c'; g.fillRect(1280, 0, 640, 1080); g.fillRect(0, 800, 1280, 280);
+      g.fillStyle = '#292d35';
+      g.fillRect(1280, 0, 1, 1080); g.fillRect(1304, 200, 592, 1); g.fillRect(1304, 470, 592, 1);
+      g.fillRect(0, 800, 1280, 1); g.fillRect(640, 824, 1, 232);
+      const life = state?.life, current = life?.now || {}, hour = life?.hour || {};
+      const value = v => v == null ? '—' : String(v);
+      const money = v => v == null ? '—' : number(v).toFixed(2);
+      const delta = v => v == null ? '—' : signed(number(v));
+      function text(line, x, y, width, font = 22, color = '#e9edf3') {
+        g.font = `${font}px ui-monospace,monospace`; g.fillStyle = color;
+        let shown = value(line);
+        if (g.measureText(shown).width > width) {
+          while (shown.length && g.measureText(shown + '…').width > width) shown = shown.slice(0, -1);
+          shown += '…';
+        }
+        g.fillText(shown, x, y);
+      }
+      const caption = (line, x, y) => text(line, x, y, 592, 18, '#ff79b0');
+      caption('who', 1304, 36);
+      const who = life?.who?.length ? life.who : ['—'];
+      const elapsed = (now - whoStart) / 20000, index = Math.floor(elapsed) % who.length;
+      const blend = clamp((elapsed % 1) * 20000 / 800);
+      function identity(line, alpha) {
+        g.save(); g.globalAlpha = alpha;
+        // Keep long identity lines readable without shrinking the type.
+        g.font = '22px ui-monospace,monospace';
+        const words = String(line).split(' ');
+        for (let row = 0; row < 3 && words.length; row++) {
+          let line = words.shift();
+          while (words.length && g.measureText(line + ' ' + words[0]).width <= 592) line += ' ' + words.shift();
+          text(line, 1304, 73 + row * 28, 592);
+        }
+        g.restore();
+      }
+      if (elapsed >= 1 && blend < 1) identity(who[(index + who.length - 1) % who.length], 1 - blend);
+      identity(who[index], elapsed < 1 ? 1 : blend);
+      text('paper money', 1304, 166, 150); text('· 139,255 neurons ·', 1462, 166, 260);
+      g.fillStyle = state?.live ? '#ff79b0' : '#8b93a1'; ellipse(1760, 159, 5, 5);
+      text('live', 1776, 166, 100);
+      caption('now', 1304, 235);
+      text(current.doing, 1304, 276, 592, 30);
+      text(current.room == null ? 'in the —' : `in the ${current.room.replace(/^the /, '')}`, 1304, 310, 592, 22, '#8b93a1');
+      ['spikes/s', 'turn', 'sugar', 'shock'].forEach((label, i) => {
+        const x = 1304 + i * 148;
+        text(label, x, 349, 140, 22, '#8b93a1');
+        if (i !== 1) text(i === 0 ? (current.spikes == null ? '—' : number(current.spikes).toLocaleString('en-US')) : current[i === 2 ? 'sugar_10m' : 'shock_10m'], x, 383, 144);
+        else if (['left', 'right'].includes(current.turn)) {
+          const direction = current.turn === 'left' ? -1 : 1;
+          g.fillStyle = '#e9edf3'; g.beginPath(); g.moveTo(x + 22 + direction * 12, 373);
+          g.lineTo(x + 22 - direction * 12, 362); g.lineTo(x + 22 - direction * 12, 384); g.closePath(); g.fill();
+        } else if (current.turn === 'straight') { g.fillStyle = '#e9edf3'; ellipse(x + 22, 373, 5, 5); }
+        else text('—', x, 383, 144);
+      });
+      text(`paper balance ${money(current.balance)} usdc`, 1304, 423, 592);
+      text(`${delta(current.today_delta)} today`, 1304, 453, 592, 22, '#8b93a1');
+      caption('feed', 1304, 508);
+      const progress = clamp((now - feedAt) / 400);
+      function feedRows(rows, offset, alpha) {
+        g.save(); g.beginPath(); g.rect(1304, 523, 592, 537); g.clip(); g.globalAlpha = alpha;
+        rows.forEach((row, i) => {
+          const y = 550 + i * 37 + offset;
+          text(row.at, 1304, y, 112, 22, '#8b93a1');
+          text(row.text, 1428, y, 468);
+        }); g.restore();
+      }
+      if (progress < 1) feedRows(previousFeed, progress * 37, 1 - progress);
+      feedRows(feed.length ? feed : [{at:'—', text:'—'}], (progress - 1) * 37, progress);
+      caption('last hour', 24, 839);
+      const metrics = [['bets','bets'], ['won','won'], ['lost','lost'], ['paper p&l','pnl'], ['pages','pages'], ['clicks','clicks'], ['scrolls','scrolls'], ['sugar','sugar'], ['shock','shock']];
+      metrics.forEach(([label, field], i) => {
+        const x = 24 + (i < 5 ? i : i - 5) * 123, y = i < 5 ? 882 : 985;
+        text(label, x, y, 121, 22, '#8b93a1');
+        text(field === 'pnl' ? delta(hour[field]) : hour[field], x, y + 38, 121, 30,
+          field === 'pnl' && hour[field] != null ? (hour[field] >= 0 ? '#f8d694' : '#ff4153') : '#e9edf3');
+      });
+      caption('paper', 664, 839);
+      text(feed[0]?.text, 664, 900, 592, 28);
+      text('paper room · no real bets ·', 664, 997, 592);
+      text(`femaleflybrain.com · UTC ${new Date().toISOString().slice(11, 19)}`, 664, 1031, 592);
+    }
     function draw(now) {
       if (destroyed) return;
       const dt = Math.min(0.1, (now - lastTime) / 1000); lastTime = now;
@@ -185,6 +277,9 @@
       const w = img.naturalWidth || 1280, h = img.naturalHeight || 800, scale = Math.min(canvas.width / w, canvas.height / h);
       const fw = w * scale, fh = h * scale, ox = (canvas.width-fw)/2, oy = (canvas.height-fh)/2;
       g.setTransform(fw/1280,0,0,fh/800,ox,oy);
+      if (broadcast) g.setTransform(canvas.width / 1920, 0, 0, canvas.height / 1080, 0, 0);
+      g.save();
+      if (broadcast) { g.beginPath(); g.rect(0, 0, 1280, 800); g.clip(); }
       const healthy = live && now - lastPoll < 15000;
       if (!healthy || !imageReady) {
         g.fillStyle = '#090a0ccc'; g.fillRect(0,0,1280,800); g.fillStyle = '#c4b9c0'; g.font = '17px ui-monospace,monospace';
@@ -243,6 +338,8 @@
         }
         if (retina) drawRetina();
       }
+      g.restore();
+      if (broadcast) drawBroadcast(now);
       raf = requestAnimationFrame(draw);
     }
     poll(); raf = requestAnimationFrame(draw);

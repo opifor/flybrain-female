@@ -7,11 +7,8 @@
 html,body{margin:0;width:100%;height:100%;background:#090a0c;color:#e9edf3;overflow:hidden;font:14px ui-monospace,monospace}
 body{display:flex;flex-direction:column}
 #show-stage{position:relative;flex:1;min-height:0}
-#strip{flex:none;padding:8px 12px;background:#0b0c0e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 <div id="show-stage" aria-label="Her live paper room"></div>
-<div id="strip">Waiting for the relay. / paper</div>
 <script src="show.js"></script>
 <script>window.paperShow = mountShow(document.getElementById('show-stage'), {audio: true, size: {width:1920, height:1080}});</script>
-<script src="betting.js" defer></script>
 </html>

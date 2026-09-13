@@ -27,6 +27,18 @@ DATA = {'events': [], 'learning': [], 'open': [], 'settled': [], 'live': True, '
 FRAME = b''
 SEQ = 0
 START = time.monotonic()
+LIFE = dict(
+    since='2026-09-13T04:07:21Z',
+    who=['her. a female fruit fly brain, 139,255 neurons. FlyWire FAFB v783.',
+         'she never speaks. the numbers do.'],
+    now=dict(room='paper room', doing='looking at ETH 15m', spikes=1312400,
+             turn='left', sugar_10m=3, shock_10m=1, balance=106.2, today_delta=6.2),
+    hour=dict(bets=4, sold=1, won=2, lost=1, pnl=5.8, pages=12, clicks=3,
+              scrolls=20, sugar=3, shock=1),
+    feed=[dict(at='07:02:11', kind='bet.won', text='eth 15m won +5.20 · sugar'),
+          dict(at='07:01:40', kind='page.scroll', text='she scrolled down on arxiv.org'),
+          dict(at='07:00:12', kind='bet.fill', text='she bought ETH up')])
+STREAM_FRAME = Path(r'build\shots\stream_frame.png')
 
 
 def fixture():
@@ -34,6 +46,7 @@ def fixture():
     SEQ += 1
     t = time.monotonic() - START
     return dict(seq=SEQ, live=DATA['live'], age=0, url='http://127.0.0.1:4660/betroom',
+                **({'life': LIFE} if DATA.get('with_life', True) else {}),
                 cursor=dict(x=.3 + .16 * math.sin(t * .8), y=.43 + .15 * math.cos(t * .7)),
                 hz=dict(steer_L=150 + 130 * math.sin(t), steer_R=150 - 130 * math.sin(t),
                         fwd_L=100, fwd_R=200, stop=0),
@@ -85,13 +98,49 @@ INSTRUMENT = """(() => {
     const original = CanvasRenderingContext2D.prototype[method];
     CanvasRenderingContext2D.prototype[method] = function(...a) {
       if (this.canvas.getAttribute('aria-label') === 'Her brain, path and paper bets') {
-        window.ink.push({method, args:a, fill:this.fillStyle, stroke:this.strokeStyle});
+        window.ink.push({method, args:a, fill:this.fillStyle, stroke:this.strokeStyle, alpha:this.globalAlpha});
         if (window.ink.length > 3000) window.ink.splice(0,1000);
       }
       return original.apply(this,a);
     };
   }
 })();"""
+
+
+def check_broadcast(page, checks, errors):
+    captions = ['who', 'now', 'feed', 'last hour', 'paper']
+    page.wait_for_function("labels => labels.every(label => window.ink.some(e => e.method === 'fillText' && e.args[0] === label))", arg=captions)
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'eth 15m won +5.20 · sugar')")
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === '1,312,400')")
+    assert abs(page.locator('img').bounding_box()['width'] - 1280) < 1
+    assert round(page.locator('img').bounding_box()['height']) == 800
+    STREAM_FRAME.parent.mkdir(parents=True, exist_ok=True)
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0] === 'eth 15m won +5.20 · sugar' && e.args[2] === 550 && e.alpha === 1)")
+    page.screenshot(path=str(STREAM_FRAME))
+    incoming = dict(at='07:03:00', kind='page.click', text='she opened the next page ' + 'x' * 100)
+    LIFE['feed'].insert(0, incoming)
+    page.evaluate('window.ink = []')
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0].startsWith('she opened') && e.args[0].endsWith('…') && e.args[1] === 1428 && e.args[2] < 550 && e.alpha > 0 && e.alpha < 1)")
+    page.wait_for_function("window.ink.some(e => e.method === 'fillText' && e.args[0].startsWith('she opened') && e.args[2] === 550 && e.alpha === 1)")
+    LIFE['feed'].pop(0)
+    DATA['with_life'] = False
+    page.wait_for_function('window.received && !("life" in window.received)')
+    page.evaluate('window.ink = []')
+    page.wait_for_function("labels => labels.every(label => window.ink.some(e => e.method === 'fillText' && e.args[0] === label))", arg=captions + ['—', 'in the —', 'paper balance — usdc'])
+    assert not errors, errors
+    DATA['with_life'] = True
+    page.wait_for_function('window.received?.life?.now.spikes === 1312400')
+    strip = page.context.new_page()
+    strip.on('pageerror', lambda e: errors.append(str(e)))
+    strip.goto(page.url.replace('/show.html', '/strip.html'))
+    strip.wait_for_function("document.getElementById('strip').textContent === 'eth 15m won +5.20 · sugar'")
+    DATA['with_life'] = False
+    strip.wait_for_function("document.getElementById('strip').textContent.startsWith('Balance 104.20 USDC')")
+    strip.close()
+    DATA['with_life'] = True
+    page.wait_for_function('window.received?.life?.now.spikes === 1312400')
+    checks.append('Broadcast captions, feed, paper tag and arena bounds render; absent life draws placeholders without page errors.')
+    checks.append('Incoming feed slides and ellipsises; the transparent strip prefers life and retains its fallback.')
 
 
 def capture(port):
@@ -118,6 +167,7 @@ def capture(port):
         page.goto(origin + '/show.html?relay=' + origin)
         page.wait_for_function("document.querySelector('img').naturalWidth === 1280")
         page.evaluate("() => { window.paperShow.onState(d => window.received = d); }")
+        check_broadcast(page, checks, errors)
         page.mouse.click(20,20)
         page.wait_for_function("window.soundContexts[0]?.state === 'running'")
         page.wait_for_function("[...document.querySelectorAll('span')].find(e=>e.textContent==='click for sound').hidden")

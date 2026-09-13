@@ -49,7 +49,7 @@
     const summary = ready ? `Balance ${money(book.balance)} USDC / ${book.win_count} wins / ${book.loss_count} losses / ${book.open_bets.length} open bets` : 'Paper book unavailable.';
     const rows = ready ? events(book, status) : [];
     if (el('strip')) {
-      el('strip').textContent = `${ready ? 'Balance ' + money(book.balance) + ' USDC' : 'Balance unavailable'} / ${ready && status.in_room ? rows[0]?.line || 'No recent activity.' : message} / paper`;
+      el('strip').textContent = d?.life?.feed?.[0]?.text ?? `${ready ? 'Balance ' + money(book.balance) + ' USDC' : 'Balance unavailable'} / ${ready && status.in_room ? rows[0]?.line || 'No recent activity.' : message} / paper`;
       return;
     }
     el('bet-status').textContent = message;
