@@ -508,13 +508,13 @@
  "run": {
   "graph_record": {
    "graph": {
-    "path": "C:\\Users\\opi40\\Work\\research\\flycoinrh\\build\\graph_brain.npz",
+    "path": "build/graph_brain.npz",
     "sha256": "d7debbbff97e56cebd625f50939a394ec470275eb52b406776b545829c737683"
    },
    "neurons": 144772,
    "exc_scale": 1.0,
    "calibration_file": {
-    "path": "C:\\Users\\opi40\\Work\\research\\flycoinrh\\calibration.py",
+    "path": "calibration.py",
     "sha256": "89a05e13bb40ff797ef67d2cb5e2b2746811adf62e2fe3b76cf6c82d48991535"
    },
    "calibration_setting": "pn05_apl10_kc03",

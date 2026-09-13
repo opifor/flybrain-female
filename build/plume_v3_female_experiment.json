@@ -588,13 +588,13 @@
  "run": {
   "graph_record": {
    "graph": {
-    "path": "C:\\Users\\opi40\\Work\\research\\flycoinrh\\build\\graph_female.npz",
+    "path": "build/graph_female.npz",
     "sha256": "740863754c4c59fc0eb20516cae4fb6aaf0922737942bb8107ae022ccee4052b"
    },
    "neurons": 139255,
    "exc_scale": 0.5,
    "calibration_file": {
-    "path": "C:\\Users\\opi40\\Work\\research\\flycoinrh\\calibration.py",
+    "path": "calibration.py",
     "sha256": "89a05e13bb40ff797ef67d2cb5e2b2746811adf62e2fe3b76cf6c82d48991535"
    },
    "calibration_setting": "pn05_apl10_kc03",
@@ -26191,7 +26191,7 @@
   }
  ],
  "v1_comparison": {
-  "source": "C:\\Users\\opi40\\Work\\research\\flycoinrh\\build\\plume_experiment.json",
+  "source": "build/plume_experiment.json",
   "available": false,
   "rows": [],
   "note": "v1 JSON not found; no comparison",

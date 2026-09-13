@@ -38,6 +38,7 @@ import io
 import ipaddress
 import json
 import os
+import shutil
 import random
 import re
 import time
@@ -250,7 +251,7 @@ def blob_put(path, data, ctype):
 
 
 TUNNEL = {"url": None, "proc": None}
-CFD = Path(os.path.expanduser("~/.claude/tools/cloudflared/cloudflared.exe"))
+CFD = Path(os.environ.get("FLY_CLOUDFLARED") or shutil.which("cloudflared") or "cloudflared")
 
 
 def start_tunnel(port):
