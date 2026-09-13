@@ -53,6 +53,9 @@ from flysim import FlyBrain, load_gains
 from envcfg import load_env
 from mushroom import MushroomBody
 from flyeye import FlyPilot
+from life import Life
+
+LIFE = Life()
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "build"
@@ -967,6 +970,7 @@ async def roam(steps_per_page=26, headful=False, seed=None):
                 moment["betting"] = betting_status()
             if hall_on():
                 moment["rooms"] = rooms_status()
+            moment["life"] = LIFE.observe(moment)
             RELAY["state"], RELAY["state_n"] = moment, RELAY["state_n"] + 1
             await send(moment)
 
