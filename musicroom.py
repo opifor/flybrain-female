@@ -6,13 +6,14 @@ from room import Room as RoomWalk
 from roomkit import Declaration
 
 CATALOGUE = "data/music/catalog.json"
+MIN_PLAY_S = 90   # she stays with a track this long before she may change it
 DECLARATION = Declaration(
     name="music room", path="/musicroom",
     cards={"source": "a small catalogue of Creative Commons music from Wikimedia Commons, each card names its license",
            "refresh_seconds": 60},
     commit_means="she plays the track on the card she settled on",
     reward_source="Listener reactions supply sugar and shock in the paper (for now) record; they will reach her through the stream chat later.",
-    chosen=["People choose the catalogue search terms, the thirty-second minimum and the six-card board.",
+    chosen=["People choose the catalogue search terms, the ninety-second minimum and the six-card board.",
             "a ten-minute room clock and a door in every room",
             "beta · v1: the shelf holds test tracks from Wikimedia Commons under CC licences; more are coming."],
     measured=["The room measures how long she stays, the drive from her mushroom body and her hearing cells' activity during music.",
@@ -20,7 +21,7 @@ DECLARATION = Declaration(
     how=("her eye settles on a music card for at least two rounds before she can choose it.",
          "the title and artist become a smell; her mushroom body compares its drive with the other cards she has seen.",
          "when she stops, the room plays that track if her drive is above or below zero; either sign can play it.",
-         "she stays with a track for at least thirty seconds and cannot restart it while it is playing.",
+         "she stays with a track for at least ninety seconds and cannot restart it while it is playing.",
          "the sound file feeds her Johnston organs, the hearing cells in her antennae, while the page plays it.",
          "a listener's sugar or shock teaches the cells recorded when she chose that play.",
          "she may leave by the door at the bottom of the room; the house closes a room after ten minutes either way."))
@@ -74,7 +75,7 @@ class Room(RoomWalk):
             return True
         self.now_playing = self.read_book().get("now_playing")
         playing = self.now_playing
-        return not playing or (at - playing["started_at"] >= 30 and playing["track_id"] != token)
+        return not playing or (at - playing["started_at"] >= MIN_PLAY_S and playing["track_id"] != token)
 
     def intent_body(self, token, drive, at, look_id):
         return {"track_id": token, "drive": float(drive), "seen_at": at, "look_id": look_id}

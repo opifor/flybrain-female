@@ -14,6 +14,7 @@ from musicroom import CATALOGUE, DECLARATION, catalogue
 from roomkit import Executor, WriteAhead, LedgerError, atomic_write, exact_body, stale_look, make_server
 
 FIELDS = {"track_id", "drive", "seen_at", "look_id"}
+MIN_PLAY_S = 90   # the same rule the room states; a change earlier than this is refused
 LIVE_REFUSAL = "live music is not built; this build is paper only"
 
 
@@ -46,7 +47,7 @@ class Book:
     def refusal(self, track_id, at):
         playing = self.playing(at)
         if playing:
-            if at - playing["started_at"] < 30:
+            if at - playing["started_at"] < MIN_PLAY_S:
                 return "still playing"
             if track_id == playing["track_id"]:
                 return "already playing"
