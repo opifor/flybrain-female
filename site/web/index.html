@@ -42,7 +42,7 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 /* mono is for data and labels only - it is a poor face for paragraphs */
-.mono,code,.addr,.v .k,.eyebrow,.corner,.step .no,.step .tag,th{font-family:var(--mono)}
+.mono,code,.addr,.v .k,.eyebrow,.corner,th{font-family:var(--mono)}
 a{color:var(--cyan);text-decoration:none;border-bottom:1px solid #1d4653}
 a:hover{border-bottom-color:var(--cyan)}
 :focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
@@ -52,120 +52,7 @@ a:hover{border-bottom-color:var(--cyan)}
 .wrap.wide{max-width:1500px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* ---------- the film ----------
-   A tall spacer scrolls under a sticky, viewport-sized stage. Scroll position
-   through the spacer picks the frame, so the film runs at the reader's pace
-   and stops when they stop. The spacer's height is set from the frame count
-   once the manifest arrives; 600vh is the floor so a short film still scrubs. */
-.film{position:relative;min-height:300vh;border-bottom:1px solid var(--line)}
-.stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:#000}
-#stage{position:absolute;inset:0;width:100%;height:100%;display:block}
-/* a soft darkening top and bottom so the words read over bright frames */
-.shade{position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 26%,
-             rgba(0,0,0,0) 54%,rgba(0,0,0,.74) 100%)}
-.scene{position:absolute;left:0;right:0;bottom:0;padding:0 24px 12vh;pointer-events:none;
-  opacity:0}
-.scene.on{opacity:1}
-.scene p{font-family:var(--serif);font-size:clamp(34px,4.6vw,66px);line-height:1.04;
-  letter-spacing:-.01em;color:#f4f7fa;margin:0;max-width:15ch;text-wrap:balance;
-  text-shadow:0 2px 24px rgba(0,0,0,.55)}
-.wide .scene.dark p{color:#14161a;text-shadow:0 1px 18px rgba(255,255,255,.45)}
-/* words are revealed by scroll position, so their look is set inline by script */
-.scene .w{display:inline-block;will-change:opacity,transform,filter}
-.scene.left p{margin-left:max(0px,calc(50% - 560px))}
-.scene.right p{margin-left:auto;margin-right:max(0px,calc(50% - 560px));text-align:right}
-.scene.mid p{margin:0 auto;text-align:center}
-.scene.low{padding-bottom:9vh}
-.wide .scene.high{bottom:auto;top:16vh}
-/* portrait: the frame is letterboxed, so every sentence sits in the black band below it */
-:root:not(.wide) .scene.right p{text-align:left;margin-left:0}
-.scene .note{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-faint);text-align:center;
-  margin:22px auto 0;max-width:44ch;line-height:1.7}
-.scene.s0{top:0;height:100%;display:flex;align-items:flex-end;justify-content:center}
-@media (max-width:640px){.scene p{font-size:clamp(28px,8.2vw,38px);max-width:none}
-}
-.corner{
-  position:absolute;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--ink-faint);pointer-events:none;line-height:1.7;
-}
-.topdex{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:auto;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
-  font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;
-  color:var(--ink);background:rgba(10,9,12,.72);border:1px solid rgba(255,121,176,.55);border-radius:999px;padding:7px 14px;
-  backdrop-filter:blur(6px)}
-.topdex b{color:#ff79b0;font-weight:600}
-.topdex:hover{border-color:#ff79b0;background:rgba(20,12,16,.9)}
-@media (max-width:640px){.topdex{top:66px;font-size:11px;padding:6px 11px}}
-.tl{top:22px;left:24px}
-.tr{top:22px;right:24px;text-align:right}
-.bl{bottom:22px;left:24px}
-.br{bottom:22px;right:24px;text-align:right}
-.tick{color:var(--live)}
-
-.title{text-align:center;pointer-events:none}
-.title h1{
-  font-family:var(--serif);font-weight:400;font-style:normal;
-  font-size:clamp(52px,11vw,116px);line-height:.92;margin:0;
-  letter-spacing:.005em;color:#eaf4fa;text-wrap:balance;
-}
-.title .latin{
-  font-family:var(--serif);font-style:italic;font-size:clamp(14px,2.4vw,19px);
-  color:var(--ink-dim);margin-top:10px;
-}
-
-.marks{position:absolute;right:18px;top:50%;transform:translateY(-50%);
-  display:grid;gap:10px;pointer-events:none}
-.marks i{display:block;width:6px;height:6px;border-radius:50%;
-  border:1px solid var(--ink-faint);background:transparent;
-  transition:background .3s,border-color .3s}
-.marks i.on{background:var(--cyan);border-color:var(--cyan)}
-/* phones keep the marks, smaller and tighter, and the text stays clear of them */
-@media (max-width:599px){.marks{right:10px;gap:8px}
-  .marks i{width:5px;height:5px}
-  .scene{padding-right:30px}}
-.hint{position:absolute;left:0;right:0;bottom:22px;text-align:center;
-  font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
-  color:var(--ink-faint);pointer-events:none;transition:opacity .4s}
-.hint.off{opacity:0}
-
-/* Reduced motion: one still per scene with its words, stacked, no scrubbing. */
-.film.still{min-height:0}
-.film.still .stage{position:static;height:auto;overflow:visible;background:var(--ground)}
-.film.still #stage,.film.still .shade,.film.still .marks,.film.still .hint{display:none}
-.film.still .scene{position:static;opacity:1;transform:none;padding:32px 24px;
-  border-bottom:1px solid var(--line)}
-.film.still .scene.s0{height:auto;display:block}
-.film.still .scene img{display:block;width:100%;max-width:980px;height:auto;
-  margin:0 auto 22px}
-.film.still .corners{display:grid;grid-template-columns:1fr 1fr;gap:12px;
-  max-width:980px;margin:0 auto 24px}
-.film.still .corner{position:static;text-align:left}
-
-/* ---------- out of the film ----------
-   The stage is sticky until the spacer's last 100vh, so the last frame is
-   still on screen while the reader covers the final 40vh of scroll. The fade
-   and the first section pull up into that tail with negative margins and sit
-   above the stage, so the frame darkens under them instead of cutting to
-   ground. The ramp starts slow so scene 6's words stay legible until the
-   fade has actually reached them. */
-.fade{position:relative;z-index:2;height:40vh;margin-top:-40vh;pointer-events:none;
-  background:linear-gradient(180deg,rgba(6,7,10,0) 0%,rgba(6,7,10,.25) 35%,
-             rgba(6,7,10,.78) 65%,var(--ground) 100%)}
-/* 16vh, not more: scene 6's caption sits 12vh above the stage's bottom edge
-   and the section's eyebrow must clear it once both scroll together */
-#story{position:relative;z-index:2;margin-top:-16vh}
 #live{position:relative;z-index:2}
-/* the stacked stills have no sticky tail to pull into */
-.film.still+.fade{display:none}
-.film.still~#story{margin-top:0}
-
-/* ---------- reveal ----------
-   The class is added by script, so without it everything is simply visible. */
-.reveal{opacity:0;transform:translateY(24px);
-  transition:opacity .5s ease-out,transform .5s ease-out}
-.reveal.in{opacity:1;transform:none}
-@media (prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}}
 
 /* ---------- sections ---------- */
 section{padding:64px 0;border-bottom:1px solid var(--line)}
@@ -174,36 +61,11 @@ h2{
   margin:0 0 6px;color:#eaf4fa;text-wrap:balance;
 }
 .lede{color:var(--ink-dim);max-width:62ch;margin:0 0 30px;font-size:18px;line-height:1.65}
-.story{max-width:66ch;margin:0;padding-left:1.3em;color:var(--ink-dim);font-size:17px;line-height:1.65}
-@media (max-width:640px){.story{font-size:16px;padding-left:1.2em}}
-.story li{margin:0 0 12px}
-.story b{color:var(--ink)}
-.story a{color:var(--rose,#ff79b0)}
 p{max-width:66ch;color:var(--ink);margin:0 0 18px}
 .eyebrow{
   font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;
   color:var(--ink-faint);margin-bottom:14px;font-weight:500;
 }
-
-.path{display:grid;gap:1px;background:var(--line);border:1px solid var(--line)}
-.step{
-  background:var(--plate);padding:18px 20px;display:grid;
-  grid-template-columns:168px 34px 1fr auto;gap:16px;align-items:baseline;
-}
-/* a still from the film's matching scene; the frame index comes from the
-   manifest at runtime so a re-rendered film keeps the right pictures */
-.step .thumb{align-self:start;width:168px;aspect-ratio:16/9;height:auto;
-  display:block;object-fit:cover;border-radius:2px;border:1px solid var(--line);
-  background:#000}
-.step .no{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
-.step .what{color:var(--ink);font-weight:500;font-size:16.5px}
-.step .what em{font-style:normal;color:var(--ink-dim);display:block;font-size:15px;margin-top:5px;line-height:1.55}
-.step .tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:500}
-.done .tag{color:var(--live)}
-.now{background:#0e1219;box-shadow:inset 2px 0 0 var(--amber)}
-.now .tag{color:var(--amber)}
-.todo .tag{color:var(--ink-faint)}
-.todo .what{color:var(--ink-dim)}
 
 .wires{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;
   background:var(--line);border:1px solid var(--line)}
@@ -470,15 +332,6 @@ footer .links{display:flex;flex-wrap:wrap;gap:22px;margin-bottom:20px}
   .copy{justify-content:center}
 }
 
-@media (max-width:640px){
-  .step{grid-template-columns:26px 1fr;gap:10px 12px}
-  .step .thumb{grid-column:1/-1;width:96px;margin-bottom:2px}
-  .step .tag{grid-column:2;margin-top:4px}
-  .title h1{font-size:clamp(46px,15vw,72px)}
-  /* the lower corners would sit under the wordmark on a phone; the numbers
-     they carry are repeated in the sections below */
-  .film:not(.still) .bl,.film:not(.still) .br{display:none}
-}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #matches .match{position:relative;border:1px solid var(--line);background:var(--plate);
   padding:22px 24px;margin-top:24px;overflow-wrap:anywhere}
@@ -595,7 +448,7 @@ function renderEntry(state){
 </script>
 </head>
 <body>
-<header class="site-nav"><a href="./">Female Flybrain · Her Rooms</a><nav aria-label="Main"><a href="rooms/">rooms</a><a href="#live">brain</a><a href="#story">story</a><a href="#ca-text">$HER</a><a href="https://kick.com/femalefly">watch</a></nav></header>
+<header class="site-nav"><a href="./">Female Flybrain · Her Rooms</a><nav aria-label="Main"><a href="rooms/">rooms</a><a href="brain.html">brain</a><a href="story.html">story</a><a href="#ca-text">$HER</a><a href="https://kick.com/femalefly">watch</a></nav></header>
 <section id="entry" aria-label="Meet Female Flybrain">
   <div class="entry-grid">
     <div class="entry-block" id="entry-who">
@@ -633,51 +486,7 @@ function renderEntry(state){
       <p class="entry-note">24/7 · she chooses where to go · you watch</p>
     </div>
   </div>
-  <a class="entry-down" href="#film" aria-label="Scroll to the film"></a>
-</section>
-
-<div class="film" id="film">
-  <div class="stage" id="stagebox">
-    <canvas id="stage" aria-hidden="true"></canvas>
-    <div class="shade"></div>
-    <div class="scene s0 on" data-scene="0">
-      <a class="topdex" href="https://dexscreener.com/robinhood/0x4754b403d876d977ed0cf0988a6dc7a08f6c5eb2d73fb3979630432cc58b9ea4" target="_blank" rel="noopener"><b>$HER</b> on DexScreener &#8599;</a>
-      <div class="corners">
-        <div class="corner tl">specimen<br><span style="color:var(--ink-dim)">FlyWire FAFB v783, female</span></div>
-        <div class="corner tr">Robinhood Chain<br><span id="blk" style="color:var(--ink-dim)">block —</span></div>
-        <div class="corner bl">139,255 neurons<br><span style="color:var(--ink-dim)">3,641,142 connections</span></div>
-        <div class="corner br"><span class="tick" id="livedot">●</span> observed live<br><span id="upd" style="color:var(--ink-dim)">—</span></div>
-      </div>
-      <div class="title">
-        <h1>FEMALE FLYBRAIN</h1>
-        <div class="latin">sister build of FLYBRAIN. same experiment, the other sex.</div>
-      </div>
-    </div>
-    <div class="scene left high dark" data-scene="1"><p>Blind at first. On a white screen 19,215 neurons fired at once.</p></div>
-    <div class="scene right low" data-scene="2"><p>Relabelled by cell type. 22,889 labels changed; the noise fell to 691.</p></div>
-    <div class="scene left low" data-scene="3"><p>Both eyes. 783 left, 789 right, one shared grid.</p></div>
-    <div class="scene right high" data-scene="4"><p>She walks. Two constants instead of a training run.</p></div>
-    <div class="scene left low" data-scene="5"><p>She typed the ticker herself.</p></div>
-    <div class="scene mid" data-scene="6"><p>$HER. Launched by the female fly, from her own wallet.</p>
-      <div class="note">The film is an illustration. The measurements below are the evidence.</div></div>
-    <div class="marks" id="marks" aria-hidden="true"></div>
-    <div class="hint" id="hint">scroll</div>
-  </div>
-</div>
-<div class="fade" aria-hidden="true"></div>
-
-<section id="story" style="padding-top:44px">
-  <div class="wrap livew">
-    <div class="eyebrow">the story, in 60 seconds</div>
-    <h2>How a female fly ended up here</h2>
-    <ol class="story">
-      <li><b>3 Sep 2026.</b> Google, Janelia and Cambridge publish the first complete wiring diagram of a <em>male</em> fruit fly's central nervous system, 165,122 neurons. <a href="https://x.com/NewsFromGoogle/status/2095553014715093022">Google's announcement.</a></li>
-      <li><b>10 Sep.</b> <a href="https://github.com/fruitflydev/flycoinrh">fruitflydev</a> simulates that male brain neuron by neuron, points its retina at a launchpad, and it launches $FLYBRAIN on Robinhood Chain. They publish the code and say: fork it.</li>
-      <li><b>Since 2024.</b> A <em>female</em> fly brain has existed all along: FlyWire FAFB, 139,255 neurons, mapped at Princeton and Cambridge and open to anyone. <a href="https://codex.flywire.ai/?dataset=fafb">The dataset.</a> The male one got the attention.</li>
-      <li><b>11 Sep.</b> I put her brain in the same rig. She was blind, then one-eyed, then stubborn. The film above is that week; the panel below is her, live.</li>
-      <li><b>11 Sep, block 60,428,098.</b> She read the launchpad through her own retina, typed the ticker herself and launched <b>$HER</b> from her own wallet. No dev supply, no initial buy. <a href="https://www.ponsfamily.com/launchpad/0x1da8a52df87aa12694ef3ba765e2cf99a8135dee">Her token page.</a></li>
-    </ol>
-  </div>
+  <a class="entry-down" href="#live" aria-label="Scroll to the live panel"></a>
 </section>
 
 <section id="live" style="padding-top:44px">
@@ -975,24 +784,7 @@ function renderEntry(state){
   </div>
 </section>
 
-<section>
-  <div class="wrap">
-    <div class="eyebrow">the plan</div>
-    <h2>How it got here</h2>
-    <p class="lede">Not a roadmap of promises — a sequence, with everything before the amber line already done and checkable in the repo.</p>
-    <div class="path">
-      <div class="step done"><img class="thumb" data-scene="0" data-at="first" loading="lazy" width="1280" height="720" alt="Forked"><div class="no">01</div><div class="what">Forked<em>Started from FLYBRAIN's public rig. Three setup bugs fixed and reported upstream.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="0" data-at="last" loading="lazy" width="1280" height="720" alt="Female connectome loaded"><div class="no">02</div><div class="what">Female connectome loaded<em>139,255 neurons, 3,641,142 signed connections, FlyWire FAFB v783.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="1" data-at="mid" loading="lazy" width="1280" height="720" alt="Blind at first"><div class="no">03</div><div class="what">Blind at first<em>On a white screen 19,215 neurons fired and the steering neurons sat at their ceiling. Cause: per-cell neurotransmitter labels in the female export are noisy; a single mislabelled L1 to L5 synapse lit the whole medulla.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="2" data-at="last" loading="lazy" width="1280" height="720" alt="Relabelled by cell type"><div class="no">04</div><div class="what">Relabelled by cell type<em>One transmitter per type by majority vote, 22,889 labels changed; the white screen dropped to 691 neurons firing and the steering neurons went quiet.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="3" data-at="last" loading="lazy" width="1280" height="720" alt="Both eyes"><div class="no">05</div><div class="what">Both eyes<em>783 left and 789 right L1 cells on one shared hex grid, 785 columns per eye.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="4" data-at="mid" loading="lazy" width="1280" height="720" alt="One constant instead of a training run"><div class="no">06</div><div class="what">One constant instead of a training run<em>Excitatory weights scaled by 0.5 put the steering neurons in the same band as the trained male; click threshold set to 100 Hz for her.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="5" data-at="last" loading="lazy" width="1280" height="720" alt="Taught the form"><div class="no">07</div><div class="what">Taught the form<em>55 cell-type gains by evolution strategy, 247 evaluations, offline 2 of 3 fields, the same as the male; live on the launchpad she typed the ticker herself, 1 of 3.</em></div><div class="tag">done</div></div>
-      <div class="step done"><img class="thumb" data-scene="6" data-at="last" loading="lazy" width="1280" height="720" alt="Launched"><div class="no">08</div><div class="what">Launched<em>She launched $HER from her own wallet on the same launchpad, block 60,428,098. <a href="https://www.ponsfamily.com/launchpad/0x1da8a52df87aa12694ef3ba765e2cf99a8135dee">Her token page</a>.</em></div><div class="tag">done</div></div>
-      <div class="step now"><img class="thumb" data-scene="6" data-at="mid" loading="lazy" width="1280" height="720" alt="Loose on the web"><div class="no">09</div><div class="what">Loose on the open web<em>She browses on her own, 24/7. Her token page is one of the places she starts from now.</em></div><div class="tag">live</div></div>
-    </div>
-  </div>
-</section>
+
 
 <section>
   <div class="wrap">
@@ -1041,254 +833,6 @@ function renderEntry(state){
 
 <script>
 /* ---------------------------------------------------------------------------
-   The film.
-
-   A frame sequence rather than a video element: a browser cannot seek a
-   video frame by frame fast enough to follow a scroll wheel, but it can draw
-   a decoded image in one paint. Frames are decoded ahead of use, the first
-   thirty at once and the rest in order; if the wanted frame has not arrived
-   yet the nearest decoded one below it stays on screen.
---------------------------------------------------------------------------- */
-(function(){
-  const film = document.getElementById('film');
-  const box = document.getElementById('stagebox');
-  const cv = document.getElementById('stage');
-  const cx = cv.getContext('2d', {alpha:false});
-  const scenes = Array.from(document.querySelectorAll('.scene'));
-  const marks = document.getElementById('marks');
-  const hint = document.getElementById('hint');
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // phones get the quarter-size set; the frames are identical otherwise
-  const FILM = innerWidth < 900 ? 'film/m/' : 'film/';
-  let V = '';
-  const src = i => FILM + 'f' + String(i + 1).padStart(4, '0') + '.webp' + V;
-  window.__filmFrame = -1;
-  window.__filmLoaded = 0;
-
-  fetch('film/manifest.json', {cache:'no-cache'})
-    .then(r => r.json())
-    .then(m => { V = m.v ? '?v=' + m.v : ''; return still ? stacked(m) : scrub(m); })
-    .catch(() => {});
-
-  function stacked(m){
-    film.classList.add('still');
-    m.scenes.forEach((s, k) => {
-      if (!scenes[k]) return;
-      const im = new Image();
-      im.src = src(s.start); im.alt = ''; im.width = m.width; im.height = m.height;
-      scenes[k].prepend(im);
-      scenes[k].classList.add('on');
-    });
-  }
-
-  function scrub(m){
-    const N = m.frames;
-    const imgs = new Array(N), ready = new Uint8Array(N);
-    const ranges = m.scenes.map(s => [s.start, s.end]);
-    // pixels of scroll per frame: the whole film in about one screen height
-    // per scene on a desktop, a little less on a phone
-    const PX = innerWidth < 900 ? 5 : 6;
-    film.style.height = (N * PX) + 'px';
-    window.__filmFrames = N;
-
-    for (let k = 0; k < ranges.length; k++) marks.appendChild(document.createElement('i'));
-    const dots = Array.from(marks.children);
-
-    // Frames are fetched on demand around the visitor's position: a few
-    // behind, more ahead, nearest first. Most visitors never reach the end,
-    // so loading the whole film up front would mostly be wasted transfer.
-    // Decoded frames are kept; the full film fits in memory.
-    // The window reaches 96 frames ahead while the visitor scrolls and
-    // shrinks to 24 once they stop, so a visitor who only reads the top of
-    // the page costs the opening frames rather than a sixth of the film.
-    const POOL = 4, BACK = 24, AHEAD = 96, MOVING = 800, IDLE = 2000, STEP = 80;
-    const asked = new Uint8Array(N);
-    const t0 = performance.now();
-    let dirty = true, inflight = 0, want = 0, moved = t0 - MOVING, last = 0;
-    function load(i){
-      asked[i] = 1; inflight++;
-      const im = new Image();
-      im.src = src(i);
-      const done = im.decode ? im.decode() : new Promise((res, rej) => { im.onload = res; im.onerror = rej; });
-      return done.then(() => { imgs[i] = im; ready[i] = 1; window.__filmLoaded++; dirty = true; },
-                       () => {})
-                 .then(() => { inflight--; fill(); });
-    }
-    function pick(lo, hi){
-      for (let i = want; i <= hi; i++) if (!asked[i]) return i;
-      for (let i = want - 1; i >= lo; i--) if (!asked[i]) return i;
-      return -1;
-    }
-    function fill(){
-      const now = performance.now();
-      const ahead = now - moved < MOVING ? AHEAD : BACK;
-      while (inflight < POOL){
-        const i = pick(Math.max(0, want - BACK), Math.min(N - 1, want + ahead));
-        if (i < 0) break;
-        load(i);
-      }
-      // With the window complete and the visitor resting, fetch the rest one
-      // frame at a time so a later scroll past the window stays smooth. The
-      // pace is capped so a fast connection is not asked for the whole film
-      // within seconds of arriving.
-      if (inflight === 0 && now - Math.max(moved, t0) > IDLE && now - last > STEP){
-        const i = pick(0, N - 1);
-        if (i >= 0){ last = now; load(i); }
-      }
-    }
-    for (let i = 0; i < Math.min(30, N); i++) load(i);
-
-    let W = 0, H = 0;
-    function fit(){
-      const d = Math.min(devicePixelRatio || 1, 2);
-      W = cv.width = Math.max(2, Math.floor(box.clientWidth * d));
-      H = cv.height = Math.max(2, Math.floor(box.clientHeight * d));
-      dirty = true;
-    }
-    addEventListener('resize', fit);
-    fit();
-
-    function paint(im){
-      // landscape: cover, crop the sides. Portrait: contain, so the whole
-      // frame shows and the black above and below reads as more film.
-      const portrait = H > W;
-      document.documentElement.classList.toggle('wide', !portrait && box.clientWidth >= 900);
-      const s = portrait ? Math.min(W / im.naturalWidth, H / im.naturalHeight)
-                         : Math.max(W / im.naturalWidth, H / im.naturalHeight);
-      if (portrait){ cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H); }
-      const w = im.naturalWidth * s, h = im.naturalHeight * s;
-      cx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
-    }
-    function progress(){
-      const span = film.offsetHeight - box.offsetHeight;
-      if (span <= 0) return 0;
-      const top = film.getBoundingClientRect().top;
-      return Math.min(1, Math.max(0, -top / span));
-    }
-    // Each sentence is split into words once; the loop then sets each word from
-    // the scene's local progress, so the text scrubs with the film instead of
-    // toggling on and off.
-    const words = scenes.map(el => {
-      const p = el.querySelector('p');
-      if (!p || el.classList.contains('s0')) return [];
-      const parts = p.textContent.trim().split(/\s+/);
-      p.textContent = '';
-      return parts.map((w, i) => {
-        const s = document.createElement('span'); s.className = 'w'; s.textContent = w;
-        p.appendChild(s); if (i < parts.length - 1) p.appendChild(document.createTextNode(' '));
-        return s;
-      });
-    });
-    function setWords(k, t){
-      const el = scenes[k]; if (!el) return;
-      const p = el.querySelector('p'); if (!p) return;
-      const ws = words[k];
-      const n = ws.length;
-      for (let j = 0; j < n; j++){
-        const f = Math.min(1, Math.max(0, ((t - 0.04) / 0.42) * n - j));
-        ws[j].style.opacity = f;
-        ws[j].style.filter = f < 1 ? 'blur(' + ((1 - f) * 10).toFixed(1) + 'px)' : 'none';
-        ws[j].style.transform = f < 1 ? 'translateY(' + ((1 - f) * 0.4).toFixed(3) + 'em)' : 'none';
-      }
-      const e = Math.min(1, Math.max(0, (t - 0.84) / 0.16));
-      const target = n ? p : el.querySelector('.title');
-      if (target){
-        target.style.opacity = 1 - e;
-        target.style.transform = e > 0 ? 'translateY(' + (-e * 48).toFixed(1) + 'px)' : 'none';
-      }
-      const note = el.querySelector('.note');
-      if (note) note.style.opacity = Math.min(1, Math.max(0, (t - 0.5) / 0.3));
-    }
-    let cur = -1, drawn = -1, lastT = -1;
-    function setScene(frame){
-      let k = 0;
-      for (let j = 0; j < ranges.length; j++) if (frame >= ranges[j][0]) k = j;
-      if (k === cur) return;
-      cur = k;
-      scenes.forEach((el, j) => el.classList.toggle('on', j === k));
-      dots.forEach((el, j) => el.classList.toggle('on', j === k));
-    }
-    function loop(){
-      const p = progress();
-      const w = Math.round(p * (N - 1));
-      if (w !== want){ want = w; moved = performance.now(); }
-      fill();
-      let i = want;
-      while (i >= 0 && !ready[i]) i--;
-      if (i >= 0 && (i !== drawn || dirty)){
-        paint(imgs[i]); drawn = i; dirty = false; window.__filmFrame = i;
-      }
-      setScene(want);
-      if (cur >= 0){
-        const [a, b] = ranges[cur];
-        const tl = b > a ? (want - a) / (b - a) : 1;
-        if (tl !== lastT){ setWords(cur, tl); lastT = tl; }
-      }
-      hint.classList.toggle('off', p > 0.02);
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }
-})();
-
-/* ---------------------------------------------------------------------------
-   Below the film.
-
-   Sections fade up as they arrive, and the step rows carry a still from the
-   scene they describe. Both are additive: with no IntersectionObserver or
-   with reduced motion nothing is hidden, and a missing manifest leaves the
-   steps as text.
---------------------------------------------------------------------------- */
-(function(){
-  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!still && 'IntersectionObserver' in window){
-    const groups = [
-      Array.from(document.querySelectorAll('section, footer')),
-      Array.from(document.querySelectorAll('.step')),
-      Array.from(document.querySelectorAll('.cmp-row'))
-    ];
-    const io = new IntersectionObserver(entries => {
-      for (const e of entries){
-        // a section taller than the viewport never reaches the ratio, so any
-        // overlap counts for it
-        const tall = e.boundingClientRect.height > innerHeight * 0.6;
-        if (!e.isIntersecting || (e.intersectionRatio < 0.15 && !tall)) continue;
-        e.target.classList.add('in');
-        io.unobserve(e.target);
-      }
-    }, {threshold:[0, 0.15]});
-    groups.forEach((els, g) => {
-      let k = 0, parent = null;
-      for (const el of els){
-        if (g > 0){
-          // stagger restarts for each container
-          if (el.parentNode !== parent){ parent = el.parentNode; k = 0; }
-          el.style.transitionDelay = (k++ * 60) + 'ms';
-        }
-        el.classList.add('reveal');
-        io.observe(el);
-      }
-    });
-  }
-
-  const thumbs = Array.from(document.querySelectorAll('.step .thumb'));
-  if (!thumbs.length) return;
-  fetch('film/manifest.json', {cache:'no-cache'})
-    .then(r => r.json())
-    .then(m => {
-      const v = m.v ? '?v=' + m.v : '';
-      for (const im of thumbs){
-        const s = m.scenes[Number(im.dataset.scene)];
-        if (!s) continue;
-        const at = im.dataset.at;
-        const f = at === 'first' ? s.start : at === 'last' ? s.end : Math.round((s.start + s.end) / 2);
-        im.src = 'film/m/f' + String(f + 1).padStart(4, '0') + '.webp' + v;
-      }
-    })
-    .catch(() => {});
-})();
-
-/* ---------------------------------------------------------------------------
    Live state, read in your browser.
 
    The public Robinhood Chain node answers CORS, so this page talks to the
@@ -1324,7 +868,6 @@ function abiString(x){
 }
 
 function render(d){
-  $('blk').textContent = 'block ' + nf(d.block);
   const t = d.token;
   const launched = d.launched !== false && !!t;
   $('ca-text').textContent = launched ? t.address : 'not launched yet';
@@ -1341,7 +884,6 @@ function render(d){
     $('t-link').href = 'https://www.ponsfamily.com/launchpad';
     if ($('f-scan')) { $('f-scan').href = 'https://robinhoodchain.blockscout.com/address/0xc88f1622748007B441f2f2B8D07562Ad2ad93681'; $('f-scan').textContent = 'her wallet'; }
   }
-  $('upd').textContent = new Date().toISOString().slice(11,19) + ' UTC';
   $('pip').classList.remove('stale');
   $('pip-t').textContent = 'read from Robinhood Chain';
 }
@@ -1365,7 +907,6 @@ async function tick(){
   catch (e) {
     $('pip').classList.add('stale');
     $('pip-t').textContent = 'chain unreachable';
-    $('upd').textContent = 'offline';
   }
 }
 

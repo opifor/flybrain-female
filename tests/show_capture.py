@@ -317,6 +317,7 @@ def capture(port):
         if path.is_file():
             shutil.copy2(path, static_dir / path.name)
     shutil.copytree(ROOT / 'site/web/rooms', static_dir / 'rooms')
+    shutil.copytree(ROOT / 'site/web/film', static_dir / 'film')
     music_dir = static_dir / 'music'
     music_dir.mkdir()
     subprocess.run(['ffmpeg', '-nostdin', '-y', '-v', 'error', '-f', 'lavfi', '-i',
@@ -434,6 +435,7 @@ def capture(port):
             panel.close()
 
         check_entry(browser, origin, checks, errors)
+        check_story(browser, origin, checks, errors)
         check_rooms(browser, origin, checks, errors)
         check_brain(browser, origin, checks, errors)
 
@@ -525,6 +527,7 @@ def check_entry(browser, origin, checks, errors):
         page.on('pageerror', lambda e: errors.append(str(e)))
         page.route('https://**/*', lambda route: route.abort())
         page.route(origin + '/state', lambda route: route.fulfill(json=state))
+        page.route(origin + '/music/catalog.json', lambda route: route.fulfill(json=[MUSIC_TRACK]))
         page.goto(origin + '/index.html?relay=' + origin)
         entry = page.locator('#entry')
         expect(entry).to_be_visible()
@@ -550,7 +553,13 @@ def check_entry(browser, origin, checks, errors):
         assert links.nth(2).get_attribute('href') == 'rooms/'
         assert page.locator('#matches').count() == 1
         assert page.locator('#comparison .eyebrow').text_content() == 'the comparison'
-        assert page.locator('.entry-down').get_attribute('href') == '#film'
+        assert page.locator('.entry-down').get_attribute('href') == '#live'
+        assert page.locator('.film, #story, .step').count() == 0
+        assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
+            'rooms/', 'brain.html', 'story.html', '#ca-text', 'https://kick.com/femalefly']
+        page.locator('.entry-down').click()
+        page.wait_for_function("location.hash === '#live' && Math.abs(document.querySelector('#live').getBoundingClientRect().top) < 2")
+        page.evaluate('window.scrollTo(0, 0)')
         state['life'] = dict(now=dict(doing='looking at ETH 15m', room='paper room',
                                      spikes=1312400, sugar_10m=3, shock_10m=1,
                                      balance=106.2, today_delta=6.2),
@@ -589,8 +598,58 @@ def check_entry(browser, origin, checks, errors):
         expect(page.locator('#entry-doing')).to_have_text('—')
         expect(page.locator('#entry-feed li span')).to_have_text(['—'] * 3)
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        assert not errors, errors
         checks.append(f'Entry at {width}px: three blocks, links, placeholders, live data, offline, and plain text.')
         page.close()
+
+
+def check_story(browser, origin, checks, errors):
+    from playwright.sync_api import expect
+
+    SHOTS.mkdir(parents=True, exist_ok=True)
+    for width in (1280, 400):
+        page = browser.new_page(viewport=dict(width=width, height=1000))
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.route('https://**/*', lambda route: route.abort())
+        page.goto(origin + '/story.html')
+        expect(page.locator('.site-nav')).to_be_visible()
+        assert page.locator('.site-nav nav a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
+            'rooms/', 'brain.html', 'story.html', 'index.html#ca-text', 'https://kick.com/femalefly']
+        expect(page.locator('.story-intro h1')).to_have_text('Her Story')
+        expect(page.locator('#story .step .no')).to_have_text([f'{i:02}' for i in range(1, 9)])
+        expect(page.locator('#launch time')).to_have_text('2026-09-11 17:19 UTC')
+        expect(page.locator('#launch td')).to_have_text([
+            'Female Flybrain (HER)', '0x1da8a52df87aa12694ef3ba765e2cf99a8135dee',
+            '0x4c4c015e9b1be50084e6ad697dfbfbaf0316a595ded30996357b0c1f285f0021',
+            '60,428,098', '0xc88f1622748007b441f2f2b8d07562ad2ad93681 (her wallet)',
+            'GOOGL', '1.00%', '0.000897 ETH'])
+        assert page.locator('#comparison').count() == 0
+        assert page.locator('#next a').evaluate_all('(links) => links.map(a => a.getAttribute("href"))') == [
+            'rooms/', 'https://kick.com/femalefly']
+        page.wait_for_function('window.__filmFrame === 0')
+        page.evaluate("window.scrollTo(0, document.querySelector('#film').offsetTop + (document.querySelector('#film').offsetHeight - innerHeight) * 0.5)")
+        page.wait_for_function('window.__filmFrame === Math.round((window.__filmFrames - 1) * 0.5)')
+        assert page.locator('.scene.on').get_attribute('data-scene') == '3'
+        page.evaluate('window.scrollTo(0, 0)')
+        page.wait_for_function('window.__filmFrame === 0')
+        page.locator('#story').scroll_into_view_if_needed()
+        page.wait_for_function("[...document.querySelectorAll('#story img')].some(im => im.getAttribute('src')?.startsWith('film/') && im.naturalWidth > 0)")
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        if width == 1280:
+            page.evaluate('window.scrollTo(0, 0)')
+            page.wait_for_function('window.__filmFrame === 0')
+            page.screenshot(path=str(SHOTS / 'story_1280.png'))
+        page.locator('#launch').scroll_into_view_if_needed()
+        expect(page.locator('#launch')).to_have_class('reveal in')
+        page.screenshot(path=str(SHOTS / f'story_launch_{width}.png'), animations='disabled')
+        page.emulate_media(reduced_motion='reduce')
+        page.reload()
+        expect(page.locator('.film')).to_have_class('film still')
+        assert page.locator('.film .scene img[src^="film/"]').count() == 7
+        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        assert not errors, errors
+        page.close()
+        checks.append(f'Story at {width}px: navigation, eight steps, launch receipt, forward and reverse film scroll, reduced motion and no overflow.')
 
 
 def check_music(page, checks):
