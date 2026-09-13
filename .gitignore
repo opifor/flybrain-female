@@ -9,6 +9,9 @@ data/
 
 # derived artefacts, recordings, scratch
 build/
+
+# her state: the paper ledger, what she learned, her day. Backed up by keepalive.ps1, never committed
+state/
 scratch/
 __pycache__/
 *.pyc

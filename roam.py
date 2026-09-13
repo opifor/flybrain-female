@@ -55,7 +55,6 @@ from mushroom import MushroomBody
 from flyeye import FlyPilot
 from life import Life
 
-LIFE = Life()
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "build"
@@ -361,6 +360,8 @@ def blob_del(path):
 
 RELAY_URL = load_env().get("FLY_RELAY_URL", "").rstrip("/")
 RELAY_TOKEN = load_env().get("FLY_RELAY_TOKEN", "")
+# Her day is state, not a build product: it lives beside the ledger.
+LIFE = Life(Path(load_env().get("FLY_STATE_DIR") or OUT) / "life")
 RELAY_EVERY = 0.5
 # what the relay thread reads: the newest state dict, the newest jpeg, and a
 # counter for each so an unchanged pair is never posted twice
