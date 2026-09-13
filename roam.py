@@ -542,7 +542,8 @@ def betting_status():
     if room is None:
         return {"in_room": False, "bookie": {"at": 0, "ok": False}}
     return {"in_room": room.in_room, "bookie": room.bookie_status,
-            "events": room.public_events, "learning": room.state()["learning"]}
+            "events": room.public_events, "learning": room.state()["learning"],
+            "cards": room.board()["cards"]}
 
 
 @app.get("/betroom")
