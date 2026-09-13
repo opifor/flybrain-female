@@ -90,6 +90,7 @@ while ($true) {
   if ($dealer.HasExited) {
     note ("dealer.py exited with " + $dealer.ExitCode)
     $dealer = start-dealer
+  }
   if ($painter.HasExited) {
     note ("painter.py exited with " + $painter.ExitCode)
     $painter = start-painter
