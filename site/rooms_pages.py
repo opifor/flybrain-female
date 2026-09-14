@@ -47,7 +47,7 @@ def generate(destination=WEB / 'rooms'):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Archivo:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
 <style>{css}</style></head><body>
 <header><a href="/">Female Flybrain · Her Rooms</a><nav aria-label="Main">
-<a href="/rooms/">rooms</a><a href="/brain.html">brain</a><a href="/story.html">story</a><a href="/show.html">show</a><a href="/#ca-text">$HER</a><a href="/watch.html">watch</a></nav></header>
+<a href="/rooms/">rooms</a><a href="/courtship.html">courtship</a><a href="/brain.html">brain</a><a href="/story.html">story</a><a href="/show.html">show</a><a href="/#ca-text">$HER</a><a href="/watch.html">watch</a></nav></header>
 <main>{way_back}<h1>{escape(title)}</h1><p class="lede">{LEDE}</p>{body}</main>
 {'<script src="show.js"></script>' if arena else ''}<script>{script}</script></body></html>
 '''

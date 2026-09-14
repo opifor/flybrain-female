@@ -12,6 +12,16 @@ sys.path.insert(0, str(ROOT))
 from calibration import CHOSEN, SETTINGS
 
 
+def refresh_navigation(output):
+    index = (ROOT / 'site/web/index.html').read_text(encoding='utf-8')
+    nav = re.search(r'<header class="site-nav">.*?</header>', index).group()
+    output = Path(output)
+    page, count = re.subn(r'<header class="site-nav">.*?</header>', lambda _: nav, output.read_text(encoding='utf-8'))
+    if count != 1:
+        raise ValueError('expected one site header')
+    output.write_text(page, encoding='utf-8')
+
+
 def build(graph, output):
     with np.load(graph, allow_pickle=False) as z:
         types = z['types'].astype(str)
@@ -94,10 +104,13 @@ def build(graph, output):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['build'])
+    parser.add_argument('command', choices=['build', 'nav'])
     local_graph = ROOT / 'build/graph_female.npz'
     default_graph = local_graph if local_graph.exists() else ROOT.parent / 'flycoinrh/build/graph_female.npz'
     parser.add_argument('--graph', type=Path, default=default_graph)
     parser.add_argument('--output', type=Path, default=ROOT / 'site/web/brain.html')
     args = parser.parse_args()
-    build(args.graph, args.output)
+    if args.command == 'nav':
+        refresh_navigation(args.output)
+    else:
+        build(args.graph, args.output)
