@@ -21,7 +21,21 @@
 # not a loss.
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+# The venv's own python.exe is a small unsigned launcher; Smart App Control
+# may refuse to start it. Run the interpreter the venv was built from and
+# point it at the venv's packages instead.
 $py = Join-Path $root '.venv\Scripts\python.exe'
+$cfg = Join-Path $root '.venv\pyvenv.cfg'
+if (Test-Path $cfg) {
+  $home_line = Get-Content $cfg | Where-Object { $_ -match '^home\s*=' } | Select-Object -First 1
+  if ($home_line) {
+    $base = Join-Path ($home_line -replace '^home\s*=\s*', '') 'python.exe'
+    if (Test-Path $base) {
+      $py = $base
+      $env:PYTHONPATH = Join-Path $root '.venv\Lib\site-packages'
+    }
+  }
+}
 $log = Join-Path $root 'build\keepalive.log'
 $state = Join-Path $root 'state'
 $backup = Join-Path $env:USERPROFILE 'Backups\flybrain-state'
