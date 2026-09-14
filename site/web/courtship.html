@@ -13,9 +13,13 @@
 <main>
 <h1>the courtship room</h1>
 <p class="lede">Two brains, one room: her FlyWire FAFB v783 brain and his FlyEM male CNS brain from FLYBRAIN. He sings, she hears, and her answer is read. Their actions are not scripted. The inputs are chosen; the controls and predictions are written down before the ten-seed runs.</p>
+<figure class="courtship-figure replay">
+<video controls muted playsinline preload="metadata" poster="/courtship/replay_poster.jpg" src="/courtship/replay.mp4" aria-label="Recorded courtship trial, seed 6 with song, then silence"></video>
+<figcaption>the trial itself, replayed from its record: every position, his wing, her glow and the sound are the experiment's numbers, frame by frame. seed 6, then the same seed with the sound cut.</figcaption>
+</figure>
 <section>
 <h2>he decides</h2>
-<p>His P1 cells are read every window: a courtship command group of 86 cells in the male map, with an uncertain identity. In the chosen encoding, her scent reaches him on Or47b neurons and on contact cells within 2 mm. A condition removes her scent to ask whether P1 notices.</p>
+<p>His P1 cells are read every window: a courtship command group of 86 cells in the male map, with an uncertain identity. In the chosen encoding, her scent reaches him on Or47b neurons and on contact cells within 2 mm. Removing her scent did not support the predicted drop in P1; driving his command group by hand raised his song and her answer.</p>
 </section>
 <section>
 <h2>he sings</h2>
@@ -27,32 +31,53 @@
 </section>
 <section>
 <h2>she answers</h2>
-<p>Her pC1 cells, 10 in the map, and her vpoDN cells, 2, are read; vpoDN is the “yes” descending neuron. Her 6 oviDN cells are read as the sign of a no. Virgin or mated is a chosen state: sex-peptide sensory cells are driven for virgin and silent for mated. In the first ten-seed run, an earlier protocol with a rate ear, vpoDN fired on every seed when he sang and never when the sound was cut.</p>
+<p>Her pC1 cells, 10 in the map, and her vpoDN cells, 2, are read; vpoDN is the “yes” descending neuron. Her 6 oviDN cells are read as the sign of a no. Virgin or mated is a chosen state: sex-peptide sensory cells are driven for virgin and silent for mated. With the waveform ear, her answer met the chosen acceptance rule on nine of ten seeds with song and none in silence.</p>
 </section>
 <section>
 <h2>he adapts</h2>
 <p>She starts inside his field of view, a chosen starting position. His LC10a cells, 275 in the map, are the visual class that tracks a female. They are read with and without her silhouette on his eye. Whether his next note follows what he saw is measured, never scripted.</p>
 </section>
 <figure class="courtship-figure">
-<img src="/courtship/trajectories.png" alt="Quick smoke run: her and his arena paths, with her vpoDN activity below.">
-<figcaption>her path solid, his dashed; her vpoDN below. This is the quick smoke figure, a placeholder for the completed run.</figcaption>
+<img src="/courtship/trajectories.png" alt="Ten-seed run across six conditions: her solid arena paths, his dashed paths, and her vpoDN activity below.">
+<figcaption>ten seeds, six conditions, twenty seconds each. her path solid, his dashed; her vpoDN below.</figcaption>
 </figure>
 <section>
 <h2>results</h2>
 <!-- results:start -->
-<p>the ten-seed run is in progress; this section fills in when it finishes.</p>
+<p>She hears him and answers: her vpoDN rises with song over silence (+13.6 Hz), and her pC1 rises too. Drive his command group by hand and his song and her answer both rise, her vpoDN by +98.5 Hz over ordinary song. The other predictions did not hold here: rhythm over jitter, approach, a fall in song or her answer when P1 is silenced, scent to P1, sight to LC10a, and a mated no; closing her pC1 gate by hand did not establish a no either.</p>
+<table aria-label="Courtship predictions and results">
+<thead><tr><th scope="col">prediction</th><th scope="col">result</th></tr></thead>
+<tbody>
+<tr><td>P1 · her vpoDN, song over silence</td><td>supported</td></tr>
+<tr><td>P2 · her pC1, song over silence</td><td>supported</td></tr>
+<tr><td>P3 · her answer, rhythm over jitter</td><td>not supported</td></tr>
+<tr><td>P4 · closer with song than silence</td><td>not supported</td></tr>
+<tr><td>P5 · his pIP10 and song fall with P1 silenced</td><td>not supported</td></tr>
+<tr><td>P6 · her answer falls with P1 silenced</td><td>not supported</td></tr>
+<tr><td>P8 · his P1 rises with her scent</td><td>not supported</td></tr>
+<tr><td>P9 · her answer falls when mated</td><td>not supported</td></tr>
+<tr><td>P11 · his LC10a rises with sight</td><td>not supported</td></tr>
+<tr><td>P13 · driving P1 raises his pIP10 and song</td><td>supported</td></tr>
+<tr><td>P14 · driving P1 raises her answer</td><td>supported</td></tr>
+<tr><td>P9' · her answer falls with the pC1 gate closed by hand</td><td>not supported</td></tr>
+</tbody>
+</table>
+<p>Across seeds, the chosen acceptance rule was met on nine of ten with song and none in silence; driving his command group raised his pIP10, delivered song and her vpoDN on all ten seeds, while closing her gate by hand still left nine of ten meeting the rule.</p>
+<p><a href="https://github.com/opifor/flycoinrh/tree/courtship">the full record</a><!-- pr:link -->: <code>build/courtship_report.md</code> holds the first comparisons; <code>build/courtship_addendum_report.md</code> holds the command drive and the hand-closed gate.</p>
 <!-- results:end -->
 </section>
 <section>
 <h2>what is not real</h2>
 <ul>
-<li>Rates, not sounds, until the waveform step.</li>
+<li>The brain readouts are rates; the inputs, song rendering and movement are chosen encodings, with uncalibrated gains.</li>
+<li>Her ear hears a waveform in 5 ms slices and her brain runs the full 50 ms of every step; the effects are smaller in this regime than in the first run.</li>
 <li>Her eye is blind in the uniform arena.</li>
-<li>Everything the brains receive is a chosen encoding, written down.</li>
+<li>The sex-peptide pathway's axons in her map carry no synapses, so a mated state has no wired entry; closing her pC1 gate by hand did not produce a no.</li>
+<li>The p1drive condition is an intervention, not a claim that P1 fires like that on its own.</li>
 <li>The words on this page are ours, the numbers are theirs.</li>
 </ul>
 </section>
-<footer><p><!-- repo:link -->The courtship repository will be linked here when it is public.</p></footer>
+<footer><p><!-- repo:link --><a href="https://github.com/opifor/flycoinrh/tree/courtship">the courtship repository</a></p></footer>
 </main>
 </body>
 </html>

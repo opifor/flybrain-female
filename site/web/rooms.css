@@ -25,3 +25,4 @@
 
 /* Courtship trajectory figure. */
 .courtship-figure{margin:32px 0}.courtship-figure img{display:block;width:100%;height:auto}.courtship-figure figcaption{color:var(--dim);margin-top:12px}
+.courtship-figure video{display:block;width:100%;height:auto;background:var(--plate)}
