@@ -1,0 +1,1116 @@
+{
+  "sources": [
+    {
+      "file": "graph_female.npz",
+      "sha256": "c3ad89ef738ad58187ff4d2f9978c923aa0335f1e3cbf1dd3ee3191dc7477331"
+    },
+    {
+      "file": "banc_888_meta.feather",
+      "sha256": "86ccf5df0c67419f8c5f43e93a7ed38d23a080e9f7fde26737290252f3780098"
+    },
+    {
+      "file": "banc_888_edgelist_simple_v3.feather",
+      "sha256": "8c296e946f3c69a8c7222f30ad75fa8a98eeb189124fec6df829c9125f4be64b"
+    }
+  ],
+  "sag_cells": 2,
+  "synapses_placed": 1384,
+  "synapses_missing": 24,
+  "unnamed_synapses_excluded": 63,
+  "total_outgoing_synapses": 1471,
+  "missing_types": [
+    "SMP602,SMP094",
+    "LNd_c",
+    "SIP078,SIP080",
+    "aSP-f1A,aSP-f1B,aSP-f2",
+    "CB1449",
+    "CB3192",
+    "CB3508",
+    "SMP338,SMP534",
+    "auto:CB0840",
+    "auto:SMP090"
+  ],
+  "sign_choice": "CHOSEN: SAG sign +1 follows functional evidence that SAG activity promotes virgin receptivity and is silenced after mating by sex peptide acting on SPSN (Feng, Palfreyman, Hasemeyer, Talsma, Dickson 2014 Neuron 83:135), not the BANC dopamine transmitter prediction.",
+  "synapse_mv": 0.275,
+  "mapping": "fafb_cell_type only (cross-map names); no count threshold; even split over target cells and SAG cells",
+  "per_type": [
+    {
+      "target_type": "pC1a",
+      "synapses": 317,
+      "fafb_cells": 2,
+      "placed": 317,
+      "missing": 0
+    },
+    {
+      "target_type": "pC1b",
+      "synapses": 204,
+      "fafb_cells": 2,
+      "placed": 204,
+      "missing": 0
+    },
+    {
+      "target_type": "pC1c",
+      "synapses": 131,
+      "fafb_cells": 2,
+      "placed": 131,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0405",
+      "synapses": 106,
+      "fafb_cells": 2,
+      "placed": 106,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0094",
+      "synapses": 97,
+      "fafb_cells": 2,
+      "placed": 97,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP286",
+      "synapses": 63,
+      "fafb_cells": 2,
+      "placed": 63,
+      "missing": 0
+    },
+    {
+      "target_type": "NPFL1-I",
+      "synapses": 16,
+      "fafb_cells": 2,
+      "placed": 16,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1379",
+      "synapses": 15,
+      "fafb_cells": 7,
+      "placed": 15,
+      "missing": 0
+    },
+    {
+      "target_type": "FLA101f_c",
+      "synapses": 15,
+      "fafb_cells": 6,
+      "placed": 15,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1081",
+      "synapses": 14,
+      "fafb_cells": 2,
+      "placed": 14,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0878",
+      "synapses": 13,
+      "fafb_cells": 8,
+      "placed": 13,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2165",
+      "synapses": 13,
+      "fafb_cells": 3,
+      "placed": 13,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0015",
+      "synapses": 12,
+      "fafb_cells": 2,
+      "placed": 12,
+      "missing": 0
+    },
+    {
+      "target_type": "CL165",
+      "synapses": 12,
+      "fafb_cells": 5,
+      "placed": 12,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP602,SMP094",
+      "synapses": 11,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 11
+    },
+    {
+      "target_type": "SMP162b",
+      "synapses": 10,
+      "fafb_cells": 4,
+      "placed": 10,
+      "missing": 0
+    },
+    {
+      "target_type": "CL237",
+      "synapses": 9,
+      "fafb_cells": 2,
+      "placed": 9,
+      "missing": 0
+    },
+    {
+      "target_type": "DNpe047",
+      "synapses": 9,
+      "fafb_cells": 2,
+      "placed": 9,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP429",
+      "synapses": 9,
+      "fafb_cells": 7,
+      "placed": 9,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_FLA_SMP_2",
+      "synapses": 8,
+      "fafb_cells": 2,
+      "placed": 8,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1008",
+      "synapses": 8,
+      "fafb_cells": 17,
+      "placed": 8,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1024",
+      "synapses": 8,
+      "fafb_cells": 6,
+      "placed": 8,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1071",
+      "synapses": 8,
+      "fafb_cells": 6,
+      "placed": 8,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1423",
+      "synapses": 8,
+      "fafb_cells": 12,
+      "placed": 8,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP106",
+      "synapses": 8,
+      "fafb_cells": 19,
+      "placed": 8,
+      "missing": 0
+    },
+    {
+      "target_type": "AstA1",
+      "synapses": 7,
+      "fafb_cells": 2,
+      "placed": 7,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0593",
+      "synapses": 7,
+      "fafb_cells": 2,
+      "placed": 7,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0959",
+      "synapses": 7,
+      "fafb_cells": 16,
+      "placed": 7,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1253",
+      "synapses": 7,
+      "fafb_cells": 8,
+      "placed": 7,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1586",
+      "synapses": 7,
+      "fafb_cells": 8,
+      "placed": 7,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_GNG_FLA_3",
+      "synapses": 6,
+      "fafb_cells": 2,
+      "placed": 6,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP090",
+      "synapses": 6,
+      "fafb_cells": 4,
+      "placed": 6,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP107",
+      "synapses": 6,
+      "fafb_cells": 12,
+      "placed": 6,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP172",
+      "synapses": 6,
+      "fafb_cells": 6,
+      "placed": 6,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP175",
+      "synapses": 6,
+      "fafb_cells": 2,
+      "placed": 6,
+      "missing": 0
+    },
+    {
+      "target_type": "l_NSC_CRZ",
+      "synapses": 6,
+      "fafb_cells": 6,
+      "placed": 6,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0075",
+      "synapses": 5,
+      "fafb_cells": 4,
+      "placed": 5,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0975",
+      "synapses": 5,
+      "fafb_cells": 8,
+      "placed": 5,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP103",
+      "synapses": 5,
+      "fafb_cells": 9,
+      "placed": 5,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP105_a",
+      "synapses": 5,
+      "fafb_cells": 8,
+      "placed": 5,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP510a",
+      "synapses": 5,
+      "fafb_cells": 2,
+      "placed": 5,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1026",
+      "synapses": 4,
+      "fafb_cells": 6,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1224",
+      "synapses": 4,
+      "fafb_cells": 4,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "FLA101f_b",
+      "synapses": 4,
+      "fafb_cells": 12,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP092",
+      "synapses": 4,
+      "fafb_cells": 4,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP098_a",
+      "synapses": 4,
+      "fafb_cells": 6,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP593",
+      "synapses": 4,
+      "fafb_cells": 2,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "oviDNa_a",
+      "synapses": 4,
+      "fafb_cells": 2,
+      "placed": 4,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1456",
+      "synapses": 3,
+      "fafb_cells": 11,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1508",
+      "synapses": 3,
+      "fafb_cells": 7,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1769",
+      "synapses": 3,
+      "fafb_cells": 3,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1930",
+      "synapses": 3,
+      "fafb_cells": 6,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2156",
+      "synapses": 3,
+      "fafb_cells": 6,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2628",
+      "synapses": 3,
+      "fafb_cells": 4,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "CB4204",
+      "synapses": 3,
+      "fafb_cells": 1,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "DNg66",
+      "synapses": 3,
+      "fafb_cells": 1,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "DNp48",
+      "synapses": 3,
+      "fafb_cells": 2,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "LNd_c",
+      "synapses": 3,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 3
+    },
+    {
+      "target_type": "PAL01",
+      "synapses": 3,
+      "fafb_cells": 2,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "SLP388",
+      "synapses": 3,
+      "fafb_cells": 2,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP121",
+      "synapses": 3,
+      "fafb_cells": 2,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP122",
+      "synapses": 3,
+      "fafb_cells": 2,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP169",
+      "synapses": 3,
+      "fafb_cells": 2,
+      "placed": 3,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_SMP_3",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_multi_76",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0057",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0772",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0963",
+      "synapses": 2,
+      "fafb_cells": 5,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1729",
+      "synapses": 2,
+      "fafb_cells": 3,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2605",
+      "synapses": 2,
+      "fafb_cells": 5,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "CL025",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "DNpe041",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "FLA101f_d",
+      "synapses": 2,
+      "fafb_cells": 5,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SIP078,SIP080",
+      "synapses": 2,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 2
+    },
+    {
+      "target_type": "SLP279",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP093",
+      "synapses": 2,
+      "fafb_cells": 4,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP160",
+      "synapses": 2,
+      "fafb_cells": 4,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP162c",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP171",
+      "synapses": 2,
+      "fafb_cells": 7,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP333",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP482",
+      "synapses": 2,
+      "fafb_cells": 4,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP507",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP589",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP594",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP598",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "aSP-f1A,aSP-f1B,aSP-f2",
+      "synapses": 2,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 2
+    },
+    {
+      "target_type": "pC1e",
+      "synapses": 2,
+      "fafb_cells": 2,
+      "placed": 2,
+      "missing": 0
+    },
+    {
+      "target_type": "5-HTPMPD01",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_FLA_1",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_GNG_111",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_SMP_1",
+      "synapses": 1,
+      "fafb_cells": 5,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_multi_23",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "AN_multi_73",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0060",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0124",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0135",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0232",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0270",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0272",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0626",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0684",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB0710",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1016",
+      "synapses": 1,
+      "fafb_cells": 3,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1267",
+      "synapses": 1,
+      "fafb_cells": 3,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1390",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1445",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1449",
+      "synapses": 1,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 1
+    },
+    {
+      "target_type": "CB1537",
+      "synapses": 1,
+      "fafb_cells": 8,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1858",
+      "synapses": 1,
+      "fafb_cells": 6,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB1941",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2021",
+      "synapses": 1,
+      "fafb_cells": 8,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2274",
+      "synapses": 1,
+      "fafb_cells": 3,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2291",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2317",
+      "synapses": 1,
+      "fafb_cells": 13,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2539",
+      "synapses": 1,
+      "fafb_cells": 7,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2610",
+      "synapses": 1,
+      "fafb_cells": 9,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB2636",
+      "synapses": 1,
+      "fafb_cells": 6,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB3043",
+      "synapses": 1,
+      "fafb_cells": 6,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB3060",
+      "synapses": 1,
+      "fafb_cells": 3,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB3192",
+      "synapses": 1,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 1
+    },
+    {
+      "target_type": "CB3508",
+      "synapses": 1,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 1
+    },
+    {
+      "target_type": "CB3547",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB3550",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CB3772",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CL178",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CRE080c",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "CRE081",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNg70",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNge082",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNge136",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNp14",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNp36",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNp37",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNp62",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "DNpe053",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "LHPV11a1",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "LHPV5i1",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SLP212c",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SLP398a",
+      "synapses": 1,
+      "fafb_cells": 1,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SLPpm3_H01",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP001",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP028",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP042",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP083",
+      "synapses": 1,
+      "fafb_cells": 4,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP203",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP338,SMP534",
+      "synapses": 1,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 1
+    },
+    {
+      "target_type": "SMP384",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP406",
+      "synapses": 1,
+      "fafb_cells": 11,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP510b",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "SMP596",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "auto:CB0840",
+      "synapses": 1,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 1
+    },
+    {
+      "target_type": "auto:SMP090",
+      "synapses": 1,
+      "fafb_cells": 0,
+      "placed": 0,
+      "missing": 1
+    },
+    {
+      "target_type": "oviDNb",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    },
+    {
+      "target_type": "pC1d",
+      "synapses": 1,
+      "fafb_cells": 2,
+      "placed": 1,
+      "missing": 0
+    }
+  ]
+}

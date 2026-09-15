@@ -14,6 +14,8 @@ The female connectome dataset is FlyWire FAFB v783, © the FlyWire Consortium
 *Nature* 2024; Schlegel et al., *Nature* 2024. The exports are not redistributed
 here. The data stays CC-BY wherever it goes; keep that attribution with it.
 
+BANC v888 compiled data, FlyWire / Lee lab, CC-BY 4.0 (confirm on the dataset page).
+
 The backrooms lines (backrooms_talk/) are written by LFM2.5-1.2B-Instruct, a
 language model by Liquid AI, used under the LFM Open License v1.0. The model
 weights are not included in this repository and are not redistributed here;

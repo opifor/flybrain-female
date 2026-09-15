@@ -14,6 +14,105 @@ import backrooms_world as bw
 from test_courtship import make_parts
 
 
+def test_v8_missing_graph(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, 'V8_GRAPH', tmp_path/'missing.npz')
+    with pytest.raises(ValueError, match='v8 requires'):
+        ce.main(['--protocol', 'v8', '--quick', '1', '--out', str(tmp_path/'run')], room_factory=FakeRoom)
+
+
+def test_v8_protocol_graph_record_and_verdict_prose(tmp_path, monkeypatch):
+    from graft_sag import sha256
+    graph, ladder = tmp_path/'own.npz', tmp_path/'ladder.json'
+    np.savez_compressed(graph, types=['AN_SMP_2']*2 + ['AN_FLA_SMP_2']*2,
+                        restore=[json.dumps(dict(sign_choice='chosen +1', per_type={}))])
+    monkeypatch.setattr(ce, 'V8_GRAPH', graph)
+    monkeypatch.setattr(ce, 'V8_CALIBRATION', ladder)
+    ladder.write_text(json.dumps(dict(graph_sha256=sha256(graph), text='Measured test ladder')), encoding='utf-8')
+    out = tmp_path/'v8'
+    assert ce.main(['--protocol', 'v8', '--quick', '1', '--out', str(out)], room_factory=FakeRoom) == 0
+    data = json.loads(ce.paths(out)[0].read_text(encoding='utf-8'))
+    assert data['female_graph']['sha256'] == sha256(graph)
+    assert data['state_cells'] == 4
+    assert data['state_cells_per_type'] == dict(AN_SMP_2=2, AN_FLA_SMP_2=2, ANXXX983=0)
+    assert data['female_exc_scale'] == .7
+    spec = data['protocol_spec']
+    assert spec['conditions'] == {k: list(v) for k, v in ce.V7_CONDITIONS.items()}
+    assert ce.V7_PREDICTIONS in spec['text']
+    assert spec['state_pattern'] == ce.V8_STATE_PATTERN
+    assert 'Measured test ladder' in spec['text']
+    assert data['FEMALE_GRAPH_present'] == ('FEMALE_GRAPH' in os.environ)
+    report = ce.paths(out)[3].read_text(encoding='utf-8')
+    for label, prediction in data['summary']['predictions'].items():
+        assert f"{label} was {prediction['verdict']}:" in report
+    assert ce.SAG_AUDIT_CORRECTION in report
+    assert ce.main(['--reanalyse', str(ce.paths(out)[0])]) == 0
+    ladder.write_text(json.dumps(dict(graph_sha256='wrong', text='bad')), encoding='utf-8')
+    with pytest.raises(ValueError, match='SHA256 mismatch'):
+        ce.v8_protocol_spec(ce.v8_graph_record())
+
+
+def test_v8_body_drives_both_types_and_v7_retains_legacy_group():
+    from test_courtship import female_fake
+    for protocol, count in (('v7', 2), ('v8', 4)):
+        female = female_fake(list(female_fake().types) + ['AN_SMP_2']*2 + ['AN_FLA_SMP_2']*2)
+        room = ce.build_room(3, 'virgin_song', brains=(make_parts()[0], female),
+                             annotations_path='build/missing', protocol=protocol)
+        body = room.bodies['B']
+        assert len(body.groups['SAG']) == count
+        drive = body.drive(np.zeros((bw.FRAME_H, bw.FRAME_W)), 0., 0.)
+        assert np.all(drive[tuple(body.groups['SAG'])] == ce.courtship.STATE_HZ)
+
+
+def test_v7_missing_graph(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, 'V7_GRAPH', tmp_path/'missing.npz')
+    with pytest.raises(ValueError, match='v7 requires'):
+        ce.main(['--protocol', 'v7', '--quick', '1', '--out', str(tmp_path/'run')], room_factory=FakeRoom)
+
+
+def test_v7_fake_quick_and_predictions(tmp_path, monkeypatch):
+    graph = tmp_path/'graft.npz'
+    np.savez_compressed(graph, graft=np.array([json.dumps(dict(sources=[], sign_choice='chosen +1'))]))
+    monkeypatch.setattr(ce, 'V7_GRAPH', graph)
+    out = tmp_path/'v7'
+    assert ce.main(['--protocol', 'v7', '--quick', '1', '--out', str(out)], room_factory=FakeRoom) == 0
+    data = json.loads(ce.paths(out)[0].read_text())
+    assert [(r['seed'], r['condition']) for r in data['outcomes']] == [(s, c) for s in (0, 1) for c in ce.V7_CONDITIONS]
+    from graft_sag import sha256
+    assert data['female_graph']['sha256'] == sha256(graph)
+    assert data['female_exc_scale'] == .7 and ce.FEMALE_EXC_SCALE == 1.
+    assert ce.main(['--reanalyse', str(ce.paths(out)[0])]) == 0
+    report = ce.paths(out)[3].read_text()
+    assert ce.V7_PREDICTIONS in report and ce.V7_CALIBRATION in report
+    assert ce.SAG_AUDIT_CORRECTION in report
+    assert 'P17 was ' in report and 'P18 was ' in report and 'P19 was ' in report
+    for r in data['outcomes']:
+        assert r['state_group'] == 'SAG'
+        assert r['state_drive_hz'] == (50. if r['condition'].startswith('virgin') else 0.)
+        r['vpodn_hz'] = {'virgin_song': 10 + r['seed']*2, 'mated_song': 3, 'virgin_silence': 1, 'mated_silence': 0}[r['condition']]
+        r['pc1_hz'] = 20 if r['condition'] == 'virgin_song' else 5
+    summary = ce.summarise_v7(data['outcomes'][::-1])
+    for label, diffs, mean, se in [('P17', [7, 9], 8, 1), ('P18', [9, 11], 10, 1), ('P19', [15, 15], 15, 0)]:
+        p = summary['predictions'][label]
+        assert p['paired_differences'] == diffs
+        assert p['mean'] == mean and p['se'] == se and p['verdict'] == 'supported'
+    assert len(summary['P20']) == 8
+
+
+def test_v7_real_body_configuration_with_fake_brains():
+    from test_courtship import female_fake
+    starts = []
+    for c in ce.V7_CONDITIONS:
+        female = female_fake(list(female_fake().types) + ['AN_SMP_2']*2)
+        room = ce.build_room(3, c, brains=(make_parts()[0], female), annotations_path='build/missing')
+        starts.append(room.arena.geometry())
+        body = room.bodies['B']
+        assert body.state_group == 'SAG'
+        assert body.state == c.split('_')[0]
+        room.previous_rates = dict(pip10_hz=100., pulse_hz=8., sine_hz=0.)
+        assert bool(np.any(room.listener_sound(0))) == c.endswith('_song')
+    assert all(s == FakeRoom(3, 'song').arena.geometry() for s in starts)
+
+
 def test_v6_requires_baseline():
     with pytest.raises(ValueError, match="requires --baseline"):
         ce.main(["--protocol", "v6", "--quick", "1", "--out", "build/courtship_v6_quick"], room_factory=FakeRoom)
@@ -51,6 +150,10 @@ def test_v6_fake_quick_and_mismatches(tmp_path):
     argv = ["--protocol", "v6", "--quick", "1", "--baseline", str(jp), "--out", str(out)]
     assert ce.main(argv, room_factory=FakeRoom) == 0
     data = json.loads(ce.paths(out)[0].read_text(encoding="utf-8"))
+    from graft_sag import sha256
+    for record in (baseline, data):
+        assert record['female_graph']['sha256'] == sha256(record['female_graph']['path'])
+        assert record['FEMALE_GRAPH_present'] == ('FEMALE_GRAPH' in os.environ)
     assert [(r["seed"], r["condition"]) for r in data["outcomes"]] == [(s, c) for s in (0, 1) for c in ("gated", "p1drive")]
     import hashlib
     assert data["baseline"]["sha256"] == hashlib.sha256(jp.read_bytes()).hexdigest()
@@ -511,7 +614,7 @@ class Cli(unittest.TestCase):
             alias = Path(td) / "alias"
             ce.paths(published)[2].write_bytes(b"protected")
             os.link(ce.paths(published)[2], ce.paths(alias)[0])
-            for constant in ("PUBLISHED", "PUBLISHED_ADDENDUM"):
+            for constant in ("PUBLISHED", "PUBLISHED_ADDENDUM", "PUBLISHED_V7", "PUBLISHED_V8"):
                 with self.subTest(constant=constant), patch.object(ce, constant, published):
                     with self.assertRaisesRegex(ValueError, "published prefix is refused"):
                         ce.assert_not_published(alias)
@@ -526,6 +629,8 @@ class Cli(unittest.TestCase):
     def test_published_refusal(self):
         self.assertEqual(ce.PUBLISHED, Path("build/courtship"))
         self.assertEqual(ce.PUBLISHED_ADDENDUM, Path("build/courtship_addendum"))
+        self.assertEqual(ce.PUBLISHED_V7, Path("build/courtship_v7"))
+        self.assertEqual(ce.PUBLISHED_V8, Path("build/courtship_v8"))
         for prefix in ("build/courtship", "build/COURTSHIP", "build/../build/courtship",
                        "build/courtship_addendum", "build/COURTSHIP_ADDENDUM",
                        "build/../build/courtship_addendum"):

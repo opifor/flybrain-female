@@ -490,14 +490,27 @@ py build_graph_female.py
 py courtship_experiment.py --protocol v5 --quick 1 --out build/courtship_smoke
 py courtship_experiment.py --protocol v5 --out build/courtship_local
 py courtship_experiment.py --protocol v6 --baseline build/courtship_experiment.json --brain flysim_gpu.FlyBrainGPU --out build/courtship_addendum_local
+py graft_sag.py
+py courtship_experiment.py --protocol v7 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v7_local
+py restore_sag.py
+py calibrate_sag.py
+py courtship_experiment.py --protocol v8 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v8_local
 ```
+
+For the graft, first download the public BANC v888 compiled data into
+`data/banc/`, with no login: [banc_888_meta.feather](https://storage.googleapis.com/lee-lab_brain-and-nerve-cord-fly-connectome/compiled_data/banc_888/banc_888_meta.feather)
+(about 57 MB) and [banc_888_edgelist_simple_v3.feather](https://storage.googleapis.com/lee-lab_brain-and-nerve-cord-fly-connectome/compiled_data/banc_888/banc_888_edgelist_simple_v3.feather)
+(about 359 MB). The same files are in
+`gs://lee-lab_brain-and-nerve-cord-fly-connectome/compiled_data/banc_888/`.
+Attribution: Bates, Phelps, Kim et al., Nature 2026 (BANC); title to be confirmed.
+See NOTICE for the data attribution and license confirmation caveat.
 
 Quick runs use two seeds and 80 steps. Add `--brain flysim_gpu.FlyBrainGPU`
 to the v5 commands to use the GPU for both brains, as the published run did.
 The addendum must use the same brain class as its baseline.
 Each prefix gets `_experiment.json`, `_trajectories.npz`, `_trajectories.png`
-and `_report.md`. Both published prefixes, `build/courtship` and
-`build/courtship_addendum`, are refused, including case variants and file aliases.
+and `_report.md`. The published prefixes, `build/courtship`,
+`build/courtship_addendum`, `build/courtship_v7` and `build/courtship_v8`, are refused, including case variants and file aliases.
 
 The evidence is in [the v5 report](build/courtship_report.md) and
 [the v6 addendum](build/courtship_addendum_report.md); the addendum records
@@ -518,15 +531,18 @@ standard errors across ten seeds; P5 and P13 require both comparisons.
 | v6 | P9': her vpoDN, v5 song > gated | not supported |
 | v6 | P13: pIP10 and delivered song, p1drive > v5 song | supported |
 | v6 | P14: her vpoDN, p1drive > v5 song | supported |
+| v7 | P17: her vpoDN, virgin_song > mated_song; +61.8 Hz, SE 0.94 | supported |
+| v7 | P18: her vpoDN, virgin_song > virgin_silence; -0.4 Hz, SE 1.13 | not supported |
+| v7 | P19: her pC1, virgin_song > mated_song; +34.3 Hz, SE 0.73 | supported |
 
-Song met the accept rule on nine of ten seeds, with approach on three and retreat on seven; silence met it on none, with approach on one and retreat on nine. Accept means vpoDN above zero in at least three windows; song produced some vpoDN activity on all ten seeds, while silence produced none.
+In v5, song met the accept rule on nine of ten seeds, with approach on three and retreat on seven; silence met it on none, with approach on one and retreat on nine. Accept means vpoDN above zero in at least three windows; song produced some vpoDN activity on all ten seeds, while silence produced none.
 
-She hears him through the waveform: song raised her vpoDN and pC1 over silence. Timing did not beat a copy with the same energy, and song did not bring them closer. Removing her scent did not lower his P1; cutting his P1 outputs did not lower his pIP10 or song, and sight did not establish an increase in his LC10a. Her sex-peptide pathway has no synapses to carry a change of state into this map, and closing pC1 by hand did not establish a no. Driving his P1 from above did raise his pIP10, the song reaching her, and her vpoDN. These unsupported comparisons do not establish that their effects are exactly zero.
+She hears him through the waveform: song raised her vpoDN and pC1 over silence. Timing did not beat a copy with the same energy, and song did not bring them closer. Removing her scent did not lower his P1; cutting his P1 outputs did not lower his pIP10 or song, and sight did not establish an increase in his LC10a. In the part-one graph, the transmitter-sign rule dropped her SAG outputs, as [the later audit explains](build/courtship_v8_report.md#limitations); closing pC1 by hand did not establish a no. Driving his P1 from above did raise his pIP10, the song reaching her, and her vpoDN. These unsupported comparisons do not establish that their effects are exactly zero.
 
-What is chosen or missing:
+What was chosen or missing in part one:
 
 - Her ear now hears a waveform in 5 ms slices and her brain runs the full 50 ms of every step; effects are smaller in this regime than in the first run.
-- The sex-peptide axons in her map carry no synapses, so a mated state has no wired entry; gated cuts pC1 outputs by hand.
+- In the built graph used by v5/v6, the sex-peptide state input has no outputs; gated cuts pC1 outputs by hand. The v8 audit below corrects the earlier anatomical explanation: her SAG export contains synapses that the transmitter-sign rule removed.
 - p1drive is an intervention.
 - Her eye is blind; dark and silence coincide. Her raw excitation scale is 1.0 by choice.
 - vpoDN is DNp37 by alias, two cells; pC1a-e has ten cells. His P1 is an uncertain dictionary group of 86 cells; contact cells carry a putative ppk23 label.
@@ -538,16 +554,60 @@ What is chosen or missing:
 
 [The first run, with a rate ear](build/courtship_v3_report.md), is kept for comparison.
 
-This is part one; the loop is built end to end and three of its five steps hold
-under the rules above. What comes next, in the open, on top of this branch:
+### Part two: she can say no
 
-- **Cooler brains.** Both maps run near their firing ceiling, which is why small
-  signals such as rhythm and her scent get lost. Probes suggest a lower
+**Protocol v8 restores her own measured SAG synapses.** The [full v8 report](build/courtship_v8_report.md) and [experiment record](build/courtship_v8_experiment.json) support a state-dependent reduction in her receptivity command, with the song still unnecessary for her yes.
+
+Her axon and its synapses are in the FAFB export. The [audit correction](build/courtship_v8_report.md#limitations) identifies a builder limitation: [the transmitter-sign rule](build_graph_female.py) keeps acetylcholine as positive and GABA and glutamate as negative, while serotonin gets sign zero and its edges are dropped from `build/graph_female.npz`. The SAG consensus transmitter is serotonin. The same rule silences outputs from about 2,900 other cells in [the base graph](build/graph_female.npz).
+
+The [restoration record](build/sag_restore.json) counts two AN_SMP_2 cells with 1,375 outgoing synapses and two AN_FLA_SMP_2 cells with 1,952: all 3,327 are restored as individual female pre/post pairs in `build/graph_female_own_sag.npz`. BANC supplied a second individual showing the same route, motivating another look at her export. The [target comparison](build/sag_restore_printout.txt) shows the same pC1a > pC1b > pC1c order in both individuals:
+
+| Target type | Her own synapses | BANC synapses |
+|---|---:|---:|
+| pC1a | 615 | 317 |
+| pC1b | 387 | 204 |
+| pC1c | 179 | 131 |
+
+**CHOSEN:** the restored SAG sign is +1, meaning activity encourages the next cell to fire, on the functional evidence from Feng and colleagues cited in [the restoration record](build/sag_restore.json). FAFB consensus serotonin and BANC prediction dopamine do not themselves fix that effect sign. The [v8 protocol](build/courtship_v8_report.md) drives both SAG types, four cells, at a steady 50 Hz for virgin and zero for mated; the upstream sex-peptide sensory neurons, SPSN, are not modelled. Her positive-weight scale stays at 0.7, carried over from v7 without tuning on the v8 ladder. His side is unchanged.
+
+A first run, [v7](build/courtship_v7_report.md), grafted BANC's measured outputs onto her map. The audit then found her own export carries the route; v8 restores her own synapses. The BANC-graft variant remains published in [its full record](build/courtship_v7_experiment.json). Both records support P17 and P19 and do not support P18, as the table below shows; the measured differences change.
+
+The [v8 record](build/courtship_v8_experiment.json) uses the same four conditions and P17/P18/P19/P20 predictions as v7, paired across ten seeds with 400 steps per condition on the GPU. Song delivers his waveform to her; silence zeros it while his brain keeps running. vpoDN is her receptivity command readout and pC1 her receptivity cell group. Hz means spikes per second; SE is the standard error of the paired difference. The [verdict rule](build/courtship_v8_report.md) requires a positive paired mean greater than two SE. Values below are rounded from the linked records.
+
+| Record | Prediction and comparison | Mean difference, Hz | SE, Hz | Verdict |
+|---|---|---:|---:|---|
+| [v7](build/courtship_v7_experiment.json) | P17: vpoDN, virgin_song − mated_song | 61.79 | 0.94 | supported |
+| [v8](build/courtship_v8_experiment.json) | P17: vpoDN, virgin_song − mated_song | 73.76 | 0.96 | supported |
+| [v7](build/courtship_v7_experiment.json) | P18: vpoDN, virgin_song − virgin_silence | −0.41 | 1.13 | not supported |
+| [v8](build/courtship_v8_experiment.json) | P18: vpoDN, virgin_song − virgin_silence | −0.32 | 1.03 | not supported |
+| [v7](build/courtship_v7_experiment.json) | P19: pC1, virgin_song − mated_song | 34.26 | 0.73 | supported |
+| [v8](build/courtship_v8_experiment.json) | P19: pC1, virgin_song − mated_song | 38.68 | 0.34 | supported |
+
+The v8 condition means and accept counts come from [the per-seed P20 readouts](build/courtship_v8_experiment.json); P20 is descriptive and has no verdict.
+
+| Condition | Her vpoDN, mean Hz | Her pC1, mean Hz | Accept rule met |
+|---|---:|---:|---:|
+| virgin_song | 74.00 | 38.73 | 10/10 |
+| mated_song | 0.24 | 0.05 | 4/10 |
+| virgin_silence | 74.32 | 38.81 | 10/10 |
+| mated_silence | 0.00 | 0.00 | 0/10 |
+
+For comparison, [v7 accept counts](build/courtship_v7_report.md#p20-descriptive-no-verdict), in the same condition order, were 10/10, 6/10, 10/10 and 0/10.
+
+P17's state difference is positive on every seed, and P19 supports a state effect in pC1 too. This is a no in the rate comparison, not complete refusal on every trial: [the chosen accept rule](build/courtship_v8_report.md) needs only vpoDN above zero in at least three windows, and mated_song still meets it on four seeds. His P1 and pIP10 readings remain descriptive; they do not establish that he decides or adapts.
+
+**P18 is not supported in the full v8 record.** Virgin silence still produces 74.32 Hz vpoDN and meets the accept rule on all ten seeds. The song-minus-silence difference is small relative to that silence level. Her state can open the gate on its own: the song is still not required for her yes. The [full result and calibration ladder](build/courtship_v8_report.md) do not establish a gate that needs both state and song.
+
+The loop is built end to end: he decides · he sings · she hears · she answers · he adapts. Three of five steps hold, now with a no added to “she answers”; this combines [the earlier song and hearing comparisons](build/courtship_v5_report.md) and [P1-drive results](build/courtship_v6_report.md) with [v8's state comparison](build/courtship_v8_report.md). The open steps, “he decides” and “he adapts”, remain unestablished.
+
+### What comes next
+
+- **Cooler brains.** His side is unchanged and still runs near its firing ceiling,
+  where small signals such as rhythm and her scent get lost. Probes suggest a lower
   excitation scale makes pIP10 depend on P1; that is a calibration to be chosen
   before data and run as a new protocol, not a fix to this one.
-- **A no with synapses.** Her sex-peptide axons end without synapses in this map.
-  The candidates for a state that reaches pC1 or oviDN through wiring that is
-  actually there will be read off the graph and pre-registered.
+- **Her nerve cord.** The full BANC graph is built; her wing, leg and abdominal
+  motor neurons are the next readouts.
 - **His adaptation, through his eye only.** Whether his song mode follows what
   LC10a saw a window earlier, with her in view for the whole trial.
 - **More than one male.** The backrooms already step four bodies; a room with one

@@ -94,6 +94,24 @@ def her(fb=None):
     return HerBody("B", fb, FakeEye(fb), female_groups(fb), female_motor(fb), seed=2)
 
 
+def test_sag_state_group_and_records():
+    from courtship import STATE_HZ, SPSN_HZ
+    fb = female_fake(list(female_fake().types) + ['AN_SMP_2', 'ANXXX983'])
+    groups = female_groups(fb)
+    assert groups['SAG'].tolist() == [fb.n-2, fb.n-1]
+    assert STATE_HZ == SPSN_HZ == 50.
+    for state, hz in [('virgin', 50.), ('mated', 0.)]:
+        body = HerBody('B', fb, BlindEye(fb), groups, female_motor(fb), state=state, state_group='SAG')
+        drive = body.drive(np.zeros((bw.FRAME_H, bw.FRAME_W)), 0., 0.)
+        np.testing.assert_array_equal(drive[tuple(groups['SAG'])], [hz, hz])
+        assert tuple(groups['SpsP']) not in drive
+        r = body.step(np.zeros((bw.FRAME_H, bw.FRAME_W)), 0., 0.)
+        for record in (r, body.describe()):
+            assert record['state_group'] == 'SAG' and record['state_drive_hz'] == hz
+    with pytest.raises(ValueError, match='state_group'):
+        HerBody('B', fb, BlindEye(fb), groups, female_motor(fb), state_group='other')
+
+
 def test_state_drive_and_recorded_readouts():
     from courtship import SPSN_HZ
     body = her()
@@ -307,7 +325,8 @@ def test_groups_and_motor():
     fb = female_fake()
     groups = female_groups(fb)
     assert {k: len(v) for k, v in groups.items()} == {
-        "JO_A": 2, "JO_B": 2, "pC1": 10, "vpoDN": 2, "SpsP": 7, "oviDN": 6}
+        "JO_A": 2, "JO_B": 2, "pC1": 10, "vpoDN": 2, "SpsP": 7, "oviDN": 6,
+        "wing_mn": 0, "leg_mn": 0, "abd_mn": 0}
     motor = female_motor(fb)
     assert set(motor) == set(bw.MOTOR_NAMES)
     for key, typ, side in (("steer_L", "DNa02", "L"), ("steer_R", "DNa02", "R"),

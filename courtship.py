@@ -1,5 +1,6 @@
 """A female listener and her descending-neuron answer in the shared room."""
 import time
+import os
 
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
@@ -11,7 +12,8 @@ from backrooms_world import (FlyBody, FRAME_W, FRAME_H, SIM_STEPS, LIF_DT_MS,
                              MOTOR_NAMES, PlumeFly, motor_groups, per_side_scales)
 
 BANDS = ((100, 500), (500, 2500))
-SPSN_HZ = 50.0  # CHOSEN tonic unmated-state encoding; SpsP identity is uncertain.
+STATE_HZ = 50.0  # CHOSEN tonic unmated-state encoding.
+SPSN_HZ = STATE_HZ  # Compatibility alias for v5/v6.
 P1_DRIVE_HZ = 100.0
 
 
@@ -61,16 +63,28 @@ class WaveEar:
                     note="CHOSEN: her brain runs in real time so pulse timing can reach it")
 
 
-def female_groups(fb):
+def female_groups(fb, sag_pattern="^(AN_SMP_2|ANXXX983)$"):
     """Female type names, under the room's channel keys."""
     patterns = {"JO_A": "^JO-A$", "JO_B": "^JO-B$",
                 "pC1": "^pC1[a-e]$", "vpoDN": "^DNp37$",
-                "SpsP": "^SpsP$", "oviDN": "^(oviDNa_a|oviDNa_b|oviDNb)$"}
+                "SpsP": "^SPSN$" if hasattr(fb, "region") else "^SpsP$",
+                "oviDN": "^(oviDNa_a|oviDNa_b|oviDNb)$"}
     groups = {k: np.asarray(fb.where(type_re=rx), dtype=np.int64)
               for k, rx in patterns.items()}
     for k in ("JO_A", "JO_B", "vpoDN", "SpsP", "oviDN"):
         if not groups[k].size:
             raise KeyError(f"no {k} cells matching {patterns[k]} in female graph")
+    if hasattr(fb, "region"):
+        groups["pC1"] = groups["pC1"][fb.region[groups["pC1"]] == "central_brain"]
+    sag = np.asarray(fb.where(type_re=sag_pattern), dtype=np.int64)
+    if sag.size:
+        groups["SAG"] = sag
+    effector = getattr(fb, "effector", np.full(fb.n, ""))
+    motor = getattr(fb, "superclass", np.full(fb.n, "")) == "motor"
+    for key, mask in (("wing_mn", effector == "wing"),
+                      ("leg_mn", np.char.endswith(effector, "_leg")),
+                      ("abd_mn", effector == "abdomen")):
+        groups[key] = np.flatnonzero(motor & mask)
     return groups
 
 
@@ -82,8 +96,10 @@ def female_motor(fb):
     return motor_groups(fb, sides)
 
 
-def load_female(path=BUILD / "graph_female.npz", p=Params(), exc_scale=None, brain_class=FlyBrain):
+def load_female(path=None, p=Params(), exc_scale=None, brain_class=FlyBrain):
     """The stored factor calibrated the web-roaming fork; courtship loads raw for parity with the male."""
+    if path is None:
+        path = os.environ.get("FEMALE_GRAPH") or BUILD / "graph_female.npz"
     cls = bw.brain_class(brain_class) if isinstance(brain_class, str) else brain_class
     fb = cls(path, p=p)
     with np.load(path, allow_pickle=False) as z:
@@ -93,6 +109,9 @@ def load_female(path=BUILD / "graph_female.npz", p=Params(), exc_scale=None, bra
         stored = float(z["exc_scale"]) if "exc_scale" in z else 1.0
         fb.exc_scale = stored if exc_scale is None else float(exc_scale)
         fb.soma_side = z["soma_side"].astype(str)
+        for key in ("fafb_types", "region", "cell_class", "effector"):
+            if key in z:
+                setattr(fb, key, z[key].astype(str))
     if not np.isfinite(fb.exc_scale) or fb.exc_scale < 0:
         raise ValueError("exc_scale must be finite and non-negative")
     # Indexed assignment notifies GPU tracked weights; run() refreshes the device.
@@ -119,7 +138,7 @@ class HerBody(FlyBody):
 
     def __init__(self, name, fb, eye, groups, motor, gains=None, sim_steps=SIM_STEPS,
                  seed=0, gaze=(FRAME_W / 2.0, FRAME_H / 2.0), sides=None,
-                 state="virgin"):
+                 state="virgin", state_group="SpsP"):
         # Reuse FlyBody's step/state protocol without its male-only selectors.
         self.name, self.fb, self.eye = str(name), fb, eye
         self.gains, self.sim_steps, self.seed = gains, int(sim_steps), int(seed)
@@ -127,6 +146,9 @@ class HerBody(FlyBody):
         if state not in ("virgin", "mated"):
             raise ValueError("state must be virgin or mated")
         self.state, self.brain_state, self.windows = state, None, 0
+        if state_group not in ("SpsP", "SAG"):
+            raise ValueError("state_group must be SpsP or SAG")
+        self.state_group = state_group
         self.secs = self.sim_steps * LIF_DT_MS / 1000.0
         self.sides = getattr(fb, "soma_side", None) if sides is None else sides
         self.groups = {k: np.asarray(v, dtype=np.int64) for k, v in groups.items()}
@@ -134,6 +156,8 @@ class HerBody(FlyBody):
             if k not in self.groups or not self.groups[k].size:
                 raise KeyError(f"no {k} cells in female body")
         self.groups.setdefault("pC1", np.empty(0, dtype=np.int64))
+        if not self.groups.get(state_group, np.empty(0)).size:
+            raise KeyError(f"no {state_group} cells in female body")
         self.motor = {k: np.asarray(motor[k], dtype=np.int64) for k in MOTOR_NAMES}
         self.side_scales = {}
         indices, scales = [], []
@@ -144,8 +168,8 @@ class HerBody(FlyBody):
             scales.append(scale)
         self.sound_idx, first = np.unique(np.concatenate(indices), return_index=True)
         self.sound_scale = np.concatenate(scales)[first]
-        if np.intersect1d(self.groups["SpsP"], self.sound_idx).size:
-            raise ValueError("SpsP cells overlap sound cells")
+        if np.intersect1d(self.groups[self.state_group], self.sound_idx).size:
+            raise ValueError(f"{self.state_group} cells overlap sound cells")
         eye_idx = np.concatenate([np.asarray(getattr(eye, k, []), dtype=np.int64)
                                   for k in ("on_idx", "off_idx")])
         if np.intersect1d(eye_idx, self.sound_idx).size:
@@ -208,10 +232,10 @@ class HerBody(FlyBody):
         for group, rate in (("JO_A", a), ("JO_B", b)):
             hz[np.searchsorted(self.sound_idx, self.groups[group])] = rate
         drive[key] = (self.sound_scale * hz).astype(np.float32)
-        idx = self.groups["SpsP"]
+        idx = self.groups[self.state_group]
         if any(np.intersect1d(k, idx).size for k in drive):
-            raise ValueError("SpsP drive overlaps another input")
-        drive[tuple(idx)] = np.full(idx.size, SPSN_HZ if self.state == "virgin" else 0., np.float32)
+            raise ValueError(f"{self.state_group} drive overlaps another input")
+        drive[tuple(idx)] = np.full(idx.size, STATE_HZ if self.state == "virgin" else 0., np.float32)
         return drive
 
     @staticmethod
@@ -236,13 +260,14 @@ class HerBody(FlyBody):
         motor = {k: rates[k] for k in MOTOR_NAMES}
         turn, speed, parts = PlumeFly.motor_from_rates(motor)
         vals = [v for k, v in drive.items()
-                if k not in (tuple(self.sound_idx), tuple(self.groups["SpsP"]))]
+                if k not in (tuple(self.sound_idx), tuple(self.groups[self.state_group]))]
         vals = (vals + [np.zeros(1), np.zeros(1)])[:2]
         eye_rates = [float(np.asarray(v).mean()) if np.asarray(v).size else 0.0
                      for v in vals[:2]]
         fired = r.get("_fired")
         return {
             "fly": self.name, "window": self.windows, "state_carried": carried,
+            "state_group": self.state_group, "state_drive_hz": STATE_HZ if self.state == "virgin" else 0.,
             "turn": float(turn), "speed": float(speed), **parts, "motor": motor,
             "song_hz": 0.0, "song_group": None, "song_cells": 0,
             "sound_hz": max(self.sound_pair(sound_hz)),
@@ -259,7 +284,8 @@ class HerBody(FlyBody):
     def describe(self):
         """Listener populations and delivered channels."""
         return {"name": self.name, "seed": self.seed, "sim_steps": self.sim_steps,
-                "state": self.state, "spsp_drive_hz": SPSN_HZ if self.state == "virgin" else 0.,
+                "state": self.state, "spsp_drive_hz": SPSN_HZ if self.state == "virgin" and self.state_group == "SpsP" else 0.,
+                "state_group": self.state_group, "state_drive_hz": STATE_HZ if self.state == "virgin" else 0.,
                 "song_group": None, "song_cells": 0, "smell_cells": 0,
                 "sound_cells": int(self.sound_idx.size),
                 "recorded_cells": int(self.rec_idx.size),

@@ -10,6 +10,7 @@ import time
 import numpy as np
 from scipy.stats import spearmanr
 
+import courtship
 import backrooms_world as bw
 import backrooms_dictionary as bd
 from courtship import BlindEye, HerBody, female_groups, female_motor, load_female
@@ -102,6 +103,8 @@ LIMITATIONS = [
     "Retired v3 limitations: rate-only ear, motor-sum song, 12 ms brain windows, separate motor-reference clipping and shuffled-rate multiset no longer describe this protocol."]
 PUBLISHED = Path("build/courtship")
 PUBLISHED_ADDENDUM = Path("build/courtship_addendum")
+PUBLISHED_V7 = Path("build/courtship_v7")
+PUBLISHED_V8 = Path("build/courtship_v8")
 V6_CONDITIONS = {"gated": (True, False), "p1drive": (True, False)}
 V6_PROTOCOL_TEXT = """Protocol v6 ADDENDUM. Only gated and p1drive are run; controls are the v5 song records paired by seed. Seed RNGs, start geometry, steps, brains and all other v5 song settings are retained.
 CHOSEN gated: identical to v5 song (virgin), with outgoing gains 0.0 on exactly pC1a, pC1b, pC1c, pC1d, pC1e; other gains one. a mated female cannot be encoded through her own sex-peptide pathway in this map, because the SPSN and SAG axons carry no synapses here; the receptivity gate is closed by hand instead, as a lesion, the way the tests lesion.
@@ -121,6 +124,154 @@ V6_LIMITATIONS = [
     "Measured male probes: silence gave P1 0 Hz; Or47b scent gave P1 24-50 Hz, putative_ppk23 contact 24-46 Hz, and LC10a vision 26 Hz. LC10a drive gave pIP10 111 Hz; direct P1 drive at 100 Hz gave pIP10 76 Hz. P1 can drive pIP10, but vision also drives it, explaining why mute did not lower pIP10 in the loop. These are motivating probes, not v6 outcomes.",
     *LIMITATIONS,
     "The baseline is a separate v5 run; its path and byte SHA256 identify the controls. P1 drive is an imposed intervention, not spontaneous firing. The retained v5 state-drive limitation describes the disconnected tonic input; v6 closes pC1 by hand."]
+
+V7_GRAPH = Path('build/graph_female_sag.npz')
+V7_EXC_SCALE = .7
+V7_CONDITIONS = {'virgin_song': (True, False), 'mated_song': (True, False),
+                 'virgin_silence': (False, False), 'mated_silence': (False, False)}
+V7_PREDICTIONS = """- P17 she can say no: her vpoDN mean rate, virgin_song > mated_song.
+- P18 she still hears: her vpoDN, virgin_song > virgin_silence.
+- P19 the state reaches her receptivity cells: her pC1 mean rate, virgin_song > mated_song.
+- P20 (descriptive, no verdict): mated_song vs mated_silence vpoDN and pC1; accept rule per condition; approach/retreat per condition; oviDN per condition; his P1/pIP10 per condition (does her state change his song, descriptively)."""
+V7_CALIBRATION = """Calibration record, measured before v7 data: GPU, eight carried windows x 250 steps, JO 60 Hz.
+Grafted raw graph: SAG 0 / 50 / 200 Hz -> pC1 7.0 / 28.0 / 68.3 Hz; raw vpoDN 172 vs 160 Hz (SAG 0 vs 50).
+Positive-weight scale -> vpoDN Hz (SAG 0 vs 50): 0.9 -> 53.8 vs 100.0; 0.8 -> 33.8 vs 50.0; 0.7 -> 2.5 (1/8 windows active) vs 38.8 (5/8), and 87.5 at SAG 100; 0.6 -> 5.0 vs 80.0. Silence gives 0 at every scale.
+CHOSEN before data: FEMALE_EXC_SCALE = 0.7, for the female's vpoDN to depend on her state while silence still drives nothing. Nothing else is tuned.
+Second calibration record, measured after the quick run and before the ten-seed run, same method, on the grafted graph: with SAG driven and NO sound, her vpoDN fires at every rate tested (scale 0.7: SAG 5 -> 12.5 Hz, 10 -> 22.5, 20 -> 43.8, 50 -> 67.5; scale 0.8: SAG 5 -> 5.0, 15 -> 73.8, 50 -> 78.8; scale 0.6: SAG 5 -> 8.8, 50 -> 72.5), and sound plus SAG is at most additive (scale 0.7, JO 60 Hz: SAG 0 -> 25.0, 50 -> 38.8). No scale or tonic rate in these ladders made her yes require both the song and her state. The protocol is kept as written: STATE_HZ 50, scale 0.7. P18 therefore may fail; if it does, the honest reading is that in this map her state opens the gate on its own and the song is not required once she is willing."""
+V7_PROTOCOL_TEXT = """Protocol v7. All v5 song/silence settings are retained except the female graph, positive-weight scale, state group and four conditions specified here.
+CHOSEN: female graph build/graph_female_sag.npz, a type-name transplant of named BANC SAG outputs, evenly split over matching FAFB targets and both SAG cells; +1 sign and 0.275 mV per synapse. Source SHA256s and the sign choice are recorded in the graft metadata.
+CHOSEN: state enters at SAG, matching ^(AN_SMP_2|ANXXX983)$; virgin = STATE_HZ = 50 Hz tonic, mated = 0 Hz. SPSN themselves are not modelled.
+CHOSEN: virgin_song and mated_song deliver song exactly as v5 song; virgin_silence and mated_silence zero her waveform exactly as v5 silence. His brain remains live in all four conditions.
+His side is unchanged from v5: raw male, same eye, same scent, same start geometry, same seeds. No lesion or P1 drive is added.
+""" + V7_CALIBRATION + "\nPredictions fixed before data (verdict rule as v5: paired difference across ten seeds > 2 SE):\n" + V7_PREDICTIONS + "\n" + "\n".join(
+    line for line in PROTOCOL_TEXT.splitlines()
+    if line.startswith(('CHOSEN: courtship starts', '- song:', '- silence:', 'CHOSEN: pIP10',
+                        'CHOSEN: mode', 'CHOSEN: 22050', 'CHOSEN: JO-A', 'CHOSEN: RMS_FULL',
+                        'CHOSEN: her brain', 'CHOSEN: female scent'))) + "\n" + BIOLOGY
+PROTOCOLS['v7'] = dict(PROTOCOLS['v5'], text=V7_PROTOCOL_TEXT, conditions=V7_CONDITIONS,
+    female_graph=V7_GRAPH.as_posix(), female_exc_scale=V7_EXC_SCALE, state_group='SAG',
+    jitter_rng=None)
+V7_LIMITATIONS = [
+    'The graft is a type-level transplant from another individual\'s map; absent target types and unnamed targets are not placed.',
+    'The SAG sign is chosen on functional evidence, not its predicted dopamine transmitter.',
+    'The positive-weight scale is chosen before data using the disclosed calibration ladder.',
+    'SPSN themselves are not modelled; the state enters at SAG.',
+    'The male is unchanged and runs at raw scale.',
+    'oviDN is a descending command readout; she has no ovipositor body model. Start geometry is chosen so she is visible to him.',
+    *[s for i, s in enumerate(LIMITATIONS) if i not in (0, 5, 8, 13, 17)],
+    'He is inside the loop: his trajectory and song can change when she moves differently. Female eye remains blind; contrast/motion vision remains a later step.']
+
+SAG_AUDIT_CORRECTION = (
+    'Correction to the historical v5/v6 anatomical explanation: the female export does '
+    'carry SAG outgoing synapses. Their serotonin consensus maps to sign zero in '
+    'build_graph_female.py, so the transmitter-sign rule drops their edges. This is '
+    'a modelling exclusion, not an anatomical absence. The earlier protocol and '
+    'limitation strings are retained unchanged as published records.')
+V7_LIMITATIONS.append(SAG_AUDIT_CORRECTION)
+V8_GRAPH = Path('build/graph_female_own_sag.npz')
+V8_CALIBRATION = Path('build/sag_calibration.json')
+V8_STATE_PATTERN = '^(AN_SMP_2|AN_FLA_SMP_2|ANXXX983)$'
+V8_PROTOCOL_TEXT = """Protocol v8. v7 grafted BANC's measured SAG outputs onto her map; this audit found her own export already carries the same route, dropped by the transmitter-sign rule; v8 restores her own synapses instead and keeps everything else. The BANC measurement stands as a second individual showing the same wiring.
+CHOSEN: female graph build/graph_female_own_sag.npz restores her individual SAG pre/post pairs at +1 sign and 0.275 mV per synapse, with the export's >= 5 synapse pair floor and only postsynaptic cells in the graph. Source and graph SHA256s and restore metadata are recorded.
+CHOSEN: state enters at SAG, matching ^(AN_SMP_2|AN_FLA_SMP_2|ANXXX983)$; both FAFB SAG types carry the state. Virgin = STATE_HZ tonic every window, mated = 0 Hz. SPSN themselves are not modelled.
+CHOSEN: FEMALE_EXC_SCALE = 0.7, carried over from the v7 calibration. The before-data ladder is recorded below; 0.7 is retained even if silence produces nonzero vpoDN. No tuning follows this ladder.
+CHOSEN: virgin_song and mated_song deliver song exactly as v5 song; virgin_silence and mated_silence zero her waveform exactly as v5 silence. His brain remains live in all four conditions.
+His side is unchanged from v5: raw male, same eye, same scent, same start geometry, same seeds. No lesion or P1 drive is added.
+""" + '\nPredictions fixed before data (verdict rule as v5: paired difference across ten seeds > 2 SE):\n' + V7_PREDICTIONS + '\n' + '\n'.join(
+    line for line in PROTOCOL_TEXT.splitlines()
+    if line.startswith(('CHOSEN: courtship starts', '- song:', '- silence:', 'CHOSEN: pIP10',
+                        'CHOSEN: mode', 'CHOSEN: 22050', 'CHOSEN: JO-A', 'CHOSEN: RMS_FULL',
+                        'CHOSEN: her brain', 'CHOSEN: female scent'))) + '\n' + BIOLOGY
+PROTOCOLS['v8'] = dict(PROTOCOLS['v7'], text=V8_PROTOCOL_TEXT,
+    female_graph=V8_GRAPH.as_posix(), state_pattern=V8_STATE_PATTERN)
+V8_LIMITATIONS = [SAG_AUDIT_CORRECTION,
+    'The restored edges are her own measured synapses. BANC is a second individual, not a donor for v8.',
+    'Both FAFB SAG types are restored and driven; AN_FLA_SMP_2 has additional targets beyond the pC1 route.',
+    'CHOSEN: the SAG effect sign is +1 on functional evidence; neither FAFB serotonin nor BANC dopamine fixes that sign.',
+    'CHOSEN: positive-weight scale 0.7 is carried over from v7, without tuning on the v8 ladder.',
+    *V7_LIMITATIONS[3:-1]]
+
+
+def v8_graph_record():
+    if not V8_GRAPH.is_file():
+        raise ValueError('v8 requires build/graph_female_own_sag.npz; run restore_sag.py first')
+    from graft_sag import sha256
+    with np.load(V8_GRAPH, allow_pickle=False) as z:
+        restore = json.loads(z['restore'].item())
+        counts = {t: int(np.sum(z['types'] == t)) for t in ('AN_SMP_2', 'AN_FLA_SMP_2', 'ANXXX983')}
+    return dict(file=V8_GRAPH.name, path=Path(os.path.relpath(V8_GRAPH)).as_posix(),
+                sha256=sha256(V8_GRAPH), restore=restore, state_cells=sum(counts.values()),
+                state_cells_per_type=counts)
+
+
+def v8_protocol_spec(graph_record):
+    if not V8_CALIBRATION.is_file():
+        raise ValueError('v8 requires the before-data ladder; run calibrate_sag.py first')
+    calibration = json.loads(V8_CALIBRATION.read_text(encoding='utf-8'))
+    if calibration['graph_sha256'] != graph_record['sha256']:
+        raise ValueError('v8 calibration graph SHA256 mismatch')
+    return dict(PROTOCOLS['v8'], calibration=calibration,
+                text=V8_PROTOCOL_TEXT + f"\nState group: {graph_record['state_cells']} cells; "
+                + str(graph_record['state_cells_per_type']) + f'; STATE_HZ = {courtship.STATE_HZ:g} Hz.\n'
+                + calibration['text'])
+
+
+def v7_graph_record():
+    if not V7_GRAPH.is_file():
+        raise ValueError('v7 requires build/graph_female_sag.npz; run graft_sag.py first')
+    from graft_sag import sha256
+    with np.load(V7_GRAPH, allow_pickle=False) as z:
+        graft = json.loads(z['graft'].item())
+    return dict(file=V7_GRAPH.name, path=Path(os.path.relpath(V7_GRAPH)).as_posix(), sha256=sha256(V7_GRAPH), graft=graft)
+
+
+def summarise_v7(rows):
+    indexed = {(r['seed'], r['condition']): r for r in rows}
+    seeds = sorted({r['seed'] for r in rows})
+    predictions = {}
+    for label, metric, control in (('P17', 'vpodn_hz', 'mated_song'),
+                                  ('P18', 'vpodn_hz', 'virgin_silence'),
+                                  ('P19', 'pc1_hz', 'mated_song')):
+        diffs = [indexed[s, 'virgin_song'][metric] - indexed[s, control][metric] for s in seeds]
+        mean = float(np.mean(diffs))
+        se = float(np.std(diffs, ddof=1)/np.sqrt(len(diffs))) if len(diffs) > 1 else None
+        predictions[label] = dict(mean=mean, se=se, n=len(diffs), paired_differences=diffs,
+            metric=metric, control=control, direction='virgin_song - ' + control,
+            verdict=verdict(mean, se, len(diffs)))
+    metrics = ('seed', 'condition', 'vpodn_hz', 'pc1_hz', 'accept', 'active_windows',
+               'approach', 'retreat', 'retreat_fraction', 'ovidn_hz', 'p1_hz', 'pip10_hz')
+    return dict(predictions=predictions, P20=[{k: r[k] for k in metrics} for r in rows])
+
+
+def write_v7_report(json_path, data):
+    lines = [f"# Courtship {data['protocol']}", '', 'Quick runs are smoke tests; two-seed verdicts are not the ten-seed experiment.',
+             data['protocol_spec']['text'], '', '## Female graph record',
+             json.dumps(data['female_graph'], indent=2), '', '## Per-seed outcomes / P20',
+             data['protocol_spec']['outcome_text']]
+    keys = ('seed', 'condition', 'state_group', 'state_drive_hz', 'accept', 'approach', 'retreat',
+            'active_windows', 'vpodn_hz', 'pc1_hz', 'ovidn_hz', 'p1_hz', 'pip10_hz')
+    lines += ['| ' + ' | '.join(keys) + ' |', '| ' + ' | '.join(['---'] * len(keys)) + ' |']
+    lines += ['| ' + ' | '.join(str(r[k]) for k in keys) + ' |' for r in data['outcomes']]
+    lines += ['', '## P17-P19', json.dumps(data['summary']['predictions'], indent=2), '', '## Result']
+    lines.append(' '.join(
+        f"{label} was {p['verdict']}: {p['direction']} in {p['metric']} was {p['mean']:.6g} Hz "
+        + f"(SE {p['se']}, n={p['n']}); the required positive difference must exceed 2 SE."
+        for label, p in data['summary']['predictions'].items()))
+    lines += ['', '## P20 (descriptive, no verdict)', json.dumps(data['summary']['P20'], indent=2)]
+    for c in V7_CONDITIONS:
+        rr = [r for r in data['outcomes'] if r['condition'] == c]
+        counts = {k: sum(r[k] for r in rr) for k in ('accept', 'approach', 'retreat')}
+        same = len({tuple(r[k] for k in counts) for r in rr}) == 1
+        lines.append(f"{c}: {counts}, n={len(rr)}. " + ('Every seed gives the same outcome.' if same else 'Outcomes differ across seeds.'))
+    hours = data['estimated_ten_seed_hours']
+    limitations = list(data['limitations'])
+    if SAG_AUDIT_CORRECTION not in limitations:
+        limitations.append(SAG_AUDIT_CORRECTION)
+    lines += ['', f'Estimated ten-seed cost (4 x 400 windows each): {hours:.3g} hours, excluding setup and rendering.',
+              '', '## Limitations', *['- ' + s for s in limitations]]
+    destination = Path(str(json_path).replace('_experiment.json', '_report.md'))
+    destination.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    return destination
 
 
 def read_baseline(path, seeds, steps, brain):
@@ -224,7 +375,7 @@ class LuminanceEye:
 
 class ExperimentRoom(bw.Room):
     def configure(self, seed, condition, song_sound=None):
-        if condition not in CONDITIONS and condition not in V6_CONDITIONS and condition != "dark":
+        if condition not in CONDITIONS and condition not in V6_CONDITIONS and condition not in V7_CONDITIONS and condition != "dark":
             raise ValueError("unknown condition")
         self.condition = condition
         rng = np.random.default_rng(np.random.SeedSequence([seed, 905]))
@@ -236,7 +387,7 @@ class ExperimentRoom(bw.Room):
         self.arena.A.y = float(np.clip(self.arena.A.y, margin-min(0., dy), bw.ARENA_MM-margin-max(0., dy)))
         self.arena.B.x, self.arena.B.y = self.arena.A.x+dx, self.arena.A.y+dy
         self.arena.B.heading = float(rng.uniform(-np.pi, np.pi))
-        self.bodies["B"].state = "mated" if condition == "mated" else "virgin"
+        self.bodies["B"].state = "mated" if condition in ("mated", "mated_song", "mated_silence") else "virgin"
         body = self.bodies["A"]
         groups = getattr(body, "groups", {})
         self.singer = Singer(seed, condition == "jittered",
@@ -275,7 +426,7 @@ class ExperimentRoom(bw.Room):
             return wave.copy()
         wave = self.singer.render(**self.previous_rates,
                                   attenuation=self.channels.falloff(self.arena.distance()))
-        if self.condition in ("silence", "dark"):
+        if self.condition in ("silence", "dark", "virgin_silence", "mated_silence"):
             wave[:] = 0.
             self.singer.record["delivered_rms"] = 0.
         return wave
@@ -298,13 +449,21 @@ def p1_lesion(fb, groups):
 
 
 def build_room(seed, condition, song_sound=None, brains=None,
-               annotations_path="data/body-annotations.feather", brain_class=FlyBrain):
+               annotations_path="data/body-annotations.feather", brain_class=FlyBrain, protocol=None):
     """One construction for every condition; new bodies reset both states."""
     cls = bw.brain_class(brain_class) if isinstance(brain_class, str) else brain_class
-    male, female = brains if brains is not None else (cls(), load_female(exc_scale=FEMALE_EXC_SCALE, brain_class=cls))
+    v7 = condition in V7_CONDITIONS
+    if v7 and brains is None:
+        (v8_graph_record if protocol == 'v8' else v7_graph_record)()
+    female_options = dict(exc_scale=V7_EXC_SCALE if v7 else FEMALE_EXC_SCALE, brain_class=cls)
+    if v7:
+        female_options['path'] = V8_GRAPH if protocol == 'v8' else V7_GRAPH
+    male, female = brains if brains is not None else (cls(), load_female(**female_options))
     eye = BlindEye(female) if condition == "dark" or FEMALE_EYE == "blind" else LuminanceEye(female)
-    body = HerBody("B", female, eye, female_groups(female),
-                   female_motor(female), seed=seed * 2 + 2, sim_steps=250)
+    groups_b = female_groups(female, sag_pattern=V8_STATE_PATTERN) if protocol == 'v8' else female_groups(female)
+    body = HerBody("B", female, eye, groups_b,
+                   female_motor(female), seed=seed * 2 + 2, sim_steps=250,
+                   state_group="SAG" if v7 else "SpsP")
     available = Path(annotations_path).is_file()
     if available:
         from flyeye import FlyEye
@@ -348,7 +507,9 @@ def outcome(seed, condition, trace, start):
     last = float(np.mean(trace["distance_mm"][-q:]))
     active = int(np.count_nonzero(trace["vpodn_hz"] > 0))
     result = dict(seed=seed, condition=condition, start=start, accept=active >= ACCEPT_WINDOWS,
-        state="mated" if condition == "mated" else "virgin",
+        state="mated" if condition in ("mated", "mated_song", "mated_silence") else "virgin",
+        state_group="SAG" if condition in V7_CONDITIONS else "SpsP",
+        state_drive_hz=0. if condition in ("mated", "mated_song", "mated_silence") else courtship.STATE_HZ,
         ovidn_hz=float(np.mean(trace["ovidn_hz"])), spsp_hz=float(np.mean(trace["spsp_hz"])),
         sight_fraction=float(np.mean(trace["sight_ok"])),
         retreat_fraction=float(np.mean(np.diff(trace["distance_mm"]) > 0)),
@@ -512,7 +673,7 @@ def paths(prefix):
 
 def assert_not_published(prefix):
     for target, protected in ((t, p) for t in paths(prefix)
-                              for root in (PUBLISHED, PUBLISHED_ADDENDUM) for p in paths(root)):
+                              for root in (PUBLISHED, PUBLISHED_ADDENDUM, PUBLISHED_V7, PUBLISHED_V8) for p in paths(root)):
         # Resolve the parent identity, including aliases, before the files exist.
         same_parent = target.parent.exists() and protected.parent.exists() and os.path.samefile(target.parent, protected.parent)
         same_file = target.exists() and protected.exists() and os.path.samefile(target, protected)
@@ -524,6 +685,8 @@ def write_report(json_path):
     data = json.loads(Path(json_path).read_text(encoding="utf-8"))
     if data["protocol"] == "v6":
         return write_v6_report(json_path, data)
+    if data["protocol"] in ("v7", "v8"):
+        return write_v7_report(json_path, data)
     environment = data.get("environment", {"brain_class": "flysim.FlyBrain", "torch_devices": {"male": None, "female": None}})
     lines = ["# Courtship experiment", "", f"Run: {len(data['seeds'])} seeds x {len(data['protocol_spec']['conditions'])} conditions x {data['steps']} steps; quick={data['quick']}.",
         "Quick runs are smoke tests; their two-seed verdicts are not the full ten-seed experiment.", "",
@@ -694,7 +857,7 @@ def main(argv=None, room_factory=None):
                 check_baseline_start(baseline, r["seed"], r["start"])
             data["summary"] = summarise_v6(data["outcomes"], baseline["outcomes"])
         else:
-            data["summary"] = summarise(data["outcomes"])
+            data["summary"] = (summarise_v7 if data["protocol"] in ("v7", "v8") else summarise)(data["outcomes"])
         data["reanalysis_note"] = args.note
         save(prefix, data, traces)
         return 0
@@ -706,8 +869,19 @@ def main(argv=None, room_factory=None):
     if args.protocol == "v6":
         baseline, baseline_identity = read_baseline(args.baseline, list(range(n)), steps, args.brain)
     factory = room_factory or build_room
+    sag_protocol = args.protocol in ('v7', 'v8')
+    graph_record = v8_graph_record() if args.protocol == 'v8' else v7_graph_record() if args.protocol == 'v7' else None
+    protocol_spec = v8_protocol_spec(graph_record) if args.protocol == 'v8' else PROTOCOLS[args.protocol]
+    if graph_record is None:
+        from graft_sag import sha256
+        graph_path = Path(os.environ.get('FEMALE_GRAPH') or courtship.BUILD/'graph_female.npz')
+        graph_record = dict(path=Path(os.path.relpath(graph_path)).as_posix(), sha256=sha256(graph_path))
+    exc_scale = V7_EXC_SCALE if sag_protocol else FEMALE_EXC_SCALE
     cls = bw.brain_class(args.brain)
-    brains = None if room_factory else (cls(), load_female(exc_scale=FEMALE_EXC_SCALE, brain_class=cls))
+    female_options = dict(exc_scale=exc_scale, brain_class=cls)
+    if sag_protocol:
+        female_options['path'] = V8_GRAPH if args.protocol == 'v8' else V7_GRAPH
+    brains = None if room_factory else (cls(), load_female(**female_options))
     environment = dict(brain_class=args.brain, torch_devices={
         name: str(fb.device) if getattr(fb, "device", None) is not None else None
         for name, fb in zip(("male", "female"), brains or (None, None))})
@@ -717,7 +891,10 @@ def main(argv=None, room_factory=None):
     while seed < n:
         sound = None
         for c in conditions:
-            room = factory(seed, c, song_sound=sound, brains=brains)
+            room_options = dict(song_sound=sound, brains=brains)
+            if room_factory is None:
+                room_options['protocol'] = args.protocol
+            room = factory(seed, c, **room_options)
             if baseline is not None:
                 check_baseline_start(baseline, seed, room.arena.geometry())
             t0 = time.perf_counter()
@@ -730,8 +907,9 @@ def main(argv=None, room_factory=None):
             if args.log:
                 with Path(args.log).open("a", encoding="utf-8") as log:
                     log.write(message + "\n")
-            if seed == 0 and c == "song":
-                ladder = budget_ladder(n, elapsed, args.budget_min * 60)
+            if seed == 0 and c in ("song", "virgin_song"):
+                budget_elapsed = elapsed * len(conditions)/len(CONDITIONS) if sag_protocol else elapsed
+                ladder = budget_ladder(n, budget_elapsed, args.budget_min * 60)
                 ladder["first_step_s"] = elapsed / steps
                 n = ladder["selected"]
             if c == "song":
@@ -739,15 +917,24 @@ def main(argv=None, room_factory=None):
             rows.append(row)
             traces.update({f"s{seed}_{c}_{k}": v for k, v in trace.items()})
         seed += 1
-    data = dict(protocol=args.protocol, protocol_spec=PROTOCOLS[args.protocol], steps=steps,
+    data = dict(protocol=args.protocol, protocol_spec=protocol_spec, steps=steps,
         seeds=list(range(n)), quick=bool(args.quick), outcomes=rows,
-        summary=summarise_v6(rows, baseline["outcomes"]) if baseline is not None else summarise(rows),
-        female_exc_scale=FEMALE_EXC_SCALE, female_eye=FEMALE_EYE,
-        ear=WaveEar().describe(), limitations=V6_LIMITATIONS if baseline is not None else LIMITATIONS,
+        summary=summarise_v6(rows, baseline["outcomes"]) if baseline is not None else (summarise_v7(rows) if sag_protocol else summarise(rows)),
+        female_exc_scale=exc_scale, female_eye=FEMALE_EYE,
+        FEMALE_GRAPH_present='FEMALE_GRAPH' in os.environ,
+        state_group="SAG" if sag_protocol else "SpsP",
+        ear=WaveEar().describe(), limitations=V6_LIMITATIONS if baseline is not None else (V8_LIMITATIONS if args.protocol == 'v8' else V7_LIMITATIONS if args.protocol == "v7" else LIMITATIONS),
         budget_ladder=ladder, timing=timings, environment=environment, note=args.note,
         date=datetime.now(timezone.utc).isoformat())
     if baseline_identity is not None:
         data["baseline"] = baseline_identity
+    data['female_graph'] = graph_record
+    if args.protocol == 'v8':
+        data['state_cells'] = graph_record['state_cells']
+        data['state_cells_per_type'] = graph_record['state_cells_per_type']
+    if sag_protocol:
+        data['estimated_ten_seed_hours'] = float(np.mean([t['step_s'] for t in timings])) * 4 * 4000 / 3600
+        print(f"Estimated ten-seed cost (4 x 400 windows each): {data['estimated_ten_seed_hours']:.3g} hours, excluding setup and rendering.", flush=True)
     save(prefix, data, traces)
     return 0
 

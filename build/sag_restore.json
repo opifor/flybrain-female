@@ -1,0 +1,362 @@
+{
+  "sources": [
+    {
+      "file": "connections_princeton.csv.gz",
+      "sha256": "445f996bf6c4b1803b9ba186189138a3061ff8623aa94c0abcf38af30a5bd48b"
+    },
+    {
+      "file": "graph_female.npz",
+      "sha256": "c3ad89ef738ad58187ff4d2f9978c923aa0335f1e3cbf1dd3ee3191dc7477331"
+    }
+  ],
+  "csv_rows": 5342446,
+  "per_type": {
+    "AN_SMP_2": {
+      "cell_count": 2,
+      "cells": [
+        {
+          "root_id": 720575940623363000,
+          "exported_synapses": 690,
+          "restored_synapses": 690
+        },
+        {
+          "root_id": 720575940631004202,
+          "exported_synapses": 685,
+          "restored_synapses": 685
+        }
+      ],
+      "exported_synapses": 1375,
+      "restored_synapses": 1375
+    },
+    "AN_FLA_SMP_2": {
+      "cell_count": 2,
+      "cells": [
+        {
+          "root_id": 720575940614614162,
+          "exported_synapses": 1033,
+          "restored_synapses": 1033
+        },
+        {
+          "root_id": 720575940638396998,
+          "exported_synapses": 919,
+          "restored_synapses": 919
+        }
+      ],
+      "exported_synapses": 1952,
+      "restored_synapses": 1952
+    }
+  },
+  "per_target_type": [
+    {
+      "target_type": "pC1a",
+      "synapses": 615,
+      "by_source_type": {
+        "AN_SMP_2": 539,
+        "AN_FLA_SMP_2": 76
+      }
+    },
+    {
+      "target_type": "CB0959",
+      "synapses": 568,
+      "by_source_type": {
+        "AN_SMP_2": 10,
+        "AN_FLA_SMP_2": 558
+      }
+    },
+    {
+      "target_type": "pC1b",
+      "synapses": 387,
+      "by_source_type": {
+        "AN_SMP_2": 387,
+        "AN_FLA_SMP_2": 0
+      }
+    },
+    {
+      "target_type": "CB0699",
+      "synapses": 297,
+      "by_source_type": {
+        "AN_SMP_2": 6,
+        "AN_FLA_SMP_2": 291
+      }
+    },
+    {
+      "target_type": "",
+      "synapses": 195,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 195
+      }
+    },
+    {
+      "target_type": "pC1c",
+      "synapses": 179,
+      "by_source_type": {
+        "AN_SMP_2": 179,
+        "AN_FLA_SMP_2": 0
+      }
+    },
+    {
+      "target_type": "SMP094",
+      "synapses": 173,
+      "by_source_type": {
+        "AN_SMP_2": 5,
+        "AN_FLA_SMP_2": 168
+      }
+    },
+    {
+      "target_type": "CB1024",
+      "synapses": 149,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 149
+      }
+    },
+    {
+      "target_type": "CB0094",
+      "synapses": 134,
+      "by_source_type": {
+        "AN_SMP_2": 128,
+        "AN_FLA_SMP_2": 6
+      }
+    },
+    {
+      "target_type": "AN_SMP_1",
+      "synapses": 114,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 114
+      }
+    },
+    {
+      "target_type": "CB0075",
+      "synapses": 78,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 78
+      }
+    },
+    {
+      "target_type": "CB0405",
+      "synapses": 60,
+      "by_source_type": {
+        "AN_SMP_2": 60,
+        "AN_FLA_SMP_2": 0
+      }
+    },
+    {
+      "target_type": "PAL01",
+      "synapses": 54,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 54
+      }
+    },
+    {
+      "target_type": "SMP025a",
+      "synapses": 52,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 52
+      }
+    },
+    {
+      "target_type": "SMP286",
+      "synapses": 38,
+      "by_source_type": {
+        "AN_SMP_2": 17,
+        "AN_FLA_SMP_2": 21
+      }
+    },
+    {
+      "target_type": "SMP172",
+      "synapses": 31,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 31
+      }
+    },
+    {
+      "target_type": "AN_FLA_SMP_2",
+      "synapses": 26,
+      "by_source_type": {
+        "AN_SMP_2": 7,
+        "AN_FLA_SMP_2": 19
+      }
+    },
+    {
+      "target_type": "pC1e",
+      "synapses": 25,
+      "by_source_type": {
+        "AN_SMP_2": 8,
+        "AN_FLA_SMP_2": 17
+      }
+    },
+    {
+      "target_type": "CB1610",
+      "synapses": 15,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 15
+      }
+    },
+    {
+      "target_type": "CB1371",
+      "synapses": 11,
+      "by_source_type": {
+        "AN_SMP_2": 11,
+        "AN_FLA_SMP_2": 0
+      }
+    },
+    {
+      "target_type": "CB2165",
+      "synapses": 11,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 11
+      }
+    },
+    {
+      "target_type": "NPFL1-I",
+      "synapses": 11,
+      "by_source_type": {
+        "AN_SMP_2": 5,
+        "AN_FLA_SMP_2": 6
+      }
+    },
+    {
+      "target_type": "SMP538",
+      "synapses": 10,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 10
+      }
+    },
+    {
+      "target_type": "SMP513",
+      "synapses": 9,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 9
+      }
+    },
+    {
+      "target_type": "CB4204",
+      "synapses": 8,
+      "by_source_type": {
+        "AN_SMP_2": 8,
+        "AN_FLA_SMP_2": 0
+      }
+    },
+    {
+      "target_type": "SMP515",
+      "synapses": 8,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 8
+      }
+    },
+    {
+      "target_type": "FLA101f_c",
+      "synapses": 7,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 7
+      }
+    },
+    {
+      "target_type": "SIP076",
+      "synapses": 7,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 7
+      }
+    },
+    {
+      "target_type": "SMP123b",
+      "synapses": 7,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 7
+      }
+    },
+    {
+      "target_type": "CB4233",
+      "synapses": 6,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 6
+      }
+    },
+    {
+      "target_type": "SMP034",
+      "synapses": 6,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 6
+      }
+    },
+    {
+      "target_type": "pC1d",
+      "synapses": 6,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 6
+      }
+    },
+    {
+      "target_type": "AN_SMP_FLA_1",
+      "synapses": 5,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 5
+      }
+    },
+    {
+      "target_type": "CB0015",
+      "synapses": 5,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 5
+      }
+    },
+    {
+      "target_type": "CB2422",
+      "synapses": 5,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 5
+      }
+    },
+    {
+      "target_type": "DNpe034",
+      "synapses": 5,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 5
+      }
+    },
+    {
+      "target_type": "SMP161",
+      "synapses": 5,
+      "by_source_type": {
+        "AN_SMP_2": 5,
+        "AN_FLA_SMP_2": 0
+      }
+    },
+    {
+      "target_type": "SMP593",
+      "synapses": 5,
+      "by_source_type": {
+        "AN_SMP_2": 0,
+        "AN_FLA_SMP_2": 5
+      }
+    }
+  ],
+  "empty_types": [],
+  "synapses_restored": 3327,
+  "excluded_synapses": 0,
+  "floor": 5,
+  "synapse_mv": 0.275,
+  "sign_choice": "CHOSEN: SAG sign +1 follows functional evidence: SAG activity promotes virgin receptivity and is silenced after mating (Feng, Palfreyman, Hasemeyer, Talsma, Dickson 2014 Neuron 83:135). The FAFB transmitter consensus is serotonin; the BANC prediction for the same types is dopamine. Neither prediction fixes the sign of the effect.",
+  "mapping": "individual female pre/post ids; pair sum >= 5; post cell must be in graph"
+}
