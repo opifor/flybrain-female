@@ -14,6 +14,274 @@ import backrooms_world as bw
 from test_courtship import make_parts
 
 
+def test_v10_required_dose_and_graph(tmp_path, monkeypatch):
+    args = ['--protocol', 'v10', '--quick', '1', '--out', str(tmp_path/'run')]
+    for dose in ([], ['--male-scale', 'nan'], ['--male-scale', '0']):
+        with pytest.raises(ValueError, match='requires --male-scale'):
+            ce.main(args+dose, room_factory=FakeRoom)
+    monkeypatch.setattr(ce, 'V8_GRAPH', tmp_path/'missing.npz')
+    with pytest.raises(ValueError, match='requires build/graph_female_own_sag'):
+        ce.main(args+['--male-scale', '.9'], room_factory=FakeRoom)
+    with pytest.raises(ValueError, match='ten seeds and 400 steps'):
+        ce.main(['--protocol', 'v10', '--male-scale', '.9', '--seeds', '1',
+                 '--out', str(tmp_path/'run')], room_factory=FakeRoom)
+
+
+@pytest.mark.parametrize('bearing,expected', [(30, (100, 0)), (-30, (0, 100)),
+    (0, (100, 100)), (10, (100, 100)), (-10, (100, 100)),
+    (120, (0, 0)), (-120, (0, 0)), (180, (0, 0))])
+def test_v10_geometry(bearing, expected):
+    arena, ch = bw.Arena(seed=1), bw.Channels()
+    arena.A.heading = 0.
+    arena.B.x = arena.A.x+2*np.cos(np.radians(bearing))
+    arena.B.y = arena.A.y+2*np.sin(np.radians(bearing))
+    np.testing.assert_allclose(ce.lc10a_geometry(ch, arena.A, arena.B), expected, atol=1e-4)
+
+
+def test_v10_size_and_replay():
+    arena, ch = bw.Arena(seed=1), bw.Channels(min_radius_px=500.)
+    arena.A.heading = 0.
+    for distance in (1., 2., 4., 8.):
+        arena.B.x, arena.B.y = arena.A.x+distance, arena.A.y
+        expected = 100*min(np.degrees(2*np.arctan(.5/distance))/ce.SIZE_FULL, 1)
+        np.testing.assert_allclose(ce.lc10a_geometry(ch, arena.A, arena.B), [expected]*2)
+    trace = dict(lc10a_drive_left_hz=np.arange(20.), lc10a_drive_right_hz=np.arange(20.)**2)
+    replay, order = ce.shuffled_drive(trace, 7)
+    assert not np.array_equal(order, np.arange(20))
+    source = np.column_stack(tuple(trace.values()))
+    np.testing.assert_array_equal(replay, source[order])
+    np.testing.assert_array_equal(replay.sum(axis=0), source.sum(axis=0))
+    np.testing.assert_array_equal(ce.shuffled_drive(trace, 7)[1], order)
+
+
+def test_neural_lag_is_previous_neural_window():
+    _, trace = ce.run_trial(FakeRoom(0, 'song'), 8, 0, 'song')
+    np.testing.assert_allclose(trace['a_neural'], trace['pip10_hz']/ce.Singer().pip10_full)
+    np.testing.assert_allclose(trace['a'][1:], trace['a_neural'][:-1])
+    assert trace['a'][0] == 0 and trace['a_neural'][0] > 0
+    lc = np.array([4., 1., 7., 2., 6., 3., 5., 8.])
+    singer = ce.Singer(pulse_cells=4, sine_cells=2, pip10_full=100.)
+    pip = np.r_[9., lc[:-1]]*10
+    mode = np.r_[.9, lc[:-1]/10]
+    values = [ce.neural_song(p, m*4, (1-m)*2, singer) for p, m in zip(pip, mode)]
+    trace.update(lc10a_hz=lc, lc10a_drive_hz=lc,
+                 a_neural=np.array(values)[:, 0], m_neural=np.array(values)[:, 1])
+    row = ce.outcome(0, 'song', trace, {})
+    for channel in ('a', 'm'):
+        assert row[channel+'_neural_lc10a_lagged_rho'] == pytest.approx(1.)
+        assert row[channel+'_neural_drive_lagged_rho'] == pytest.approx(1.)
+        assert ce.correlation(trace[channel+'_neural'], lc) != pytest.approx(1.)
+    assert row['m_lc10a_lagged_rho'] == ce.correlation(trace['m'][1:], lc[:-1])
+    assert ce.neural_song(200, 0, 0, singer) == (1., 0.)
+    assert ce.neural_song(50, 4, 2, singer) == (.5, .5)
+
+
+def test_v10_turn_oracle():
+    assert ce.heading_reduces_bearing(30, 0, np.radians(10))
+    assert not ce.heading_reduces_bearing(30, 0, np.radians(-10))
+    assert not ce.heading_reduces_bearing(30, 0, 0)
+    assert not ce.heading_reduces_bearing(10, 0, np.radians(30))  # overshoot
+    assert ce.heading_reduces_bearing(30, np.radians(175), np.radians(-175))
+
+
+def test_v10_predictions_missing_pairs_and_channel_rule():
+    rows = [dict(seed=s, condition=c, lc10a_hz=10. if c == 'sight' else 0.,
+        a_neural_drive_lagged_rho=.8 if c == 'sight' else .1,
+        m_neural_drive_lagged_rho=-.5 if c == 'sight' else .5,
+        turn_toward_fraction=.7 if c == 'sight' else .2)
+        for s in range(10) for c in ce.V10_CONDITIONS]
+    summary = ce.summarise_v10(rows[::-1])
+    assert summary['P26_channels'] == ['a']
+    for label in ('P25', 'P26_a', 'P27'):
+        assert summary['predictions'][label]['established']
+    assert summary['predictions']['P25']['paired_differences'] == [10.]*10
+    rows[0]['a_neural_drive_lagged_rho'] = None
+    summary = ce.summarise_v10(rows)
+    assert summary['P26_verdict'] == 'not established'
+    assert summary['predictions']['P26_a']['n'] == 9
+    assert summary['predictions']['P26_a']['excluded_seeds'] == [0]
+    for r in rows:
+        r['lc10a_hz'] = float(r['seed']) if r['condition'] == 'sight' else 0.
+    p = ce.summarise_v10(rows)['predictions']['P25']
+    assert p['mean'] == 4.5
+    assert p['se'] == pytest.approx(np.std(np.arange(10.), ddof=1)/np.sqrt(10))
+
+
+def test_v10_fake_brains_quick(tmp_path, monkeypatch):
+    from test_courtship import female_fake
+    from test_backrooms_world import FakeEye
+    import flyeye
+    graph = tmp_path/'own.npz'
+    np.savez_compressed(graph, types=['AN_SMP_2']*2+['AN_FLA_SMP_2']*2, restore=json.dumps({}))
+    monkeypatch.setattr(ce, 'V8_GRAPH', graph)
+    male = make_parts()[0]
+    male.wdata = np.array([-2., 0., 10.], dtype=np.float32)
+    female = female_fake(list(female_fake().types)+['AN_SMP_2']*2+['AN_FLA_SMP_2']*2)
+    monkeypatch.setattr(ce.bw, 'brain_class', lambda name: lambda: male)
+    def load(**kwargs):
+        assert kwargs['path'] == graph and kwargs['exc_scale'] == .7
+        return female
+    monkeypatch.setattr(ce, 'load_female', load)
+    original = ce.build_room
+    seen = []
+    annotations = tmp_path/'annotations.feather'
+    annotations.touch()
+    sides = np.full(male.n, '', dtype=str)
+    sides[male.where(type_re='^LC10a$')] = ['L', 'R']
+    monkeypatch.setattr(ce.bw, 'soma_sides', lambda *args: sides)
+    monkeypatch.setattr(flyeye, 'FlyEye', lambda fb, **kwargs: FakeEye(fb))
+    def factory(seed, condition, brains, protocol):
+        np.testing.assert_allclose(male.wdata, [-2., 0., 9.])
+        assert protocol == 'v10'
+        room = original(seed, condition, brains=brains, protocol=protocol, annotations_path=annotations)
+        assert room.bodies['B'].state_group == 'SAG'
+        assert room.bodies['B'].state == 'virgin'
+        assert len(room.bodies['B'].groups['SAG']) == 4
+        seen.append(condition)
+        return room
+    monkeypatch.setattr(ce, 'build_room', factory)
+    prefix = tmp_path/'v10'
+    assert ce.main(['--protocol', 'v10', '--male-scale', '.9', '--quick', '1', '--out', str(prefix)]) == 0
+    np.testing.assert_array_equal(male.wdata, [-2., 0., 10.])
+    assert seen == list(ce.V10_CONDITIONS)*2
+    data = json.loads(ce.paths(prefix)[0].read_text(encoding='utf-8'))
+    assert data['male_exc_scale'] == .9 and data['steps'] == 80
+    assert len(data['outcomes']) == 6
+    for seed in (0, 1):
+        rr = [r for r in data['outcomes'] if r['seed'] == seed]
+        assert all(r['start'] == rr[0]['start'] for r in rr)
+    with np.load(ce.paths(prefix)[1]) as z:
+        for seed in (0, 1):
+            get = lambda c, k: z[f's{seed}_{c}_{k}']
+            order = get('shuffled', 'lc10a_replay_index').astype(int)
+            assert not np.array_equal(order, np.arange(80))
+            for side in ('left', 'right'):
+                key = f'lc10a_drive_{side}_hz'
+                np.testing.assert_array_equal(get('shuffled', key), get('sight', key)[order])
+                assert get('shuffled', key).sum() == pytest.approx(get('sight', key).sum())
+            for c in ce.V10_CONDITIONS:
+                np.testing.assert_allclose(get(c, 'lc10a_hz'), get(c, 'lc10a_drive_hz'))
+            assert np.all(get('blind', 'lc10a_drive_hz') == 0)
+    report = ce.paths(prefix)[3].read_text(encoding='utf-8')
+    for text in ('## Result', 'P25', 'P26_a', 'P26_m', 'P27', 'P28', 'SIZE_FULL', '0.9', 'one-window neural lag'):
+        assert text in report
+    assert all(p.is_file() for p in ce.paths(prefix))
+
+
+def test_v10_refuses_unknown_sides():
+    from test_courtship import female_fake
+    male = make_parts()[0]
+    female = female_fake(list(female_fake().types)+['AN_SMP_2']*2+['AN_FLA_SMP_2']*2)
+    with pytest.raises(ValueError, match='known left/right soma_side'):
+        ce.build_room(0, 'sight', brains=(male, female), protocol='v10', annotations_path='build/missing')
+
+
+def test_v9_missing_graph(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, 'V8_GRAPH', tmp_path/'missing.npz')
+    with pytest.raises(ValueError, match='requires build/graph_female_own_sag'):
+        ce.main(['--protocol', 'v9', '--quick', '1', '--out', str(tmp_path/'run')], room_factory=FakeRoom)
+
+
+def test_v9_positive_weights_restored_even_on_failure():
+    from types import SimpleNamespace
+    fb = SimpleNamespace(wdata=np.array([-3., 0., 10., 20.], dtype=np.float32))
+    original = fb.wdata.copy()
+    for scale in ce.MALE_EXC_SCALES:
+        for _ in ce.V9_CONDITIONS:
+            with ce.male_excitation(fb, scale):
+                np.testing.assert_allclose(fb.wdata, [-3., 0., 10*scale, 20*scale])
+            np.testing.assert_array_equal(fb.wdata, original)
+    with pytest.raises(RuntimeError), ce.male_excitation(fb, .7):
+        raise RuntimeError('trial failure')
+    np.testing.assert_array_equal(fb.wdata, original)
+
+
+def test_v9_body_controls():
+    from test_courtship import female_fake
+    for condition in ce.V9_CONDITIONS:
+        male = make_parts()[0]
+        male.type_names, male.type_code = np.unique(male.types, return_inverse=True)
+        female = female_fake(list(female_fake().types)+['AN_SMP_2']*2+['AN_FLA_SMP_2']*2)
+        room = ce.build_room(3, condition, brains=(male, female), protocol='v9', annotations_path='build/missing')
+        body = room.bodies['B']
+        assert body.state_group == 'SAG' and body.state == 'virgin'
+        assert len(body.groups['SAG']) == 4
+        drive = body.drive(np.zeros((bw.FRAME_H, bw.FRAME_W)), 0., 0.)
+        np.testing.assert_array_equal(drive[tuple(body.groups['SAG'])], 50.)
+        gains = room.bodies['A'].gains
+        if condition == 'mute':
+            expected = np.ones(len(male.type_names))
+            expected[np.unique(male.type_code[room.bodies['A'].groups['P1']])] = 0
+            np.testing.assert_array_equal(gains, expected)
+        else:
+            assert gains is None
+        scent = room.listener_scent({'A': {'female_scent_orn': 80., 'female_scent_contact': 90.}, 'B': 0.})
+        assert scent['A']['female_scent_orn'] == (0. if condition == 'noscent' else 80.)
+        assert scent['A']['female_scent_contact'] == (0. if condition == 'noscent' else 90.)
+
+
+def test_v9_fake_quick_and_multiple_scale_rule(tmp_path, monkeypatch, capsys):
+    graph = tmp_path/'own.npz'
+    np.savez_compressed(graph, types=['AN_SMP_2']*2+['AN_FLA_SMP_2']*2, restore=json.dumps({}))
+    monkeypatch.setattr(ce, 'V8_GRAPH', graph)
+    class V9FakeRoom(FakeRoom):
+        def step(self):
+            result = super().step()
+            result['A']['total_hz'] = 17.
+            return result
+    from types import SimpleNamespace
+    male = SimpleNamespace(wdata=np.array([-3., 0., 10.], dtype=np.float32))
+    female = object()
+    seen = []
+    monkeypatch.setattr(ce.bw, 'brain_class', lambda name: lambda: male)
+    def load(**options):
+        assert options['path'] == graph and options['exc_scale'] == .7
+        return female
+    def factory(seed, condition, brains, protocol):
+        assert protocol == 'v9' and brains == (male, female)
+        scale = ce.MALE_EXC_SCALES[len(seen)//6]
+        np.testing.assert_allclose(male.wdata, [-3., 0., 10*scale])
+        seen.append((scale, seed, condition))
+        return V9FakeRoom(seed, condition)
+    monkeypatch.setattr(ce, 'load_female', load)
+    monkeypatch.setattr(ce, 'build_room', factory)
+    prefix = tmp_path/'v9'
+    assert ce.main(['--protocol', 'v9', '--quick', '1', '--out', str(prefix)]) == 0
+    np.testing.assert_array_equal(male.wdata, [-3., 0., 10.])
+    assert len(seen) == 18
+    assert all(p.is_file() for p in ce.paths(prefix))
+    data = json.loads(ce.paths(prefix)[0].read_text(encoding='utf-8'))
+    assert ce.MALE_EXC_SCALES == (.9, .8, .7)
+    assert tuple(ce.V9_CONDITIONS) == ('song', 'mute', 'noscent')
+    assert len(data['outcomes']) == 18 and data['steps'] == 80
+    assert data['female_exc_scale'] == .7
+    assert data['estimated_ten_seed_hours'] == pytest.approx(np.mean([t['step_s'] for t in data['timing']])*36000/3600)
+    assert '9 cells x 10 seeds x 400 steps' in capsys.readouterr().out
+    assert len(data['summary']['cells']) == 9
+    assert set(data['summary']['established'].values()) == {'not established'}
+    for seed in (0, 1):
+        rr = [r for r in data['outcomes'] if r['seed'] == seed]
+        assert all(r['start'] == rr[0]['start'] and r['male_total_hz'] == 17. and r['state_group'] == 'SAG' for r in rr)
+    with np.load(ce.paths(prefix)[1]) as z:
+        assert len([k for k in z if k.endswith('_male_total_hz')]) == 18
+    report = ce.paths(prefix)[3].read_text(encoding='utf-8')
+    assert ce.V9_PREDICTIONS in report and ce.V9_RULE in report and ce.V9_CALIBRATION in report
+    assert '## Result' in report
+    rows = [dict(data['outcomes'][0], seed=s, condition=c, male_exc_scale=scale,
+                 pip10_hz=10. if c == 'song' else 1., delivered_rms=10. if c == 'song' else 1.,
+                 p1_hz=10. if c == 'song' else 1.)
+            for scale in ce.MALE_EXC_SCALES for s in range(10) for c in ce.V9_CONDITIONS]
+    assert set(ce.summarise_v9(rows)['established'].values()) == {'established'}
+    for r in rows:
+        if r['male_exc_scale'] == .8 and r['condition'] == 'song':
+            r.update(pip10_hz=0., p1_hz=0.)
+    summary = ce.summarise_v9(rows[::-1])
+    assert set(summary['established'].values()) == {'not established'}
+    assert summary['per_scale']['0.8']['P21_command']['reversed']
+    assert summary['per_scale']['0.9']['P21_command']['paired_differences'] == [9.]*10
+    assert ce.main(['--reanalyse', str(ce.paths(prefix)[0])]) == 0
+
+
 def test_v8_missing_graph(tmp_path, monkeypatch):
     monkeypatch.setattr(ce, 'V8_GRAPH', tmp_path/'missing.npz')
     with pytest.raises(ValueError, match='v8 requires'):
@@ -614,7 +882,7 @@ class Cli(unittest.TestCase):
             alias = Path(td) / "alias"
             ce.paths(published)[2].write_bytes(b"protected")
             os.link(ce.paths(published)[2], ce.paths(alias)[0])
-            for constant in ("PUBLISHED", "PUBLISHED_ADDENDUM", "PUBLISHED_V7", "PUBLISHED_V8"):
+            for constant in ("PUBLISHED", "PUBLISHED_ADDENDUM", "PUBLISHED_V7", "PUBLISHED_V8", "PUBLISHED_V9", "PUBLISHED_V10", "PUBLISHED_V11"):
                 with self.subTest(constant=constant), patch.object(ce, constant, published):
                     with self.assertRaisesRegex(ValueError, "published prefix is refused"):
                         ce.assert_not_published(alias)
@@ -631,6 +899,9 @@ class Cli(unittest.TestCase):
         self.assertEqual(ce.PUBLISHED_ADDENDUM, Path("build/courtship_addendum"))
         self.assertEqual(ce.PUBLISHED_V7, Path("build/courtship_v7"))
         self.assertEqual(ce.PUBLISHED_V8, Path("build/courtship_v8"))
+        self.assertEqual(ce.PUBLISHED_V9, Path("build/courtship_v9"))
+        self.assertEqual(ce.PUBLISHED_V10, Path("build/courtship_v10"))
+        self.assertEqual(ce.PUBLISHED_V11, Path("build/courtship_v11"))
         for prefix in ("build/courtship", "build/COURTSHIP", "build/../build/courtship",
                        "build/courtship_addendum", "build/COURTSHIP_ADDENDUM",
                        "build/../build/courtship_addendum"):
@@ -720,3 +991,96 @@ def test_previous_measured_command_and_distance_scale():
     expected = Singer().render(**room.previous_rates)
     attenuated = Singer().render(**room.previous_rates, attenuation=room.channels.falloff(5))
     assert rms(attenuated) == pytest.approx(rms(expected)*room.channels.falloff(5))
+
+
+@pytest.mark.parametrize('condition,orn,contact', [
+    ('song', False, False), ('noscent_orn', True, False),
+    ('noscent_contact', False, True), ('noscent', True, True)])
+def test_v11_drives(condition, orn, contact):
+    from test_courtship import female_fake
+    male = make_parts()[0]
+    female = female_fake(list(female_fake().types)+['AN_SMP_2']*2+['AN_FLA_SMP_2']*2)
+    room = ce.build_room(3, condition, brains=(male, female), protocol='v11', annotations_path='build/missing')
+    source = {'A': {'female_scent_orn': 80., 'female_scent_contact': 90., bw.SMELL_KEY: 0.}, 'B': 0.}
+    actual = room.listener_scent(source)
+    assert actual == {'A': {'female_scent_orn': 0. if orn else 80.,
+        'female_scent_contact': 0. if contact else 90., bw.SMELL_KEY: 0.}, 'B': 0.}
+    assert source['A']['female_scent_orn'] == 80. and source['A']['female_scent_contact'] == 90.
+    assert ce.v11_drive_flags(condition) == dict(orn_zeroed=orn, contact_zeroed=contact)
+    assert room.bodies['A'].gains is None
+    assert room.bodies['B'].state_group == 'SAG'
+    assert len(room.bodies['B'].groups['SAG']) == 4
+
+
+def test_v11_required_dose_and_graph(tmp_path, monkeypatch):
+    args = ['--protocol', 'v11', '--quick', '1', '--out', str(tmp_path/'run')]
+    for dose in ([], ['--male-scale', 'nan'], ['--male-scale', '0']):
+        with pytest.raises(ValueError, match='requires --male-scale'):
+            ce.main(args+dose, room_factory=FakeRoom)
+    monkeypatch.setattr(ce, 'V8_GRAPH', tmp_path/'missing.npz')
+    with pytest.raises(ValueError, match='requires build/graph_female_own_sag'):
+        ce.main(args+['--male-scale', '.9'], room_factory=FakeRoom)
+    with pytest.raises(ValueError, match='ten seeds and 400 steps'):
+        ce.main(['--protocol', 'v11', '--male-scale', '.9', '--seeds', '1',
+                 '--out', str(tmp_path/'run')], room_factory=FakeRoom)
+
+
+def test_v11_predictions():
+    rows = [dict(seed=s, condition=c, p1_hz=float(s+1) if c!='song' else 0.,
+        pip10_hz=10. if c!='song' else 0., delivered_rms=1. if c=='noscent_orn' else 0.)
+        for s in range(10) for c in ce.V11_CONDITIONS]
+    summary = ce.summarise_v11(rows[::-1])
+    assert summary['predictions']['P29']['mean'] == 5.5
+    assert summary['predictions']['P29']['se'] == pytest.approx(np.std(np.arange(1., 11.), ddof=1)/np.sqrt(10))
+    assert summary['predictions']['P30']['established']
+    assert summary['P31_joint'] == dict(orn=True, contact=False)
+    assert summary['P32']['noscent_orn']['delivered_rms']['mean'] == -1.
+    assert 'verdict' not in summary['P32']['noscent_orn']['delivered_rms']
+    rows = [r for r in rows if not (r['seed']==0 and r['condition']=='noscent_orn')]
+    summary = ce.summarise_v11(rows)
+    assert summary['predictions']['P29']['excluded_seeds'] == [0]
+    assert not summary['predictions']['P29']['established']
+
+
+def test_v11_fake_quick(tmp_path, monkeypatch):
+    graph = tmp_path/'own.npz'
+    np.savez_compressed(graph, types=['AN_SMP_2']*2+['AN_FLA_SMP_2']*2, restore=json.dumps({}))
+    monkeypatch.setattr(ce, 'V8_GRAPH', graph)
+    from test_courtship import female_fake
+    male = make_parts()[0]
+    male.wdata = np.array([-2., 0., 10.], dtype=np.float32)
+    female = female_fake(list(female_fake().types)+['AN_SMP_2']*2+['AN_FLA_SMP_2']*2)
+    monkeypatch.setattr(ce.bw, 'brain_class', lambda name: lambda: male)
+    def load(**kwargs):
+        assert kwargs['path'] == graph and kwargs['exc_scale'] == .7
+        return female
+    monkeypatch.setattr(ce, 'load_female', load)
+    original = ce.build_room
+    def factory(seed, condition, brains, protocol):
+        np.testing.assert_allclose(male.wdata, [-2., 0., 9.])
+        assert protocol == 'v11'
+        return original(seed, condition, brains=brains, protocol=protocol, annotations_path='build/missing')
+    monkeypatch.setattr(ce, 'build_room', factory)
+    prefix = tmp_path/'v11'
+    assert ce.main(['--protocol', 'v11', '--male-scale', '.9', '--quick', '1',
+        '--out', str(prefix)]) == 0
+    np.testing.assert_array_equal(male.wdata, [-2., 0., 10.])
+    data = json.loads(ce.paths(prefix)[0].read_text(encoding='utf-8'))
+    assert data['male_exc_scale'] == .9 and data['steps'] == 80
+    assert len(data['outcomes']) == 8
+    assert data['environment']['brain_class'] == 'flysim.FlyBrain'
+    with np.load(ce.paths(prefix)[1]) as z:
+        for r in data['outcomes']:
+            assert r['orn_zeroed'] == (r['condition'] in ('noscent_orn', 'noscent'))
+            assert r['contact_zeroed'] == (r['condition'] in ('noscent_contact', 'noscent'))
+            distance = z[f"s{r['seed']}_{r['condition']}_distance_mm"]
+            assert r['contact_fraction'] == np.mean(distance < 2.)
+            assert r['distance_mm'] == np.mean(distance)
+    for seed in (0, 1):
+        starts = [r['start'] for r in data['outcomes'] if r['seed']==seed]
+        assert all(s==starts[0] for s in starts)
+    assert not any(p['established'] for p in data['summary']['predictions'].values())
+    report = ce.paths(prefix)[3].read_text(encoding='utf-8')
+    for text in ('## Result', 'P29', 'P30', 'P31_orn', 'P31_contact', 'P32', 'orn_zeroed', 'contact_zeroed', 'contact_fraction'):
+        assert text in report
+    assert data['estimated_ten_seed_hours'] == pytest.approx(np.mean([t['seconds']/80 for t in data['timing']])*16000/3600)

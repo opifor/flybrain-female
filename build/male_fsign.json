@@ -1,0 +1,112 @@
+{
+  "overrides": [
+    {
+      "group": "vAB3",
+      "transmitter": null,
+      "sign": 1.0,
+      "rationale": "CHOSEN: functional excitation of P1; applied to all dictionary vAB3 outputs",
+      "citation": "Clowney et al. 2015 Neuron 87:1036-1049, https://doi.org/10.1016/j.neuron.2015.07.025",
+      "selected_cells": 6,
+      "changed_cells": 6,
+      "bodies": [
+        11998,
+        13341,
+        13693,
+        14320,
+        512498,
+        922722
+      ],
+      "indices": [
+        1868,
+        3126,
+        3445,
+        4009,
+        124685,
+        162530
+      ],
+      "edges": 1789,
+      "synapses": 34809,
+      "action": "flipped"
+    },
+    {
+      "group": "mAL",
+      "transmitter": "unclear",
+      "sign": -1.0,
+      "rationale": "CHOSEN: restore the known GABAergic group sign only for unclear cells",
+      "citation": "Clowney et al. 2015 Neuron 87:1036-1049, https://doi.org/10.1016/j.neuron.2015.07.025",
+      "selected_cells": 23,
+      "changed_cells": 23,
+      "bodies": [
+        11147,
+        13701,
+        15604,
+        15618,
+        20215,
+        20771,
+        30116,
+        34612,
+        38290,
+        38743,
+        46697,
+        71416,
+        84395,
+        369210,
+        513126,
+        514411,
+        515272,
+        515541,
+        517048,
+        518673,
+        519905,
+        535834,
+        539322
+      ],
+      "indices": [
+        1060,
+        3452,
+        5153,
+        5166,
+        9282,
+        9777,
+        18128,
+        22069,
+        25327,
+        25719,
+        32731,
+        53496,
+        63946,
+        123452,
+        125008,
+        125749,
+        126234,
+        126384,
+        127294,
+        128251,
+        128972,
+        135576,
+        136462
+      ],
+      "edges": 2081,
+      "synapses": 17169,
+      "action": "added"
+    }
+  ],
+  "source_sha256s": {
+    "connectome-weights.feather": "e35da783d1c686b2b58b3b87cd6a403ae43bfcfba8bff28e08ef752c1a56afc1",
+    "body-neurotransmitters.feather": "95c9289220663abeb3409f3ad9e5a7f8a53f8093f5139d15502cd08da8879621",
+    "body-annotations.feather": "2177e246113e4cfbf1e7772ec37c6da1955ff22e8063d0b1f833101f99a9a3b2",
+    "build_graph.py": "07c9859f8a6799483b9d94f8c5bc165fe3a98cc1503b764bf5ded51fffc27a9c",
+    "backrooms_dictionary.py": "02209ed39d6702984a510221ed9efaad725e8216013b0a885406cced090f97ac",
+    "functional_sign.py": "e0f718b25333e89c0102ccbd05e784169f584b0576084cb8e418fa521bf1ab94",
+    "graph.npz": "5a6e6fbfa5f2d3840218cb32cc0182828829c9212b483ce771cfea7718a7b947"
+  },
+  "outside_columns_max_abs_diff": 0.0,
+  "vab3_target_synapses": {
+    "mAL": 11508,
+    "P1": 1111
+  },
+  "original_zero_sign_cells": 4143,
+  "cells": 165122,
+  "min_syn": 3,
+  "mv_per_synapse": 0.275
+}

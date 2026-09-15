@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import time
+from contextlib import contextmanager
 
 import numpy as np
 from scipy.stats import spearmanr
@@ -105,6 +106,9 @@ PUBLISHED = Path("build/courtship")
 PUBLISHED_ADDENDUM = Path("build/courtship_addendum")
 PUBLISHED_V7 = Path("build/courtship_v7")
 PUBLISHED_V8 = Path("build/courtship_v8")
+PUBLISHED_V9 = Path("build/courtship_v9")
+PUBLISHED_V10 = Path("build/courtship_v10")
+PUBLISHED_V11 = Path("build/courtship_v11")
 V6_CONDITIONS = {"gated": (True, False), "p1drive": (True, False)}
 V6_PROTOCOL_TEXT = """Protocol v6 ADDENDUM. Only gated and p1drive are run; controls are the v5 song records paired by seed. Seed RNGs, start geometry, steps, brains and all other v5 song settings are retained.
 CHOSEN gated: identical to v5 song (virgin), with outgoing gains 0.0 on exactly pC1a, pC1b, pC1c, pC1d, pC1e; other gains one. a mated female cannot be encoded through her own sex-peptide pathway in this map, because the SPSN and SAG axons carry no synapses here; the receptivity gate is closed by hand instead, as a lesion, the way the tests lesion.
@@ -375,7 +379,7 @@ class LuminanceEye:
 
 class ExperimentRoom(bw.Room):
     def configure(self, seed, condition, song_sound=None):
-        if condition not in CONDITIONS and condition not in V6_CONDITIONS and condition not in V7_CONDITIONS and condition != "dark":
+        if condition not in CONDITIONS and condition not in V6_CONDITIONS and condition not in V7_CONDITIONS and condition not in V10_CONDITIONS and condition not in V11_CONDITIONS and condition != "dark":
             raise ValueError("unknown condition")
         self.condition = condition
         rng = np.random.default_rng(np.random.SeedSequence([seed, 905]))
@@ -417,6 +421,10 @@ class ExperimentRoom(bw.Room):
     def listener_scent(self, smell):
         if self.condition == "noscent":
             return {"A": {"female_scent_orn": 0., "female_scent_contact": 0., bw.SMELL_KEY: 0.}, "B": 0.}
+        if self.condition in ('noscent_orn', 'noscent_contact'):
+            male = dict(smell['A'])
+            male['female_scent_' + self.condition.removeprefix('noscent_')] = 0.
+            return dict(smell, A=male)
         return smell
 
     def listener_sound(self, sound_hz):
@@ -452,15 +460,18 @@ def build_room(seed, condition, song_sound=None, brains=None,
                annotations_path="data/body-annotations.feather", brain_class=FlyBrain, protocol=None):
     """One construction for every condition; new bodies reset both states."""
     cls = bw.brain_class(brain_class) if isinstance(brain_class, str) else brain_class
-    v7 = condition in V7_CONDITIONS
+    v7 = condition in V7_CONDITIONS or protocol in ('v9', 'v10', 'v11', 'v12')
     if v7 and brains is None:
-        (v8_graph_record if protocol == 'v8' else v7_graph_record)()
+        (v8_graph_record if protocol in ('v8', 'v9', 'v10', 'v11', 'v12') else v7_graph_record)()
     female_options = dict(exc_scale=V7_EXC_SCALE if v7 else FEMALE_EXC_SCALE, brain_class=cls)
     if v7:
-        female_options['path'] = V8_GRAPH if protocol == 'v8' else V7_GRAPH
-    male, female = brains if brains is not None else (cls(), load_female(**female_options))
+        female_options['path'] = V8_GRAPH if protocol in ('v8', 'v9', 'v10', 'v11', 'v12') else V7_GRAPH
+    if protocol == 'v12' and brains is None:
+        v12_graph_record()
+    male, female = brains if brains is not None else (
+        cls(graph_path=V12_GRAPH) if protocol == 'v12' else cls(), load_female(**female_options))
     eye = BlindEye(female) if condition == "dark" or FEMALE_EYE == "blind" else LuminanceEye(female)
-    groups_b = female_groups(female, sag_pattern=V8_STATE_PATTERN) if protocol == 'v8' else female_groups(female)
+    groups_b = female_groups(female, sag_pattern=V8_STATE_PATTERN) if protocol in ('v8', 'v9', 'v10', 'v11', 'v12') else female_groups(female)
     body = HerBody("B", female, eye, groups_b,
                    female_motor(female), seed=seed * 2 + 2, sim_steps=250,
                    state_group="SAG" if v7 else "SpsP")
@@ -473,6 +484,8 @@ def build_room(seed, condition, song_sound=None, brains=None,
         male_eye = LuminanceEye(male)
         sides = np.full(male.n, "", dtype=str)
     groups = bd.present_groups(male)
+    if protocol == 'v12' and any(k not in groups for k in ('mAL', 'vAB3')):
+        raise ValueError('v12 requires measured male groups mAL and vAB3')
     groups["LC10a"] = male.where(type_re="^LC10a$")
     for key in ("P1", "pIP10", "LC10a"):
         if key not in groups or not len(groups[key]):
@@ -487,11 +500,15 @@ def build_room(seed, condition, song_sound=None, brains=None,
         male_recorded_groups={k: len(groups[k]) for k in ("P1", "pIP10", "LC10a")},
         disclosure=("MEASURED: annotation columns and soma sides loaded by bodyId." if available
                     else "CHOSEN: missing annotations use luminance and unknown soma sides; no column or side identities are invented."))
+    if protocol == 'v12':
+        room.male_setup['male_recorded_groups'].update({k: len(groups[k]) for k in ('mAL', 'vAB3')})
     room.configure(seed, condition, song_sound)
     if condition == "gated":
         body.gains = pc1_lesion(female)
     if condition == "p1drive":
         install_p1_drive(room.bodies["A"])
+    if protocol == 'v10':
+        install_lc10a_drive(room, sides)
     return room
 
 
@@ -537,6 +554,16 @@ def outcome(seed, condition, trace, start):
         for label, key in (("distance", "distance_mm"), ("speed", "her_speed_mm_s")):
             result[f"{channel}_{label}_lagged_rho"] = correlation(trace[channel][1:], trace[key][:-1]) if channel in trace else None
     result["m_lc10a_lagged_rho"] = correlation(trace["m"][1:], trace["lc10a_hz"][:-1])
+    for channel in ('a', 'm'):
+        neural = trace.get(channel + '_neural')
+        result[channel + '_neural_lc10a_lagged_rho'] = (
+            correlation(neural[1:], trace['lc10a_hz'][:-1]) if neural is not None else None)
+        if 'lc10a_drive_hz' in trace:
+            result[channel + '_neural_drive_lagged_rho'] = correlation(
+                neural[1:], trace['lc10a_drive_hz'][:-1])
+    if 'turn_toward' in trace:
+        result.update(turn_toward_fraction=float(trace['turn_toward'].mean()),
+                      distance_mm=float(trace['distance_mm'].mean()), state_group='SAG')
     seen = trace["sight_ok"].astype(bool)
     result["lc10a_sight_hz"] = float(trace["lc10a_hz"][seen].mean()) if seen.any() else None
     result["lc10a_no_sight_hz"] = float(trace["lc10a_hz"][~seen].mean()) if (~seen).any() else None
@@ -558,7 +585,9 @@ def run_trial(room, steps, seed, condition):
     sight_ok = any(np.any(np.abs(np.asarray(image[k]) - v) > 1e-6)
                    for k, v in baseline.items())
     rows = []
-    for _ in range(steps):
+    for window in range(steps):
+        if getattr(room, 'protocol', None) == 'v10':
+            prepare_lc10a_window(room, window)
         image = eye.look(ch.sight_frame(room.arena.A, room.arena.B), *ch.gaze)
         window_sight = any(np.any(np.abs(np.asarray(image[k])-v) > 1e-6)
                            for k, v in baseline.items())
@@ -582,6 +611,18 @@ def run_trial(room, steps, seed, condition):
             her_sound_a_hz=sound_a, her_sound_b_hz=sound_b,
             song_hz=r["A"]["song_hz"], his_sound_hz=r["A"]["in"]["sound_hz"])
         wave = r.get("song_wave", {})
+        a_neural, m_neural = neural_song(r['A']['rates']['pIP10'],
+            r['A']['pulse_hz'], r['A']['sine_hz'], room.singer)
+        row.update(a_neural=a_neural, m_neural=m_neural)
+        if getattr(room, 'protocol', None) == 'v10':
+            drive = room.lc10a_current
+            before_bearing = g['bearing_deg']['A']
+            row.update(lc10a_drive_hz=float(np.mean(drive)),
+                lc10a_drive_left_hz=float(room.lc10a_pair[0]),
+                lc10a_drive_right_hz=float(room.lc10a_pair[1]),
+                lc10a_replay_index=room.lc10a_source_index,
+                turn_toward=heading_reduces_bearing(before_bearing,
+                    g['A']['heading_rad'], r['after']['A']['heading_rad']))
         row.update(pip10_hz=r["A"]["rates"]["pIP10"],
                    lc10a_hz=r["A"]["rates"]["LC10a"],
                    source_pip10_hz=wave.get("pip10_hz", 0.),
@@ -591,8 +632,16 @@ def run_trial(room, steps, seed, condition):
                    replay_gain=wave.get("replay_gain", 1.),
                    her_brain_s=r["B"].get("brain_s", 0.))
         rows.append(row)
+        if getattr(room, 'protocol', None) in ('v9', 'v12'):
+            row['male_total_hz'] = r['A']['total_hz']
+        if getattr(room, 'protocol', None) == 'v12':
+            row.update(mal_hz=r['A']['rates']['mAL'], vab3_hz=r['A']['rates']['vAB3'])
     trace = {k: np.asarray([r[k] for r in rows], dtype=float) for k in rows[0]}
     result = outcome(seed, condition, trace, start)
+    if getattr(room, 'protocol', None) in ('v9', 'v12'):
+        result.update(male_total_hz=float(trace['male_total_hz'].mean()), state_group='SAG')
+    if getattr(room, 'protocol', None) == 'v12':
+        result.update(mal_hz=float(trace['mal_hz'].mean()), vab3_hz=float(trace['vab3_hz'].mean()))
     result.update(sight_ok=bool(sight_ok), sight_check=sight, **room.male_setup)
     return result, trace
 
@@ -673,7 +722,7 @@ def paths(prefix):
 
 def assert_not_published(prefix):
     for target, protected in ((t, p) for t in paths(prefix)
-                              for root in (PUBLISHED, PUBLISHED_ADDENDUM, PUBLISHED_V7, PUBLISHED_V8) for p in paths(root)):
+                              for root in (PUBLISHED, PUBLISHED_ADDENDUM, PUBLISHED_V7, PUBLISHED_V8, PUBLISHED_V9, PUBLISHED_V10, PUBLISHED_V11) for p in paths(root)):
         # Resolve the parent identity, including aliases, before the files exist.
         same_parent = target.parent.exists() and protected.parent.exists() and os.path.samefile(target.parent, protected.parent)
         same_file = target.exists() and protected.exists() and os.path.samefile(target, protected)
@@ -683,6 +732,14 @@ def assert_not_published(prefix):
 
 def write_report(json_path):
     data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    if data['protocol'] == 'v12':
+        return write_v12_report(json_path, data)
+    if data['protocol'] == 'v11':
+        return write_v11_report(json_path, data)
+    if data['protocol'] == 'v10':
+        return write_v10_report(json_path, data)
+    if data['protocol'] == 'v9':
+        return write_v9_report(json_path, data)
     if data["protocol"] == "v6":
         return write_v6_report(json_path, data)
     if data["protocol"] in ("v7", "v8"):
@@ -817,6 +874,637 @@ def save(prefix, data, traces):
     write_report(jp)
 
 
+MALE_EXC_SCALES = (0.9, 0.8, 0.7)
+V9_CONDITIONS = {c: CONDITIONS[c] for c in ('song', 'mute', 'noscent')}
+V9_PREDICTIONS = '''- P21 the command carries the song: his pIP10 mean rate and delivered song RMS, song > mute (both, as P5).
+- P22 he notices her: his P1 mean rate, song > noscent (as P8).
+- P23 (descriptive, no verdict): pIP10 and delivered RMS by scale; P1 by scale; total male rate by scale (is there a scale where silence stays silent and song still sings); her vpoDN by scale (does cooling him change what reaches her); accept rule per cell.
+- P24 (descriptive, stated as not testable): LC10a per cell, with the sentence "LC10a is not reachable from this eye model; adaptation through LC10a is not tested in v9".'''
+V9_RULE = 'Verdict rule per scale as v5: paired difference > 2 SE, n = 10. A step counts as established only if it holds at at least one scale AND the direction is not reversed (difference < -2 SE) at any other scale in the sweep; report every scale. P21 requires both comparisons at the same scale; reversal of either comparison at any scale prevents establishment. Quick runs are smoke tests and cannot establish a step.'
+V9_CALIBRATION = '''Calibration record: raw male graph (GPU, 8 carried windows x 250 steps; these are calibration probes, not outcomes):
+- Silence gives 0 Hz everywhere; any input (her scent on Or47b, her silhouette on his eye, either eye model) ignites the whole male network to ~45-60 Hz total, after which pIP10 is erratic: at one scale it ranges 2 to 245 Hz across conditions, and a P1 lesion sometimes raises pIP10. A ladder of positive-weight scales 1.00/0.98/0.96/0.94/0.92/0.90 showed NO monotone dependence of pIP10 on P1 and no stable scent effect on P1 in eight-window probes. An earlier probe at 0.9 and 0.8 with scent+contact drive at 100 Hz on each class gave pIP10 0-4 Hz (song command gone) while P1 stayed 10-25 Hz. So the regime where P1 controls pIP10, if it exists, lies somewhere in 0.7-0.95 and eight-window probes cannot find it: it needs seeds and the closed loop.
+- LC10a cannot be reached from his eye in this map: lamina L1/L2 drive, T4/T5 drive, T2/T3, Tm3/Mi1 all leave LC10a at 0-2 Hz; only driving LC10a's own strongest medulla input types (Tm5Y, LC9, LC10c, TmY21, Tm5a) lights it (47-137 Hz). Its strongest inputs by weight include large inhibitory classes (TuTuA_2, AOTU042). So "he adapts" measured through LC10a is not testable with the current eye; say so.'''
+V9_PROTOCOL_TEXT = '''Protocol v9. CHOSEN before data: MALE_EXC_SCALE swept over {0.9, 0.8, 0.7}, positive weights only, before room construction, restored between cells. Raw 1.0 is already on record in v5 and failed P5/P8.
+Ten seeds, 400 steps, paired by seed and start across nine cells. Quick mode: two seeds, 80 steps, nine cells. No seed-count adaptation.
+Female side = v8 exactly: own restored SAG graph build/graph_female_own_sag.npz (required), both SAG types, virgin STATE_HZ = 50 Hz, positive-weight scale 0.7, blind eye.
+Conditions at every scale: song as v5; mute sets only his P1 outgoing gains to zero as v5; noscent zeros both her scent and contact drives to him as v5. All other v5 song settings retained.
+Predictions fixed before data:
+''' + V9_PREDICTIONS + '\n' + V9_RULE
+PROTOCOLS['v9'] = dict(PROTOCOLS['v8'], text=V9_PROTOCOL_TEXT, conditions=V9_CONDITIONS,
+    male_exc_scales=MALE_EXC_SCALES, seed_ladder=(10,), budget_note='Exactly 9 cells x 10 seeds; no seed reduction.')
+V9_LIMITATIONS = [
+    'The male scale is a chosen dose, not a measurement.',
+    'The sweep is small and pre-registered; the multiple-scale rule is not a multiplicity-adjusted significance test.',
+    'His eye still floods on uniform grey.',
+    'LC10a is not reachable from this eye model; adaptation through LC10a is not tested in v9',
+    'No silence cell is included in v9; silence staying silent is calibration evidence only, not tested by this sweep.',
+    *[s for s in V8_LIMITATIONS if s != 'The male is unchanged and runs at raw scale.'],
+    'Mute changes only his P1 outgoing gains; its spikes need not be silent.']
+
+
+@contextmanager
+def male_excitation(fb, scale):
+    """Indexed writes notify GPU weights, as in load_female; never compound doses."""
+    original = fb.wdata.copy()
+    try:
+        fb.wdata[fb.wdata > 0] *= scale
+        yield
+    finally:
+        fb.wdata[:] = original
+
+
+def summarise_v9(rows, scale_set=MALE_EXC_SCALES):
+    scales, cells = {}, []
+    for scale in scale_set:
+        rr = [r for r in rows if r['male_exc_scale'] == scale]
+        indexed = {(r['seed'], r['condition']): r for r in rr}
+        seeds = sorted({r['seed'] for r in rr})
+        predictions = {}
+        for label, metric, control in (('P21_command', 'pip10_hz', 'mute'),
+                ('P21_rms', 'delivered_rms', 'mute'), ('P22', 'p1_hz', 'noscent')):
+            diffs = [indexed[s, 'song'][metric] - indexed[s, control][metric] for s in seeds]
+            mean = float(np.mean(diffs))
+            se = float(np.std(diffs, ddof=1)/np.sqrt(len(diffs))) if len(diffs) > 1 else None
+            predictions[label] = dict(mean=mean, se=se, n=len(diffs), paired_differences=diffs,
+                metric=metric, control=control, verdict=verdict(mean, se, len(diffs)),
+                reversed=bool(se is not None and mean < -2*se))
+        predictions['P21_verdict'] = ('supported' if all(predictions[k]['verdict'] == 'supported'
+            for k in ('P21_command', 'P21_rms')) else 'not supported')
+        scales[str(scale)] = predictions
+        for c in V9_CONDITIONS:
+            cell = [r for r in rr if r['condition'] == c]
+            cells.append(dict(male_exc_scale=scale, condition=c, n=len(cell),
+                accept=sum(r['accept'] for r in cell),
+                **{k: float(np.mean([r[k] for r in cell])) for k in
+                   ('pip10_hz', 'delivered_rms', 'p1_hz', 'male_total_hz', 'vpodn_hz', 'lc10a_hz')}))
+    established = {}
+    for step, keys in (('P21', ('P21_command', 'P21_rms')), ('P22', ('P22',))):
+        holds = any(all(p[k]['verdict'] == 'supported' for k in keys) for p in scales.values())
+        reverse = any(p[k]['reversed'] for p in scales.values() for k in keys)
+        full = all(p[k]['n'] == 10 for p in scales.values() for k in keys)
+        established[step] = 'established' if full and holds and not reverse else 'not established'
+    return dict(per_scale=scales, established=established, cells=cells)
+
+
+def v9_cell_table(data):
+    keys = ('male_exc_scale', 'condition', 'n', 'pip10_hz', 'delivered_rms', 'p1_hz',
+            'male_total_hz', 'vpodn_hz', 'lc10a_hz', 'accept')
+    return ['| ' + ' | '.join(keys) + ' |', '| ' + ' | '.join(['---']*len(keys)) + ' |'] + [
+        '| ' + ' | '.join(f'{r[k]:.6g}' if isinstance(r[k], float) else str(r[k]) for k in keys) + ' |'
+        for r in data['summary']['cells']]
+
+
+def write_v9_report(json_path, data):
+    lines = ['# Courtship v9', '', data['protocol_spec']['text'], '', '## Calibration record',
+        V9_CALIBRATION, '', '## Female graph record', json.dumps(data['female_graph'], indent=2),
+        '', '## Per-scale verdicts', '| Scale | Prediction | Difference | SE | n | Verdict | Reversed |',
+        '|---|---|---:|---:|---:|---|---|']
+    for scale, ps in data['summary']['per_scale'].items():
+        for label, p in ps.items():
+            if isinstance(p, dict):
+                lines.append(f"| {scale} | {label} | {p['mean']} | {p['se']} | {p['n']} | {p['verdict']} | {p['reversed']} |")
+        lines.append(f"P21 joint verdict at {scale}: {ps['P21_verdict']}.")
+    lines += ['', '## Per-seed outcomes', data['protocol_spec']['outcome_text']]
+    keys = ('male_exc_scale', 'seed', 'condition', 'pip10_hz', 'delivered_rms', 'p1_hz',
+            'male_total_hz', 'vpodn_hz', 'lc10a_hz', 'accept', 'active_windows', 'approach', 'retreat')
+    lines += ['| ' + ' | '.join(keys) + ' |', '| ' + ' | '.join(['---']*len(keys)) + ' |']
+    lines += ['| ' + ' | '.join(str(r[k]) for k in keys) + ' |' for r in data['outcomes']]
+    lines += ['', '## P23/P24 descriptives (no verdict)', *v9_cell_table(data),
+        'LC10a is not reachable from this eye model; adaptation through LC10a is not tested in v9',
+        'No silence cell was run; the silent baseline is from calibration only.', '', '## Result',
+        ' '.join(f"{k} is {v} under the multiple-scale rule." for k, v in data['summary']['established'].items()),
+        'Two-seed quick comparisons are smoke evidence only.' if data['quick'] else 'All ten paired seeds are reported at every scale.',
+        '', f"Ten-seed cost: {data['estimated_ten_seed_hours']:.6g} hours (9 cells x 10 seeds x 400 steps), excluding setup and rendering.",
+        '', '## Limitations', *['- '+s for s in data['limitations']]]
+    destination = Path(str(json_path).replace('_experiment.json', '_report.md'))
+    destination.write_text('\n'.join(lines)+'\n', encoding='utf-8')
+    return destination
+
+
+def run_v9(args, prefix, room_factory=None):
+    if not args.quick and (args.seeds != 10 or args.steps != 400):
+        raise ValueError('v9 requires ten seeds and 400 steps; use --quick 1 for smoke tests')
+    graph = v8_graph_record()
+    n, steps = (2, 80) if args.quick else (10, 400)
+    cls = bw.brain_class(args.brain)
+    brains = None if room_factory else (cls(), load_female(path=V8_GRAPH, exc_scale=.7, brain_class=cls))
+    rows, traces, timings, starts = [], {}, [], {}
+    from contextlib import nullcontext
+    for scale in MALE_EXC_SCALES:
+        for seed in range(n):
+            for condition in V9_CONDITIONS:
+                with male_excitation(brains[0], scale) if brains else nullcontext():
+                    room = (room_factory(seed, condition, brains=brains) if room_factory else
+                            build_room(seed, condition, brains=brains, protocol='v9'))
+                    room.protocol = 'v9'
+                    start = room.arena.geometry()
+                    if seed in starts and start != starts[seed]:
+                        raise ValueError('v9 paired start mismatch')
+                    starts[seed] = start
+                    t0 = time.perf_counter()
+                    row, trace = run_trial(room, steps, seed, condition)
+                    elapsed = time.perf_counter()-t0
+                row['male_exc_scale'] = scale
+                rows.append(row)
+                timings.append(dict(male_exc_scale=scale, seed=seed, condition=condition, step_s=elapsed/steps))
+                traces.update({f's{seed}_{condition}_scale{scale}_{k}': v for k, v in trace.items()})
+                print(f'scale={scale} seed={seed} condition={condition} step_s={elapsed/steps:.6f}', flush=True)
+                if len(rows) == 1:
+                    print(f'First-trial ten-seed estimate: {elapsed/steps*9*10*400/3600:.6g} hours (9 cells x 10 seeds x 400 steps).', flush=True)
+    hours = float(np.mean([t['step_s'] for t in timings]))*9*10*400/3600
+    data = dict(protocol='v9', protocol_spec=PROTOCOLS['v9'], seeds=list(range(n)), steps=steps,
+        quick=bool(args.quick), male_exc_scales=MALE_EXC_SCALES, female_exc_scale=.7,
+        female_graph=graph, female_eye=FEMALE_EYE, state_group='SAG', state_drive_hz=50.,
+        outcomes=rows, summary=summarise_v9(rows), timing=timings, estimated_ten_seed_hours=hours,
+        limitations=V9_LIMITATIONS, calibration=V9_CALIBRATION, ear=WaveEar().describe(),
+        environment=dict(brain_class=args.brain, torch_devices={name: str(getattr(fb, 'device', None))
+            for name, fb in zip(('male', 'female'), brains or (None, None))}),
+        date=datetime.now(timezone.utc).isoformat())
+    jp, npz, png, _ = paths(prefix)
+    jp.parent.mkdir(parents=True, exist_ok=True)
+    jp.write_text(json.dumps(data, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+    np.savez_compressed(npz, **traces)
+    # Keep the existing four-artifact contract, with one labelled panel per cell.
+    plot_data = dict(data, protocol_spec=dict(data['protocol_spec'], conditions={
+        f'{c} scale {scale}': V9_CONDITIONS[c] for scale in MALE_EXC_SCALES for c in V9_CONDITIONS}),
+        outcomes=[dict(r, condition=f"{r['condition']} scale {r['male_exc_scale']}") for r in rows])
+    plot_traces = {}
+    for r in rows:
+        source = f"s{r['seed']}_{r['condition']}_scale{r['male_exc_scale']}_"
+        target = f"s{r['seed']}_{r['condition']} scale {r['male_exc_scale']}_"
+        plot_traces.update({target+k[len(source):]: v for k, v in traces.items() if k.startswith(source)})
+    render_pil(png, plot_data, plot_traces)
+    write_report(jp)
+    print('\n'.join(v9_cell_table(data)), flush=True)
+    print(f'Ten-seed cost: {hours:.6g} hours (9 cells x 10 seeds x 400 steps), excluding setup and rendering.', flush=True)
+    return 0
+
+
+LC10A_HZ_MAX = 100.0
+SIZE_FULL = float(np.degrees(2*np.arctan((bw.BODY_HEIGHT_MM/2)/2.0)))
+V10_CONDITIONS = {'sight': (True, False), 'blind': (True, False), 'shuffled': (True, False)}
+V10_TEXT = f'''Protocol v10: he adapts, a pre-registered intervention.
+CHOSEN: ten seeds, 400 steps, paired by seed and start; quick = two seeds x 80 steps (one seed allowed for CPU budget).
+Female = v8: required own restored SAG graph, virgin SAG 50 Hz, positive-weight scale 0.7.
+Male positive-weight scale is required via --male-scale, a chosen dose from v9; no default.
+CHOSEN: LC10A_HZ_MAX = {LC10A_HZ_MAX} Hz; SIZE_FULL = {SIZE_FULL:.12g} degrees, the vertical angular diameter at 2 mm for the room's 1 mm body height.
+Use ellipse_of ry_raw / px_per_deg x 2 (unfloored vertical angular diameter). Drive = 100 x clip(size / SIZE_FULL, 0, 1).
+Sight: drive each LC10a cell by soma_side while her centre bearing is in the front field (+/-90 degrees, boundaries included); positive bearing drives left, negative right, both within +/-10 degrees. Behind = zero.
+Blind: no LC10a drive. His v5 eye, including grey flooding, stays the same in all conditions.
+Shuffled: run sight first; replay its left/right drive pairs using numpy default_rng(SeedSequence([seed, 1025])).permutation, with an identity permutation rotated once. Preserve each cell's total drive, break the temporal link to current geometry.
+Drive scalar for P26 = mean input Hz across all LC10a cells, including the zero side. Record both side rates and replay indices.
+P25 the drive lands: LC10a mean rate, sight > blind (intervention check, not vision).
+P26 he adapts: Spearman rho(m_neural[t], drive[t-1]) and rho(a_neural[t], drive[t-1]), sight > shuffled; at least one channel must pass, both reported.
+P27 he turns toward her: fraction of all windows where his heading change reduces absolute bearing to her pre-window position, sight > blind. Zero turns do not count; translations are excluded.
+P28 descriptive: pIP10, delivered RMS, her vpoDN and accept; mean distance, approach and retreat per condition and seed.
+Predictions fixed before data: paired difference > 2 SE, n=10, as v5. Missing/constant correlations are undefined, excluded as pairs; fewer than ten valid pairs cannot establish a prediction. Quick comparisons are smoke evidence only.
+'''
+V10_LIMITATIONS = [
+    'LC10a measured-geometry drive replaces the visual pathway with chosen constants; it does not validate the native lamina-to-LC10a pathway. His eye still floods on grey.',
+    'The male scale is a chosen dose from v9; the quick-run dose 0.9 is a smoke-test choice, not a sweep-selected final dose.',
+    'The old m_lc10a_lagged_rho compares rendered m[t] from neural window t-1 with LC10a[t-1], so it does not measure a one-window neural lag. Legacy fields remain unchanged; new neural fields use current rates against previous-window LC10a.',
+    'P26 tests either of two reported correlations with the specified >2 SE rule, without multiplicity adjustment. Correlation is not a learned adaptation mechanism.',
+    'Angular size uses the unfloored vertical diameter; bearing and size vary with movement, but no separate motion gain is added.',
+    *[s for s in V8_LIMITATIONS if s != 'The male is unchanged and runs at raw scale.']]
+PROTOCOLS['v10'] = dict(PROTOCOLS['v8'], text=V10_TEXT, conditions=V10_CONDITIONS,
+    lc10a_hz_max=LC10A_HZ_MAX, size_full_deg=SIZE_FULL, male_scale_required=True,
+    jitter_rng=None, seed_ladder=(10,), budget_note='No seed reduction except explicit one-seed quick CPU run.')
+
+
+def neural_song(pip10, pulse, sine, singer):
+    """Same normalization as song.Singer.render, without its one-window delay."""
+    p, s = pulse/singer.pulse_cells, sine/singer.sine_cells
+    return float(np.clip(pip10/singer.pip10_full, 0, 1)), float(p/(p+s)) if p+s > 0 else 0.
+
+
+def heading_reduces_bearing(bearing, before, after):
+    """Hold the pre-window line of sight fixed: isolate his heading change."""
+    turned = (bearing - np.degrees(after-before) + 180) % 360 - 180
+    return abs(turned) < abs(bearing)
+
+
+def lc10a_geometry(channels, viewer, other):
+    ellipse = channels.ellipse_of(viewer, other)
+    bearing = ellipse['bearing_deg']
+    size = 2*ellipse['ry_raw']/channels.px_per_deg
+    rate = LC10A_HZ_MAX*float(np.clip(size/SIZE_FULL, 0, 1))
+    if abs(bearing) > min(90., channels.fov_w/(2*channels.px_per_deg)):
+        return np.zeros(2, dtype=np.float32)
+    return np.asarray([rate if bearing >= -10 else 0.,
+                       rate if bearing <= 10 else 0.], dtype=np.float32)
+
+
+def shuffled_drive(trace, seed):
+    pairs = np.column_stack((trace['lc10a_drive_left_hz'], trace['lc10a_drive_right_hz']))
+    order = np.random.default_rng(np.random.SeedSequence([seed, 1025])).permutation(len(pairs))
+    if len(order) > 1 and np.array_equal(order, np.arange(len(order))):
+        order = np.roll(order, 1)
+    return pairs[order].copy(), order
+
+
+def install_lc10a_drive(room, soma_side):
+    body = room.bodies['A']
+    idx = body.groups['LC10a']
+    sides = np.asarray(soma_side)[idx]
+    if not np.all(np.isin(sides, ['L', 'R'])) or not all(np.any(sides == s) for s in ('L', 'R')):
+        raise ValueError('v10 requires known left/right soma_side for all LC10a cells')
+    room.lc10a_sides = sides
+    original = body.drive
+
+    def drive(frame, smell_hz, sound_hz):
+        result = original(frame, smell_hz, sound_hz)
+        if any(np.intersect1d(k, idx).size for k in result):
+            raise ValueError('LC10a drive overlaps another input')
+        result[tuple(idx)] = room.lc10a_current.copy()
+        return result
+
+    body.drive = drive
+
+
+def prepare_lc10a_window(room, window):
+    if room.condition == 'shuffled':
+        pair = room.lc10a_replay[window]
+        source = int(room.lc10a_order[window])
+    else:
+        pair = (lc10a_geometry(room.channels, room.arena.A, room.arena.B)
+                if room.condition == 'sight' else np.zeros(2, dtype=np.float32))
+        source = window
+    room.lc10a_pair, room.lc10a_source_index = pair, source
+    room.lc10a_current = np.where(room.lc10a_sides == 'L', pair[0], pair[1]).astype(np.float32)
+
+
+def summarise_v10(rows):
+    indexed = {(r['seed'], r['condition']): r for r in rows}
+    seeds = sorted({r['seed'] for r in rows})
+    predictions = {}
+    for label, metric, control in (
+            ('P25', 'lc10a_hz', 'blind'),
+            ('P26_a', 'a_neural_drive_lagged_rho', 'shuffled'),
+            ('P26_m', 'm_neural_drive_lagged_rho', 'shuffled'),
+            ('P27', 'turn_toward_fraction', 'blind')):
+        pairs = [(s, indexed[s, 'sight'][metric], indexed[s, control][metric]) for s in seeds]
+        valid = [(s, a-b) for s, a, b in pairs if a is not None and b is not None]
+        diffs = [d for _, d in valid]
+        mean = float(np.mean(diffs)) if diffs else None
+        se = float(np.std(diffs, ddof=1)/np.sqrt(len(diffs))) if len(diffs) > 1 else None
+        v = verdict(mean, se, len(diffs))
+        predictions[label] = dict(metric=metric, control=control, mean=mean, se=se,
+            n=len(diffs), paired_differences=diffs, valid_seeds=[s for s, _ in valid],
+            excluded_seeds=[s for s, a, b in pairs if a is None or b is None], verdict=v,
+            established=len(diffs) == 10 and v == 'supported')
+    channels = [c for c in ('a', 'm') if predictions['P26_'+c]['established']]
+    return dict(predictions=predictions, P26_channels=channels,
+        P26_verdict='established' if channels else 'not established')
+
+
+def v10_seed_table(data):
+    keys = ('seed', 'condition', 'lc10a_hz', 'a_neural_drive_lagged_rho',
+        'm_neural_drive_lagged_rho', 'turn_toward_fraction', 'pip10_hz',
+        'delivered_rms', 'vpodn_hz', 'accept', 'distance_mm', 'approach', 'retreat')
+    return ['| '+' | '.join(keys)+' |', '| '+' | '.join(['---']*len(keys))+' |'] + [
+        '| '+' | '.join(f'{r[k]:.6g}' if isinstance(r[k], float) else str(r[k]) for k in keys)+' |'
+        for r in data['outcomes']]
+
+
+def write_v10_report(json_path, data):
+    lines = ['# Courtship v10', '', '## Calibration/design record', V10_TEXT,
+        f"CHOSEN male positive-weight scale: {data['male_exc_scale']}.",
+        'Female graph record: '+json.dumps(data['female_graph']), '', '## Verdicts',
+        '| Prediction | Difference | SE | n | >2 SE comparison | Established (n=10) |',
+        '|---|---:|---:|---:|---|---|']
+    for label, p in data['summary']['predictions'].items():
+        lines.append(f"| {label} | {p['mean']} | {p['se']} | {p['n']} | {p['verdict']} | {p['established']} |")
+    lines += ['', '## Per-seed outcomes and P28 (descriptive)', *v10_seed_table(data),
+        '', '## Result',
+        ' '.join(f"{k}: {'established' if data['summary']['predictions'][k]['established'] else 'not established'}." for k in ('P25', 'P27')),
+        f"P26: {data['summary']['P26_verdict']}; qualifying channels: {', '.join(data['summary']['P26_channels']) or 'none'}. Both a and m are reported above.",
+        'Quick run: smoke evidence only.' if data['quick'] else 'Ten-seed design; undefined pairs cannot establish a prediction.',
+        '', '## Limitations', *['- '+s for s in data['limitations']]]
+    destination = Path(str(json_path).replace('_experiment.json', '_report.md'))
+    destination.write_text('\n'.join(lines)+'\n', encoding='utf-8')
+    return destination
+
+
+def run_v10(args, prefix, room_factory=None):
+    if args.male_scale is None or not np.isfinite(args.male_scale) or args.male_scale <= 0:
+        raise ValueError('v10 requires --male-scale with a finite positive value')
+    if not args.quick and (args.seeds != 10 or args.steps != 400):
+        raise ValueError('v10 requires ten seeds and 400 steps; use --quick 1 for smoke tests')
+    graph = v8_graph_record()
+    n, steps = (1 if args.seeds == 1 else 2, 80) if args.quick else (10, 400)
+    cls = bw.brain_class(args.brain)
+    brains = None if room_factory else (cls(), load_female(path=V8_GRAPH, exc_scale=.7, brain_class=cls))
+    from contextlib import nullcontext
+    rows, traces, timings = [], {}, []
+    print(V10_TEXT+f'CHOSEN male positive-weight scale: {args.male_scale}', flush=True)
+    for seed in range(n):
+        sight_trace, start = None, None
+        for condition in V10_CONDITIONS:
+            with male_excitation(brains[0], args.male_scale) if brains else nullcontext():
+                room = (room_factory(seed, condition, brains=brains) if room_factory else
+                        build_room(seed, condition, brains=brains, protocol='v10'))
+                room.protocol = 'v10'
+                if start is not None and room.arena.geometry() != start:
+                    raise ValueError('v10 paired start mismatch')
+                start = room.arena.geometry()
+                if condition == 'shuffled':
+                    room.lc10a_replay, room.lc10a_order = shuffled_drive(sight_trace, seed)
+                t0 = time.perf_counter()
+                row, trace = run_trial(room, steps, seed, condition)
+                elapsed = time.perf_counter()-t0
+            row['male_exc_scale'] = args.male_scale
+            rows.append(row)
+            timings.append(dict(seed=seed, condition=condition, seconds=elapsed))
+            traces.update({f's{seed}_{condition}_{k}': v for k, v in trace.items()})
+            if condition == 'sight':
+                sight_trace = trace
+            print(f'seed={seed} condition={condition} seconds={elapsed:.3f}', flush=True)
+    data = dict(protocol='v10', protocol_spec=PROTOCOLS['v10'], seeds=list(range(n)),
+        steps=steps, quick=bool(args.quick), male_exc_scale=args.male_scale,
+        female_exc_scale=.7, female_graph=graph, female_eye=FEMALE_EYE,
+        state_group='SAG', state_drive_hz=50., outcomes=rows, summary=summarise_v10(rows),
+        limitations=V10_LIMITATIONS, timing=timings, ear=WaveEar().describe(),
+        environment=dict(brain_class=args.brain), date=datetime.now(timezone.utc).isoformat())
+    save(prefix, data, traces)
+    print('\n'.join(v10_seed_table(data)), flush=True)
+    print(json.dumps(data['summary'], indent=2), flush=True)
+    return 0
+
+
+V11_CONDITIONS = {c: CONDITIONS['song'] for c in ('song', 'noscent_orn', 'noscent_contact', 'noscent')}
+V11_TEXT = '''Protocol v11: which of her cues suppresses his command.
+CHOSEN before data: required --male-scale, positive male weights only, restored between trials; 0.9 is the v9 rule choice. Female = v8: required own restored SAG graph, both SAG types, virgin 50 Hz, positive-weight scale 0.7, blind eye.
+Ten paired seeds, 400 steps, four conditions; quick = two seeds x 80 steps (explicit --seeds 1 permitted for cost). Same starting geometry per seed.
+song: both cues on; noscent_orn: only Or47b zero; noscent_contact: only contact zero; noscent: both zero. Interventions occur only in listener_scent.
+Or47b: ORN_VA1v (130 cells), SMELL_MAX_HZ with distance falloff. Contact: putative_ppk23 (269 cells), same drive within 2 mm. Existing drive includes the 2 mm boundary; contact_fraction is strictly distance < 2 mm, using pre-window geometry.
+P29: P1 mean rate, noscent_orn > song.
+P30: P1 mean rate, noscent_contact > song.
+P31_orn: pIP10 mean rate AND delivered RMS, noscent_orn > song (both).
+P31_contact: pIP10 mean rate AND delivered RMS, noscent_contact > song (both, separately reported).
+P32 descriptive: noscent versus each partial removal (one cue alone); her vpoDN and accept, distance, approach/retreat and contact fraction per seed and condition.
+Verdict rule as v5: paired difference > 2 SE, n = 10. Quick runs cannot establish predictions. Predictions fixed before data.
+'''
+PROTOCOLS['v11'] = dict(PROTOCOLS['v8'], text=V11_TEXT, conditions=V11_CONDITIONS,
+    male_scale_required=True, seed_ladder=(10,), budget_note='Exactly four conditions x ten seeds; no full-run reduction.')
+V11_LIMITATIONS = [
+    'This characterises a suppression; it does not establish that he decides.',
+    'Drives are chosen rates on chosen cell groups.',
+    'The transmitter-sign rule treats the dictionary vAB3 cells as inhibitory because they are glutamatergic here.',
+    *[s.replace('in v9', 'in v11').replace('by this sweep', 'by this protocol')
+      for s in V9_LIMITATIONS if not s.startswith(('The sweep', 'Mute changes'))]]
+
+
+def v11_drive_flags(condition):
+    return dict(orn_zeroed=condition in ('noscent_orn', 'noscent'),
+                contact_zeroed=condition in ('noscent_contact', 'noscent'))
+
+
+def summarise_v11(rows):
+    indexed = {(r['seed'], r['condition']): r for r in rows}
+    seeds = sorted({r['seed'] for r in rows})
+    def comparison(metric, treatment, control):
+        valid = []
+        for seed in seeds:
+            a = indexed.get((seed, treatment), {}).get(metric)
+            b = indexed.get((seed, control), {}).get(metric)
+            if a is not None and b is not None and np.isfinite(a) and np.isfinite(b):
+                valid.append((seed, a-b))
+        diffs = [d for _, d in valid]
+        mean = float(np.mean(diffs)) if diffs else None
+        se = float(np.std(diffs, ddof=1)/np.sqrt(len(diffs))) if len(diffs)>1 else None
+        v = verdict(mean, se, len(diffs))
+        return dict(metric=metric, treatment=treatment, control=control, mean=mean, se=se,
+            n=len(diffs), paired_differences=diffs, valid_seeds=[s for s, _ in valid],
+            excluded_seeds=[s for s in seeds if s not in [i for i, _ in valid]],
+            verdict=v, established=len(diffs)==10 and v=='supported')
+    predictions = {}
+    for cue, label in (('orn', 'P29'), ('contact', 'P30')):
+        predictions[label] = comparison('p1_hz', 'noscent_'+cue, 'song')
+        for metric in ('pip10_hz', 'delivered_rms'):
+            predictions['P31_'+cue+'_'+metric] = comparison(metric, 'noscent_'+cue, 'song')
+    joint = {cue: all(predictions['P31_'+cue+'_'+m]['established']
+                     for m in ('pip10_hz', 'delivered_rms')) for cue in ('orn', 'contact')}
+    descriptive = {c: {m: {k: v for k, v in comparison(m, 'noscent', c).items()
+                           if k not in ('verdict', 'established')}
+                      for m in ('p1_hz', 'pip10_hz', 'delivered_rms')}
+                   for c in ('noscent_orn', 'noscent_contact')}
+    return dict(predictions=predictions, P31_joint=joint, P32=descriptive)
+
+
+def v11_seed_table(data):
+    keys = ('seed', 'condition', 'orn_zeroed', 'contact_zeroed', 'p1_hz', 'pip10_hz',
+        'delivered_rms', 'vpodn_hz', 'accept', 'distance_mm', 'approach', 'retreat', 'contact_fraction')
+    return ['| '+' | '.join(keys)+' |', '| '+' | '.join(['---']*len(keys))+' |'] + [
+        '| '+' | '.join(f'{r[k]:.6g}' if isinstance(r[k], float) else str(r[k]) for k in keys)+' |'
+        for r in data['outcomes']]
+
+
+def write_v11_report(json_path, data):
+    lines = ['# Courtship v11', '', '## Design record', data['protocol_spec']['text'],
+        f"CHOSEN male positive-weight scale: {data['male_exc_scale']}.",
+        'Female graph record: '+json.dumps(data['female_graph']),
+        'Environment: '+json.dumps(data['environment']), '', '## Verdicts',
+        '| Prediction | Difference | SE | n | >2 SE | Established (n=10) |',
+        '|---|---:|---:|---:|---|---|']
+    for label, p in data['summary']['predictions'].items():
+        lines.append(f"| {label} | {p['mean']} | {p['se']} | {p['n']} | {p['verdict']} | {p['established']} |")
+    lines += ['', '## Per-seed outcomes / P32', *v11_seed_table(data),
+        '', 'P32: both removed minus each single removal (descriptive, no verdict):',
+        json.dumps(data['summary']['P32']), '', '## Result',
+        ' '.join(f"{k}: {'established' if data['summary']['predictions'][k]['established'] else 'not established'}." for k in ('P29', 'P30')),
+        ' '.join(f"P31_{cue}: {'established' if ok else 'not established'} (both command and RMS required)." for cue, ok in data['summary']['P31_joint'].items()),
+        'Quick run: smoke evidence only.' if data['quick'] else 'Ten-seed design; undefined pairs cannot establish a prediction.',
+        'This characterises suppression and does not establish that he decides.',
+        f"Estimated ten-seed cost: {data['estimated_ten_seed_hours']:.6g} hours; excludes setup and rendering.",
+        '', '## Limitations', *['- '+s for s in data['limitations']]]
+    destination = Path(str(json_path).replace('_experiment.json', '_report.md'))
+    destination.write_text('\n'.join(lines)+'\n', encoding='utf-8')
+    return destination
+
+
+def run_v11(args, prefix, room_factory=None):
+    if args.male_scale is None or not np.isfinite(args.male_scale) or args.male_scale <= 0:
+        raise ValueError('v11 requires --male-scale with a finite positive value')
+    if not args.quick and (args.seeds != 10 or args.steps != 400):
+        raise ValueError('v11 requires ten seeds and 400 steps; use --quick 1 for smoke tests')
+    graph = v8_graph_record()
+    n, steps = (1 if args.seeds == 1 else 2, 80) if args.quick else (10, 400)
+    cls = bw.brain_class(args.brain)
+    brains = None if room_factory else (cls(), load_female(path=V8_GRAPH, exc_scale=.7, brain_class=cls))
+    from contextlib import nullcontext
+    rows, traces, timings = [], {}, []
+    print(V11_TEXT+f'CHOSEN male positive-weight scale: {args.male_scale}', flush=True)
+    for seed in range(n):
+        start = None
+        for condition in V11_CONDITIONS:
+            with male_excitation(brains[0], args.male_scale) if brains else nullcontext():
+                room = (room_factory(seed, condition, brains=brains) if room_factory else
+                        build_room(seed, condition, brains=brains, protocol='v11'))
+                room.protocol = 'v11'
+                if start is not None and room.arena.geometry() != start:
+                    raise ValueError('v11 paired start mismatch')
+                start = room.arena.geometry()
+                t0 = time.perf_counter()
+                row, trace = run_trial(room, steps, seed, condition)
+                elapsed = time.perf_counter()-t0
+            row.update(male_exc_scale=args.male_scale, state_group='SAG',
+                **v11_drive_flags(condition),
+                distance_mm=float(np.mean(trace['distance_mm'])),
+                contact_fraction=float(np.mean(trace['distance_mm'] < 2.)))
+            rows.append(row)
+            timings.append(dict(seed=seed, condition=condition, seconds=elapsed))
+            traces.update({f's{seed}_{condition}_{k}': v for k, v in trace.items()})
+            print(f'seed={seed} condition={condition} seconds={elapsed:.3f}', flush=True)
+    data = dict(protocol='v11', protocol_spec=PROTOCOLS['v11'], seeds=list(range(n)),
+        steps=steps, quick=bool(args.quick), male_exc_scale=args.male_scale,
+        female_exc_scale=.7, female_graph=graph, female_eye=FEMALE_EYE,
+        state_group='SAG', state_drive_hz=50., outcomes=rows, summary=summarise_v11(rows),
+        limitations=V11_LIMITATIONS, timing=timings, ear=WaveEar().describe(),
+        environment=dict(brain_class=args.brain), date=datetime.now(timezone.utc).isoformat())
+    data['estimated_ten_seed_hours'] = float(np.mean([t['seconds']/steps for t in timings]))*16000/3600
+    save(prefix, data, traces)
+    print('\n'.join(v11_seed_table(data)), flush=True)
+    print(json.dumps(data['summary'], indent=2), flush=True)
+    return 0
+
+
+
+V12_GRAPH = Path('build/graph_male_fsign.npz')
+V12_SCALES = (0.9, 0.8)
+V12_TEXT = """Protocol v12. Identical to v9 except the required functional-sign male graph and scales {0.9, 0.8}.
+CHOSEN: 0.9 is the v10/v11 dose; 0.8 is the neighbour where v9's RMS comparison passed while the pIP10 difference sat just under threshold.
+Ten paired seeds, 400 steps, six scale/condition cells; quick = two seeds x 80 steps (explicit --seeds 1 permitted).
+Male build/graph_male_fsign.npz: dictionary vAB3 sign +1; mAL unclear sign -1. Record graph SHA256 and override table.
+Hypothesis: these narrow functional-sign corrections recover P1 control of song and its response to her scent.
+Risk: vAB3 to mAL input exceeds direct vAB3 to P1 input in this map, so restoring mAL inhibition may lower P1 rather than raise it.
+A null means this narrow correction does not recover P1 control at these doses, not that the pathway is absent.
+Female side = v8: own restored SAG graph, both SAG types, virgin 50 Hz, positive-weight scale 0.7, blind eye.
+Positive male weights alone are scaled before room construction and restored between trials. Conditions song/mute/noscent and all remaining v9 settings retained; starts paired across all scales and conditions.
+- P33 the command carries the song under the functional signs: his pIP10 mean rate and delivered RMS, song > mute (both).
+- P34 he notices her under the functional signs: his P1 mean rate, song > noscent.
+- P35 (descriptive): P1, pIP10, RMS, male total rate per scale; mAL and vAB3 mean rates per condition (record both groups); her vpoDN and accept per cell.
+""" + V9_RULE.replace('P21', 'P33')
+V12_LIMITATIONS = [s.replace('v9', 'v12') for s in V9_LIMITATIONS] + [
+    'The override list is chosen from literature for three cell groups only: male vAB3, male mAL and the already restored female SAG. Every other modulatory class stays silenced.',
+    'Functional excitation of P1 is extrapolated to all dictionary vAB3 outputs; receptor-specific effects are not modelled.']
+PROTOCOLS['v12'] = dict(PROTOCOLS['v9'], text=V12_TEXT, male_exc_scales=V12_SCALES,
+    male_graph=V12_GRAPH.as_posix(), budget_note='Exactly six cells x ten seeds; no full-run reduction.')
+
+
+def v12_graph_record():
+    from graft_sag import sha256
+    if not V12_GRAPH.exists():
+        raise ValueError('v12 requires build/graph_male_fsign.npz; run functional_sign.py first')
+    with np.load(V12_GRAPH, allow_pickle=False) as z:
+        record = json.loads(str(z['fsign']))
+    return dict(path=V12_GRAPH.as_posix(), sha256=sha256(V12_GRAPH), fsign=record)
+
+
+def summarise_v12(rows):
+    result = summarise_v9(rows, V12_SCALES)
+    def rename(value):
+        if isinstance(value, dict):
+            return {k.replace('P21', 'P33').replace('P22', 'P34'): rename(v) for k, v in value.items()}
+        return value
+    result = rename(result)
+    for cell in result['cells']:
+        rr = [r for r in rows if r['male_exc_scale'] == cell['male_exc_scale'] and r['condition'] == cell['condition']]
+        cell.update({k: float(np.mean([r[k] for r in rr])) for k in ('mal_hz', 'vab3_hz')})
+    return result
+
+
+def v12_cell_table(data):
+    keys = ('male_exc_scale', 'condition', 'n', 'p1_hz', 'pip10_hz', 'delivered_rms', 'male_total_hz', 'mal_hz', 'vab3_hz', 'vpodn_hz', 'accept')
+    return ['| '+' | '.join(keys)+' |', '| '+' | '.join(['---']*len(keys))+' |'] + [
+        '| '+' | '.join(f'{r[k]:.6g}' if isinstance(r[k], float) else str(r[k]) for k in keys)+' |' for r in data['summary']['cells']]
+
+
+def write_v12_report(json_path, data):
+    lines = ['# Courtship v12', '', data['protocol_spec']['text'], '', '## Override record',
+        json.dumps(data['male_graph'], indent=2), '## Female graph record', json.dumps(data['female_graph']),
+        '', '## Per-scale verdicts', '| Scale | Prediction | Difference | SE | n | Verdict | Reversed |', '|---|---|---|---|---|---|---|']
+    for scale, predictions in data['summary']['per_scale'].items():
+        for label, p in predictions.items():
+            if isinstance(p, dict):
+                lines.append(f"| {scale} | {label} | {p['mean']} | {p['se']} | {p['n']} | {p['verdict']} | {p['reversed']} |")
+        lines.append(f"P33 joint at {scale}: {predictions['P33_verdict']}.")
+    keys = ('male_exc_scale', 'seed', 'condition', 'p1_hz', 'pip10_hz', 'delivered_rms', 'male_total_hz', 'mal_hz', 'vab3_hz', 'vpodn_hz', 'accept', 'approach', 'retreat')
+    lines += ['', '## Per-seed outcomes', data['protocol_spec']['outcome_text'], '| '+' | '.join(keys)+' |', '| '+' | '.join(['---']*len(keys))+' |']
+    lines += ['| '+' | '.join(str(r[k]) for k in keys)+' |' for r in data['outcomes']]
+    lines += ['', '## P35 (descriptive)', *v12_cell_table(data), '', '## Result',
+        ' '.join(f'{k}: {v}.' for k, v in data['summary']['established'].items()),
+        'Quick run: smoke evidence only.' if data['quick'] else 'All ten paired seeds reported at both scales.',
+        'A null means this narrow correction does not recover P1 control at these doses, not that the pathway is absent.',
+        *[f"At scale {scale}, song minus mute is {p['P33_command']['mean']:.6g} Hz in pIP10 and {p['P33_rms']['mean']:.6g} in delivered RMS; song minus noscent is {p['P34']['mean']:.6g} Hz in P1."
+          for scale, p in data['summary']['per_scale'].items()],
+        f"Across the recorded scale/condition cells, vAB3 mean rates span {min(r['vab3_hz'] for r in data['summary']['cells']):.6g} to {max(r['vab3_hz'] for r in data['summary']['cells']):.6g} Hz; mAL means span {min(r['mal_hz'] for r in data['summary']['cells']):.6g} to {max(r['mal_hz'] for r in data['summary']['cells']):.6g} Hz (descriptive).",
+        f"Ten-seed cost: {data['estimated_ten_seed_hours']:.6g} hours; excludes setup and rendering.",
+        '', '## Limitations', *['- '+s for s in data['limitations']]]
+    destination = Path(str(json_path).replace('_experiment.json', '_report.md'))
+    destination.write_text('\n'.join(lines)+'\n', encoding='utf-8')
+    return destination
+
+
+def run_v12(args, prefix, room_factory=None):
+    if not args.quick and (args.seeds != 10 or args.steps != 400):
+        raise ValueError('v12 requires ten seeds and 400 steps; use --quick 1 for smoke tests')
+    male_graph = v12_graph_record()
+    graph = v8_graph_record()
+    n, steps = (1 if args.seeds == 1 else 2, 80) if args.quick else (10, 400)
+    cls = bw.brain_class(args.brain)
+    brains = None if room_factory else (cls(graph_path=V12_GRAPH), load_female(path=V8_GRAPH, exc_scale=.7, brain_class=cls))
+    rows, traces, timings, starts = [], {}, [], {}
+    from contextlib import nullcontext
+    for scale in V12_SCALES:
+        for seed in range(n):
+            for condition in V9_CONDITIONS:
+                with male_excitation(brains[0], scale) if brains else nullcontext():
+                    room = (room_factory(seed, condition, brains=brains) if room_factory else
+                            build_room(seed, condition, brains=brains, protocol='v12'))
+                    room.protocol = 'v12'
+                    start = room.arena.geometry()
+                    if seed in starts and start != starts[seed]:
+                        raise ValueError('v12 paired start mismatch')
+                    starts[seed] = start
+                    t0 = time.perf_counter()
+                    row, trace = run_trial(room, steps, seed, condition)
+                    elapsed = time.perf_counter()-t0
+                row['male_exc_scale'] = scale
+                rows.append(row)
+                timings.append(dict(male_exc_scale=scale, seed=seed, condition=condition, step_s=elapsed/steps))
+                traces.update({f's{seed}_{condition}_scale{scale}_{k}': v for k, v in trace.items()})
+                print(f'scale={scale} seed={seed} condition={condition} step_s={elapsed/steps:.6f}', flush=True)
+                if len(rows) == 1:
+                    print(f'First-trial ten-seed estimate: {elapsed/steps*6*10*400/3600:.6g} hours (6 cells x 10 seeds x 400 steps).', flush=True)
+    hours = float(np.mean([t['step_s'] for t in timings]))*6*10*400/3600
+    data = dict(protocol='v12', protocol_spec=PROTOCOLS['v12'], seeds=list(range(n)), steps=steps,
+        quick=bool(args.quick), male_exc_scales=V12_SCALES, female_exc_scale=.7,
+        male_graph=male_graph, female_graph=graph, female_eye=FEMALE_EYE, state_group='SAG', state_drive_hz=50.,
+        outcomes=rows, summary=summarise_v12(rows), timing=timings, estimated_ten_seed_hours=hours,
+        limitations=V12_LIMITATIONS, ear=WaveEar().describe(),
+        environment=dict(brain_class=args.brain, torch_devices={name: str(getattr(fb, 'device', None))
+            for name, fb in zip(('male', 'female'), brains or (None, None))}),
+        date=datetime.now(timezone.utc).isoformat())
+    jp, npz, png, _ = paths(prefix)
+    jp.parent.mkdir(parents=True, exist_ok=True)
+    jp.write_text(json.dumps(data, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+    np.savez_compressed(npz, **traces)
+    # Keep the existing four-artifact contract, with one labelled panel per cell.
+    plot_data = dict(data, protocol_spec=dict(data['protocol_spec'], conditions={
+        f'{c} scale {scale}': V9_CONDITIONS[c] for scale in V12_SCALES for c in V9_CONDITIONS}),
+        outcomes=[dict(r, condition=f"{r['condition']} scale {r['male_exc_scale']}") for r in rows])
+    plot_traces = {}
+    for r in rows:
+        source = f"s{r['seed']}_{r['condition']}_scale{r['male_exc_scale']}_"
+        target = f"s{r['seed']}_{r['condition']} scale {r['male_exc_scale']}_"
+        plot_traces.update({target+k[len(source):]: v for k, v in traces.items() if k.startswith(source)})
+    render_pil(png, plot_data, plot_traces)
+    write_report(jp)
+    print('\n'.join(v12_cell_table(data)), flush=True)
+    print(f'Ten-seed cost: {hours:.6g} hours (6 cells x 10 seeds x 400 steps), excluding setup and rendering.', flush=True)
+    return 0
+
+
 def main(argv=None, room_factory=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--protocol", choices=PROTOCOLS, default="v5")
@@ -824,6 +1512,7 @@ def main(argv=None, room_factory=None):
     ap.add_argument("--steps", type=int, default=DEFAULT_STEPS)
     ap.add_argument("--quick", type=int, choices=(0, 1), default=0)
     ap.add_argument("--brain", default="flysim.FlyBrain")
+    ap.add_argument('--male-scale', type=float)
     ap.add_argument("--baseline")
     ap.add_argument("--out")
     ap.add_argument("--budget-min", type=float, default=150)
@@ -844,6 +1533,26 @@ def main(argv=None, room_factory=None):
         return 4
     if args.reanalyse:
         data = json.loads(jp.read_text(encoding="utf-8"))
+        if data['protocol'] == 'v12':
+            data['summary'] = summarise_v12(data['outcomes'])
+            jp.write_text(json.dumps(data, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+            write_report(jp)
+            return 0
+        if data['protocol'] == 'v11':
+            data['summary'] = summarise_v11(data['outcomes'])
+            jp.write_text(json.dumps(data, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+            write_report(jp)
+            return 0
+        if data['protocol'] == 'v10':
+            data['summary'] = summarise_v10(data['outcomes'])
+            jp.write_text(json.dumps(data, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+            write_report(jp)
+            return 0
+        if data['protocol'] == 'v9':
+            data['summary'] = summarise_v9(data['outcomes'])
+            jp.write_text(json.dumps(data, indent=2, allow_nan=False)+'\n', encoding='utf-8')
+            write_report(jp)
+            return 0
         with np.load(paths(prefix)[1]) as z:
             traces = dict(z)
         data["outcomes"] = [dict(r, **outcome(r["seed"], r["condition"],
@@ -865,6 +1574,14 @@ def main(argv=None, room_factory=None):
     if n < 1 or steps < 4 or not np.isfinite(args.budget_min) or args.budget_min <= 0:
         ap.error("positive seeds and budget, and at least four steps required")
     conditions = PROTOCOLS[args.protocol]["conditions"]
+    if args.protocol == 'v12':
+        return run_v12(args, prefix, room_factory)
+    if args.protocol == 'v9':
+        return run_v9(args, prefix, room_factory)
+    if args.protocol == 'v11':
+        return run_v11(args, prefix, room_factory)
+    if args.protocol == 'v10':
+        return run_v10(args, prefix, room_factory)
     baseline = baseline_identity = None
     if args.protocol == "v6":
         baseline, baseline_identity = read_baseline(args.baseline, list(range(n)), steps, args.brain)
