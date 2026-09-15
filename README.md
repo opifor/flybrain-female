@@ -498,6 +498,10 @@ py courtship_experiment.py --protocol v8 --brain flysim_gpu.FlyBrainGPU --out bu
 py courtship_experiment.py --protocol v9 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v9_local
 py courtship_experiment.py --protocol v10 --male-scale 0.9 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v10_local
 py courtship_experiment.py --protocol v11 --male-scale 0.9 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v11_local
+py functional_sign.py
+py courtship_experiment.py --protocol v12 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v12_local
+py courtship_experiment.py --protocol v13 --male-scale 0.9 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v13_local
+py courtship_experiment.py --protocol v14 --male-scale 0.9 --brain flysim_gpu.FlyBrainGPU --out build/courtship_v14_local
 ```
 
 For the graft, first download the public BANC v888 compiled data into
@@ -514,7 +518,8 @@ The addendum must use the same brain class as its baseline.
 Each prefix gets `_experiment.json`, `_trajectories.npz`, `_trajectories.png`
 and `_report.md`. The published prefixes, `build/courtship`,
 `build/courtship_addendum`, `build/courtship_v7`, `build/courtship_v8`,
-`build/courtship_v9`, `build/courtship_v10` and `build/courtship_v11`, are refused, including case variants and file aliases.
+`build/courtship_v9`, `build/courtship_v10`, `build/courtship_v11`,
+`build/courtship_v12`, `build/courtship_v13` and `build/courtship_v14`, are refused, including case variants and file aliases.
 
 The evidence is in [the v5 report](build/courtship_report.md) and
 [the v6 addendum](build/courtship_addendum_report.md); the addendum records
@@ -612,7 +617,17 @@ This part of the loop did not hold: he decides and he adapts are not established
 
 **v11** pre-registered separate cue removals at male scale 0.9, retaining the v8 female setup and ten paired seeds: song kept both cues, noscent_orn removed only olfactory input, noscent_contact removed only contact input, and noscent removed both. P29 supported increased P1 after olfactory removal, by 6.78 Hz (SE 1.31); P30 did not support an increase after contact removal. P31 required both pIP10 and delivered RMS to increase: olfactory removal passed, contact removal did not. P32 is descriptive, with no verdict: removing both versus olfactory input alone changed P1 by -0.46 Hz (SE 0.31), and removing both versus contact alone changed it by 6.21 Hz (SE 1.40); the record also gives song, her receptivity command and accept rule, distance, approach/retreat and contact exposure. Her scent reaches him as Or47b olfactory drive plus contact drive labelled putative ppk23, an unverified receptor assignment. In this map these inputs take routes with different signs to P1, meaning activity can encourage or suppress downstream firing. The dictionary's vAB3 relay cells are glutamatergic here, so the transmitter-sign rule treats their outputs as inhibitory. Sources: [v11 report](build/courtship_v11_report.md), [record](build/courtship_v11_experiment.json), [input wiring](backrooms_world.py), [dictionary](backrooms_dictionary.py), [male graph](build/graph.npz) and [sign rule](build_graph.py).
 
-All table entries are paired mean differences +/- SE (standard error), rounded from those records; Hz means spikes per second. Support requires a positive difference greater than two SE across ten seeds. P21 and P31 require both listed measurements; v9 additionally forbids a reversal at another scale. P26 compares rank correlations, which measure whether values rise and fall together; its amplitude and mode channels are both shown. RMS and correlation values are unitless; turning is a fraction of windows.
+#### Four more levers, same answer
+
+**v12: transmitter sign.** The functional-sign graph makes vAB3 outputs positive (+1, encouraging firing) and restores inhibitory GABA outputs for 23 mAL cells labelled "unclear". With ten paired seeds in song, mute and noscent at scales 0.9 and 0.8, P33 did not establish P1 control of song at either scale. P34, P1 song minus noscent, was negative at 0.9 (-1.45 Hz, SE 1.03) and reversed at 0.8 (-2.07 Hz, SE 0.35). The correction did not recover the command chain. Sources: [v12 report](build/courtship_v12_report.md), [record](build/courtship_v12_experiment.json), [sign overrides](build/male_fsign.json).
+
+**v13: contrast eye.** Uniform grey now gives no visual drive; the eye responds to differences from that background. Using the base male graph at scale 0.9, ten paired seeds compared song, mute, noscent_orn (olfactory input removed, contact kept) and blind. P36 did not support more LC10a activity in song than blind (-0.0144 Hz, SE 0.0113). P37 (command control), P38 (P1 response to scent) and P39 (song following the previous window's LC10a activity) were also unsupported; both song amplitude and pulse-versus-sine balance failed the latter comparison against a shifted sequence. Descriptively, his network averaged about 42 Hz per neuron in song, mute and blind, versus 22.7 Hz in noscent_orn. Sources: [v13 report](build/courtship_v13_report.md), [record](build/courtship_v13_experiment.json).
+
+**v14: olfactory dose.** With the contrast eye and male scale 0.9, ten paired seeds compared song, mute and noscent_orn at maximum olfactory drives of 200, 50 and 20 Hz; the delivered input falls with distance. P41 did not support a lower total rate at the lowest dose: song at 200 minus 20 Hz was -1.23 Hz per neuron (SE 0.47), a reversal. Even the lowest tested dose sustained the high-rate state. P42 (P1 control of song) and P43 (P1 response to scent) were not established at any dose. "Ignition" means a window above 30 Hz per neuron: its fraction in song was 0.95625-0.99925 across doses, versus 0.504 without olfactory input; mute ranged from 0.919 to 0.99975. Sources: [v14 report](build/courtship_v14_report.md), [record](build/courtship_v14_experiment.json).
+
+A second adult male brain-and-nerve-cord map does not exist: [MaleCNS v1.0](https://male-cns.janelia.org/) is the newest available map, and [MANC](https://www.janelia.org/project-team/flyem/manc-connectome) contains the nerve cord only.
+
+All table entries are paired mean differences +/- SE (standard error), rounded from those records; Hz means spikes per second. Support requires a positive difference greater than two SE across ten seeds. P21, P31, P33, P37 and P42 require both listed measurements; v9, v12 and v14 additionally forbid a reversal at another tested scale or dose. P26 and P39 compare rank correlations, which measure whether values rise and fall together; their amplitude and mode channels are both shown. P39 subtracts a control made by shifting the LC10a sequence by half a trial, retaining the same one-window lag. RMS and correlation values are unitless; turning is a fraction of windows. The v14 rows show olfactory dose as well as male weight scale; P41 is one comparison across doses.
 
 | Protocol / scale | Prediction and subtraction | Mean difference +/- SE | Verdict |
 |---|---|---|---|
@@ -629,22 +644,38 @@ All table entries are paired mean differences +/- SE (standard error), rounded f
 | v11 / 0.9 | P30: P1, noscent_contact - song | 0.1072 +/- 0.3319 Hz | not supported |
 | v11 / 0.9 | P31: noscent_orn - song | pIP10: 15.9900 +/- 6.9886 Hz; RMS: 0.013545 +/- 0.006468 | supported, both |
 | v11 / 0.9 | P31: noscent_contact - song | pIP10: 0.4850 +/- 1.2644 Hz; RMS: -0.000404 +/- 0.001281 | not supported |
+| v12 / 0.9 | P33: song - mute | pIP10: 1.1025 +/- 2.7380 Hz; RMS: 0.004528 +/- 0.006029 | not established |
+| v12 / 0.9 | P34: P1, song - noscent | -1.4493 +/- 1.0293 Hz | not supported; negative |
+| v12 / 0.8 | P33: song - mute | pIP10: 3.0475 +/- 2.2487 Hz; RMS: 0.001928 +/- 0.002379 | not established |
+| v12 / 0.8 | P34: P1, song - noscent | -2.0658 +/- 0.3541 Hz | reversed |
+| v13 / 0.9 | P36: LC10a, song - blind | -0.0144 +/- 0.0113 Hz | not supported |
+| v13 / 0.9 | P37: song - mute | pIP10: 0.4525 +/- 2.1572 Hz; RMS: -0.002622 +/- 0.006631 | not supported |
+| v13 / 0.9 | P38: P1, song - noscent_orn | -1.7912 +/- 1.1828 Hz | not supported |
+| v13 / 0.9 | P39: lagged correlation, song - shifted | amplitude: -0.043805 +/- 0.026932; mode: -0.051251 +/- 0.045995 | not supported |
+| v14 / 0.9 / 200 - 20 Hz | P41: total male rate, song | -1.2322 +/- 0.4711 Hz per neuron | not supported; reversed |
+| v14 / 0.9 / 200 Hz | P42: song - mute | pIP10: 0.5950 +/- 2.1939 Hz; RMS: -0.002368 +/- 0.006698 | not established |
+| v14 / 0.9 / 200 Hz | P43: P1, song - noscent_orn | -1.7883 +/- 1.1806 Hz | not established |
+| v14 / 0.9 / 50 Hz | P42: song - mute | pIP10: 1.4750 +/- 6.6954 Hz; RMS: -0.003459 +/- 0.014927 | not established |
+| v14 / 0.9 / 50 Hz | P43: P1, song - noscent_orn | -0.8423 +/- 1.2344 Hz | not established |
+| v14 / 0.9 / 20 Hz | P42: song - mute | pIP10: 5.9775 +/- 9.4634 Hz; RMS: 0.003278 +/- 0.013880 | not established |
+| v14 / 0.9 / 20 Hz | P43: P1, song - noscent_orn | -0.4390 +/- 0.8938 Hz | not established |
 
-**What this means.** In this male map, with this eye and this synthesis, the command chain from her cues to his song is not recoverable by cooling over the tested scales. Her scent suppresses his command in a network whose transmitter-sign rule makes relay routes inhibitory; the cue-removal evidence identifies olfactory suppression, not a supported contact effect or proof of a particular relay's causal role. A geometry drive on LC10a changes his song and approach but does not produce adaptation by the registered tests. Three of the page's five steps hold: he sings, she hears, she answers (with a no). He decides and he adapts do not, as tested.
+**What this means, after the levers.** In this male model, olfactory input at every tested dose drives the whole network into a high-rate state: about 42 Hz per neuron, with ignition on almost every song window. In that state his command cells do not control his song by the registered tests; this does not prove their effect is exactly zero. Cooling, functional sign corrections across three cell groups (her SAG, his vAB3 and mAL), a contrast eye and a lower olfactory dose have not established the missing command chain. The remaining candidates are the network dynamics themselves: firing thresholds (how much input triggers a spike), the refractory period (the pause after a spike), and weight scale (connection strength), calibrated against known behaviours as in the [reference model's validation of feeding and grooming](https://www.nature.com/articles/s41586-024-07763-9); and the synthesis choices that turn neural activity into sound. These are model-level changes, larger than a protocol. "He decides" and "he adapts" stay open until then.
 
 ### What comes next
 
-- **Beyond cooling.** Cooling alone did not rescue P1 control of pIP10 in the
-  sweep. The next candidates are a different male map, an eye that reaches LC10a
-  natively, and the transmitter-sign rule itself, which silences every modulatory
-  class in both base maps; her restored SAG outputs are an explicit exception.
+- **Transmitter-sign rule tested.** The narrow functional corrections did not recover his command chain; they do not settle the signs of all other cell groups.
+- **Contrast eye tested.** Removing the grey background drive did not establish increased LC10a activity or adaptation.
+- **No second male map.** MaleCNS remains the available adult male brain-and-nerve-cord map; MANC cannot replace its brain.
+- **Olfactory dose tested.** The lowest tested scent dose still sustained the high-rate state and did not establish command control.
+- **Calibrating the model.** Test network dynamics against known behaviours and revisit how neural activity becomes song before claiming decision or adaptation.
 - **Her nerve cord.** The full BANC graph is built; her wing, leg and abdominal
   motor neurons are the next readouts.
 - **More than one male.** The backrooms already step four bodies; a room with one
   female and several singers asks who she walks beside.
 - **A third brain.** The two maps share most of their cell types; a mosaic of the two, run in the same room, is the next experiment, pre-registered like the others.
 
-Each of these gets its own preregistered protocol and its own published record.
+Further experiments need their own preregistered protocols and published records; model calibration also needs explicit validation against known behaviours.
 
 ## Hosting it
 

@@ -882,7 +882,7 @@ class Cli(unittest.TestCase):
             alias = Path(td) / "alias"
             ce.paths(published)[2].write_bytes(b"protected")
             os.link(ce.paths(published)[2], ce.paths(alias)[0])
-            for constant in ("PUBLISHED", "PUBLISHED_ADDENDUM", "PUBLISHED_V7", "PUBLISHED_V8", "PUBLISHED_V9", "PUBLISHED_V10", "PUBLISHED_V11"):
+            for constant in ("PUBLISHED", "PUBLISHED_ADDENDUM", "PUBLISHED_V7", "PUBLISHED_V8", "PUBLISHED_V9", "PUBLISHED_V10", "PUBLISHED_V11", "PUBLISHED_V12", "PUBLISHED_V13", "PUBLISHED_V14"):
                 with self.subTest(constant=constant), patch.object(ce, constant, published):
                     with self.assertRaisesRegex(ValueError, "published prefix is refused"):
                         ce.assert_not_published(alias)
@@ -902,6 +902,9 @@ class Cli(unittest.TestCase):
         self.assertEqual(ce.PUBLISHED_V9, Path("build/courtship_v9"))
         self.assertEqual(ce.PUBLISHED_V10, Path("build/courtship_v10"))
         self.assertEqual(ce.PUBLISHED_V11, Path("build/courtship_v11"))
+        self.assertEqual(ce.PUBLISHED_V12, Path("build/courtship_v12"))
+        self.assertEqual(ce.PUBLISHED_V13, Path("build/courtship_v13"))
+        self.assertEqual(ce.PUBLISHED_V14, Path("build/courtship_v14"))
         for prefix in ("build/courtship", "build/COURTSHIP", "build/../build/courtship",
                        "build/courtship_addendum", "build/COURTSHIP_ADDENDUM",
                        "build/../build/courtship_addendum"):
