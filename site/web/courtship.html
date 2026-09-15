@@ -32,6 +32,7 @@
 <section>
 <h2>she answers</h2>
 <p>Her pC1 and vpoDN cells are read; vpoDN is the “yes” descending neuron. Her oviDN cells are read as the sign of a no. We chose virgin and mated states by driving or silencing sex-peptide sensory cells. With the waveform ear, song brought her answer across the chosen acceptance threshold in most seeds; silence left it below.</p>
+<p>The wire carrying her state was already in her own FlyWire map: her SAG cells have outputs, but a serotonin transmitter prediction silenced them in a graph builder that keeps only acetylcholine, GABA and glutamate edges. BANC, a second female's brain and nerve cord map, showed the same route to pC1 in the same order and made us look again. In part two we turned her own synapses back on with a chosen positive sign.</p>
 </section>
 <section>
 <h2>he adapts</h2>
@@ -44,7 +45,7 @@
 <section>
 <h2>what held, and what is open</h2>
 <!-- results:start -->
-<p>Song over silence raised her vpoDN and her pC1. Driving his command group raised his song and her answer, with her vpoDN up +98.5 Hz over ordinary song. Those links held. The open questions are what part two goes after. Rhythm remains open: her ear now hears a waveform, and the brains run near ceiling so small signals get lost. Approach is open because there is no heading readout yet. Silencing P1 and testing scent and sight remain open because the loop is noisy at this excitation. A mated no needs another route because her map's sex-peptide axons carry no synapses; the hand-closed pC1 gate also leaves that question open.</p>
+<p>In part one, song over silence raised her vpoDN and her pC1. Driving his command group raised his song and her answer, with her vpoDN up +98.5 Hz over ordinary song. Those links held. Rhythm remains open: her ear now hears a waveform, and the brains run near ceiling so small signals get lost. Approach is open because there is no heading readout yet. Silencing P1 and testing scent and sight remain open because the loop is noisy at this excitation. A mated no remained open with the state route excluded by the builder; the hand-closed pC1 gate also left that question open. Part two tests her restored route below.</p>
 <table aria-label="Courtship predictions and results">
 <thead><tr><th scope="col">prediction</th><th scope="col">outcome</th></tr></thead>
 <tbody>
@@ -60,24 +61,55 @@
 <tr><td>P13 · driving P1 raises his pIP10 and song</td><td>held</td></tr>
 <tr><td>P14 · driving P1 raises her answer</td><td>held</td></tr>
 <tr><td>P9' · her answer falls with the pC1 gate closed by hand</td><td>open</td></tr>
+<tr><td>P17 · v7: she can say no</td><td>held</td></tr>
+<tr><td>P18 · v7: she still hears</td><td>open</td></tr>
+<tr><td>P19 · v7: the state reaches her receptivity cells</td><td>held</td></tr>
+<tr><td>P17 · v8: she can say no</td><td>held</td></tr>
+<tr><td>P18 · v8: she still hears</td><td>open</td></tr>
+<tr><td>P19 · v8: the state reaches her receptivity cells</td><td>held</td></tr>
 </tbody>
 </table>
-<p>With song, her answer met the chosen acceptance rule in 90% of seeds. Silence brought no seeds across the threshold.</p>
+<p>In part one, with song, her answer met the chosen acceptance rule in 90% of seeds. Silence brought no seeds across the threshold.</p>
 <p>Driving his command group raised his pIP10, delivered song and her vpoDN in every seed.</p>
-<p>Closing her gate by hand left 90% of seeds meeting the acceptance rule. A no remains an open question.</p>
+<p>Closing her gate by hand left 90% of seeds meeting the acceptance rule. A no remained open in that run.</p>
 <p><a href="https://github.com/opifor/flycoinrh/tree/courtship">the full record</a> (<a href="https://github.com/fruitflydev/flycoinrh/pull/9">pull request to FLYBRAIN</a>): <code>build/courtship_report.md</code> holds the first comparisons; <code>build/courtship_addendum_report.md</code> holds the command drive and the hand-closed gate.</p>
 <!-- results:end -->
+</section>
+<section>
+<h2>part two: she can say no</h2>
+<p>Protocol v8 restores her own SAG synapses with a positive sign chosen from the functional evidence of Feng and colleagues. Her state enters at both SAG types: on for virgin, off for mated. Her positive weights are scaled by 0.7, chosen before data from the v7 ladder. The same four conditions and predictions run across ten seeds. He runs raw and unchanged.</p>
+<p>The first run, v7, used a BANC graft: P17 +61.8 Hz held, P18 -0.4 Hz stayed open, and P19 +34.3 Hz held.</p>
+<ul>
+<li>P17 · v8: she can say no: her vpoDN, virgin song over mated song, rose +73.8 Hz (SE 0.97). All ten seeds were positive. Held.</li>
+<li>P18 · v8: she still hears: her vpoDN, virgin song over virgin silence, changed -0.3 Hz (SE 1.03). Open, not held.</li>
+<li>P19 · v8: the state reaches her receptivity cells: her pC1, virgin song over mated song, rose +38.7 Hz (SE 0.34). Held.</li>
+</ul>
+<p>SE is the standard error across seeds. Meeting the chosen accept rule is counted separately from the mean rate.</p>
+<table aria-label="Part two acceptance counts">
+<thead><tr><th scope="col">condition</th><th scope="col">accept</th></tr></thead>
+<tbody>
+<tr><th scope="row">virgin song</th><td>10/10</td></tr>
+<tr><th scope="row">mated song</th><td>4/10</td></tr>
+<tr><th scope="row">virgin silence</th><td>10/10</td></tr>
+<tr><th scope="row">mated silence</th><td>0/10</td></tr>
+</tbody>
+</table>
+<p>Mean rates (vpoDN / pC1, Hz): virgin song 74.0 / 38.7; mated song 0.2 / 0.0; virgin silence 74.3 / 38.8; mated silence 0 / 0.</p>
+<p>In this map her state opens the gate on its own; once she is willing, the song is not needed for her yes. No scale or tonic rate tested in the two calibration ladders printed in the v7 protocol made her yes require both the song and her state. The v8 calibration also left her answering in silence at the chosen scale, so P18 remains open.</p>
+<p>record: <a href="https://github.com/opifor/flycoinrh/tree/courtship">v8 and v7 reports in the repository</a></p>
 </section>
 <section>
 <h2>how to read this</h2>
 <ul>
 <li>Rates and spikes are readouts of the running brains. Positions record movement under the chosen encoding. We write down the inputs, song rendering, movement and uncalibrated gains so each choice can be checked against the record.</li>
-<li>We chose raw excitation for this run so the loop could be measured at that setting. The brains run near ceiling, where small signals get lost.</li>
+<li>We chose raw excitation for part one so the loop could be measured at that setting. The brains run near ceiling, where small signals get lost.</li>
 <li>We chose waveform slices of 5 ms so her ear receives the sound he makes.</li>
 <li>Her brain runs the full 50 ms of every step in real time. The effects in this regime are smaller than in the first run.</li>
 <li>We chose a uniform arena to keep the room simple. Her eye is blind in that room.</li>
 <li>We chose to start her inside his field of view so his eye has her silhouette to read.</li>
-<li>Virgin and mated are chosen input states. Her map's sex-peptide axons carry no synapses, so the mated state has no wired entry. Closing her pC1 gate by hand is a separate intervention whose readout still leaves a no open.</li>
+<li>Virgin and mated are chosen input states. In part one, the builder excluded her SAG outputs, so her state lacked that wired route. Closing her pC1 gate by hand was a separate intervention whose readout left a no open.</li>
+<li>Her SAG outputs are restored from her own export with a chosen positive sign, based on the functional evidence of Feng and colleagues. Transmitter predictions disagree: serotonin here, dopamine in BANC; neither prediction fixes the effect's sign. Her positive weights are scaled by 0.7, chosen before data from the v7 calibration ladder. SPSN, the uterine sensors, are not modelled; state enters at SAG. The builder's transmitter-sign rule also silences other modulatory cells' outputs, a limitation of the whole model.</li>
+<li>BANC is the second individual's brain and nerve cord map, used as a cross-check of the SAG route. The full BANC graph is built but not used here.</li>
 <li>The p1drive condition is an intervention chosen to measure what driving his command group can set in motion. It measures the response to that drive, not his spontaneous P1 activity.</li>
 <li>Cell identities that are uncertain stay marked as uncertain: his putative P1 group contains 86 cells in the male map.</li>
 <li>The chosen contact encoding reaches cells within 2 mm so proximity can enter the loop.</li>
@@ -98,7 +130,7 @@
 <h2>what comes next</h2>
 <ul>
 <li>Cooler brains, so small signals have room to move the loop.</li>
-<li>A no with synapses, so her state has a wired route into her answer.</li>
+<li>A yes that needs both her state and his song; her restored route leaves that open.</li>
 <li>His adaptation through his eye alone, to measure whether what he sees changes his next note.</li>
 <li>A room with one female and several singers, to measure her response when the room has more than his song in it.</li>
 </ul>
